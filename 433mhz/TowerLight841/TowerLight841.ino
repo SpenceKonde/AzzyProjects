@@ -1,63 +1,5 @@
 /*
-This sketch continually listens to a 433 or 315mhz receiver connected to rxpin. 
-It listens for 4, 8, 16, or 32 byte packets, sent 2ms after the training burst with 0.65ms low between bits, 1.1ms high for 1, 0.6ms for 0.
-
-
-
-
-Description of packet format:
-
-The first byte of packets is:
-
-| SZ1 | SZ0 | A5 | A4 | A3 | A2 | A1 | A0 |
-
-A5~0: Address bits - 6 bit address of the device, compared to MyAddress. Only packets matching address are processed. 
-
-SZ1~SZ0: Size setting
-
-SZ1=0, SZ0=0: 4 bytes
-SZ1=0, SZ0=1: 8 bytes
-SZ1=1, SZ0=0: 16 bytes
-SZ1=1, SZ0=1: 32 bytes
-
-The next two bytes go into MyCmd and MyParam, respectively, if the transmission is accepted (ie, device address matches and checksum is OK)
-
-In a 4 byte packet, the first 4 bits of the last byte goes into MyExtParam (extended parameter), and the last 4 bits are the checksum. 
-
-For all longer packets, the whole fourth byte goes into MyExtParam, and the final byte is the checksum. 
-
-For 4 byte packets, checksum is calculated by XORing the first three bytes, then XORing the first 4 bits of the result with the last 4 bits, and the first 4 bits of the fourth byte. 
-
-For longer packets, checksum is calculated by XORing all bytes of the packet. 
-
-
-How to extend this:
-
-
-Most of the heavy lifting has been done with regards to receiving, transmitting, and ignoring repeated commands. Ideally, you should only have to edit onCommandST() to handle your new commands, and loop() if you want to add new states, poll sensors, etc. 
-
-Receiving:
-
-On receiving a valid packet, MyState will be set to CommandST, and MyCmd, MyParam, and MyExtParam will be populated.
-
-Add a test for the new command to onCommandST() that calls code to handle your new command. 
-If you're receiving a long packet, you can get bytes beyond the first 4 from txrxbuffer[] (these are not stored as a separate variable in order to save on SRAM)
-
-
-Transmitting:
-
-Populate txrxbuffer with the bytes you want to send (bytes beyond that are ignored), including the size/address byte.  
-set TXLength to the length of the packet you are sending. Do not set up the checksum - this is done by doTransmit();
-
-Call doTransmit(rep) to send it, where rep is the number of times you want to repeat the transmission to ensure that it arrives. This blocks until it finishes sending.
-
-
-The example commands are:
-
-0xF2 - Respond with a 4-byte packet containing the values at 2 locations on the EEPROM, at the addresses (MyParam) and (MyParam+MyExtParam). The first byte is the address of this device, and the first half of the fourth byte is the checksum of the received command (likely not useful here). 
-
-0xF4 - Respond with a packet (MyParam) bytes long, repeated (MyExtParam) times. For testing reception. This calculates the checksum, but doesn't set the size and address byte to anything meaningful.
-
+This is an adaptation of TXrxbasev21 for use with tiny841 tower light
 */
 
 #define ListenST 1
@@ -136,21 +78,15 @@ byte MyState;
 unsigned char MyCmd;
 unsigned char MyParam;
 unsigned char MyExtParam;
-unsigned long curTime;
+//unsigned long curTime;
 int count=0;
 int badcsc=0;
 byte pksize=32;
 byte TXLength;
 unsigned long lastChecksum; //Not the same as the CSC - this is our hack to determine if packets are identical
 unsigned long forgetCmdAt; 
-byte last1;
-byte last2;
-byte last3;
-byte last4;
-int reccount;
-
-
-
+byte inputstate=0;
+byte oldinputstate=0;
 
 void setup() {
 	lastPinState=0;
@@ -163,18 +99,18 @@ void setup() {
 	pinMode(9,OUTPUT);  //lights for testing
 	pinMode(10,OUTPUT);
 	pinMode(11,OUTPUT);
+	pinMode(doorup,INPUT_PULLUP); 
+	pinMode(doordn,INPUT); //external pullup
 	Serial.begin(9600);
-	digitalWrite(9,1);  // RGB LED for testing on demo board
-	digitalWrite(10,1); // set them to 1 to turn off, since it's inverted
-	digitalWrite(11,1); //
-	delay(1000);
+	delay(10000);
+	UCSR0B&=~(1<<RXEN0); //turn off RX but leave TX
+	pinMode(fridge,INPUT_PULLUP);
 	Serial.println("Startup OK");
 
 }
 
 
 void loop() {
-	curTime=micros();
 	if (MyState==ListenST) {
 		ClearCMD(); //do the command reset only if we are in listenst but NOT receiving.
 		onListenST();
@@ -186,7 +122,9 @@ void loop() {
 	} else {
 		MyState=ListenST; //in case we get into a bad state somehow.
 	}
+
 }
+
 
 
 
@@ -194,7 +132,6 @@ void loop() {
 void onCommandST() {
 	Serial.print("onCommandST");
 	Serial.println(MyCmd);
-	Serial.println("and another test");
 	switch (MyCmd) {
 	case 0xF2: {
 		Serial.println("Starting transmit info");
@@ -211,16 +148,6 @@ void onCommandST() {
 		digitalWrite(2,1);
 		delay(500);
 		digitalWrite(2,0);
-		MyState=ListenST;
-		break;
-	}
-	case 0xF4: {
-		Serial.println("Starting transmit");
-		Serial.print(MyParam);
-		Serial.print(" byte payload");
-		prepareTestPayload();
-		delay(500);
-		doTransmit(MyExtParam);
 		MyState=ListenST;
 		break;
 	}
@@ -243,31 +170,17 @@ void prepareEEPReadPayload() {
 	TXLength=4;
 }
 
-void prepareTestPayload() { //MyParam sets the size of the payload to send.
-	Serial.println("prepareTestPayload called...");
-	for (byte i=1;i<MyParam;i++) { //if we wanted, we could pick a return address, and start with i=2, and then set up address/etc in txrxbuffer[0]. But this is just a demo.
-		txrxbuffer[i-1]=100+i; 
-		txrxbuffer[MyParam-1]=txrxbuffer[MyParam-1]^(100+i);
-		Serial.print("B");
-		Serial.print(i);
-		Serial.print(": ");
-		Serial.println(txrxbuffer[i]);
-	}
-	Serial.println("Payload generated.");
-	TXLength=MyParam;
-}
-
 void doTransmit(int rep) { //rep is the number of repetitions
 	byte txchecksum=0;
 	for (byte i=0;i<TXLength-1;i++) {
 		txchecksum=txchecksum^txrxbuffer[i];
 	}
-	if (TXLength==4) {
+	//if (TXLength==4) { //commented out to save code space.
 		txchecksum=(txchecksum&0x0F)^(txchecksum>>4)^((txrxbuffer[3]&0xF0)>>4);
 		txrxbuffer[3]=(txrxbuffer[3]&0xF0)+(txchecksum&0x0F);
-	} else {
-		txrxbuffer[TXLength-1]=txchecksum;
-	} 
+	//} else {
+	//	txrxbuffer[TXLength-1]=txchecksum;
+	//} 
 	for (byte r=0;r<rep;r++) {;
 		for (byte j=0; j < txTrainRep; j++) {
 			delayMicroseconds(txTrainLen);
@@ -302,6 +215,7 @@ void doTransmit(int rep) { //rep is the number of repetitions
 
 void onListenST() {
 	byte pinState=digitalRead(rxpin);
+	unsigned long curTime=micros();
 	if (pinState==lastPinState) {
 		return;
 	} else {
@@ -335,7 +249,7 @@ void onListenST() {
 				txrxbuffer[rxaridx]=rxdata;
 				rxdata=0;
 				rxaridx++;
-				if (rxaridx*8==pksize) {
+				if  (raridx>=4) //(rxaridx*8==pksize) {
 					Serial.println("Receive done");
 					parseRx();
 					//parseRx2(txrxbuffer,pksize/8);
@@ -368,7 +282,7 @@ void parseRx() { //uses the globals.
 	if (rcvAdd==MyAddress) {
 		if (lastChecksum!=calcBigChecksum(byte(pksize/8))) {
 			lastChecksum=calcBigChecksum(byte(pksize/8));
-		    if (pksize==32) { //4 byte packet
+		    //if (pksize==32) { //4 byte packet - commented out, only 4 byte packets will be accepted by this to save space.
 		    	calccsc=txrxbuffer[0]^txrxbuffer[1]^txrxbuffer[2];
 		    	calccsc=(calccsc&15)^(calccsc>>4)^(txrxbuffer[3]>>4);
 		    	if (calccsc==(txrxbuffer[3]&15)) {
@@ -379,11 +293,11 @@ void parseRx() { //uses the globals.
 		    		Serial.println(MyCmd);
 		    		Serial.println(MyParam);
 		    		Serial.println(MyExtParam);
-		    		Serial.println("Valid transmission received");
+		    		Serial.println("Valid RX");
 	    		} else {
-	    			Serial.println("Bad CSC on 4 byte packet");
+	    			Serial.println("Bad CSC");
 	    		}
-			} else {
+			/*} else { //4-byte packets only
 				for (byte i=1;i<(pksize/8);i++) {
 					calccsc=calccsc^txrxbuffer[i-1];
 				}
@@ -399,9 +313,9 @@ void parseRx() { //uses the globals.
 				} else {
 					Serial.println("Bad CSC on long packet");
 				}  
-			}
+			}*/
 		} else {
-			Serial.println("Already got it");
+			Serial.println("GOT IT");
 		} 
 	} else {
 		Serial.println("Not for me");
