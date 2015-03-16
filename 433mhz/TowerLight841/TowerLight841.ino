@@ -18,7 +18,7 @@ This is an adaptation of TXrxbasev21 for use with tiny841 tower light
 #define led5 6
 #define fridge 8
 #define doorup 1
-#define doordown 0
+#define doordn 0
 #define rxmaxlen 32 //
 
 //These set the parameters for transmitting. 
@@ -86,6 +86,11 @@ byte TXLength;
 unsigned long lastChecksum; //Not the same as the CSC - this is our hack to determine if packets are identical
 unsigned long forgetCmdAt; 
 
+unsigned long lastfridge;
+unsigned long 
+
+
+
 void setup() {
 	lastPinState=0;
 	lastPinLowTime=0;
@@ -125,8 +130,6 @@ void loop() {
 
 
 
-
-
 void onCommandST() {
 	Serial.print("onCommandST");
 	Serial.println(MyCmd);
@@ -141,7 +144,6 @@ void onCommandST() {
 	}
 
 	case 0xFE: {
-		reccount++;
 		Serial.println("Received test packet");
 		digitalWrite(2,1);
 		delay(500);
@@ -167,6 +169,12 @@ void prepareEEPReadPayload() {
 	txrxbuffer[3]=oldcsc<<4;
 	TXLength=4;
 }
+
+void prepareNoticePacket(){
+
+
+}
+
 
 void doTransmit(int rep) { //rep is the number of repetitions
 	byte txchecksum=0;
@@ -247,7 +255,7 @@ void onListenST() {
 				txrxbuffer[rxaridx]=rxdata;
 				rxdata=0;
 				rxaridx++;
-				if  (raridx>=4) //(rxaridx*8==pksize) {
+				if  (rxaridx>=4) //(rxaridx*8==pksize) {
 					Serial.println("Receive done");
 					parseRx();
 					//parseRx2(txrxbuffer,pksize/8);
@@ -255,7 +263,6 @@ void onListenST() {
 				}
 			}
 			return;
-		}   
 	} else {
 		lastPinHighTime=curTime;
 		if (lastPinHighTime-lastPinLowTime > rxSyncMin && lastPinHighTime-lastPinLowTime <rxSyncMax && rxing==0) {
