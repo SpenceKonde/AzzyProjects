@@ -85,8 +85,6 @@ byte pksize=32;
 byte TXLength;
 unsigned long lastChecksum; //Not the same as the CSC - this is our hack to determine if packets are identical
 unsigned long forgetCmdAt; 
-byte inputstate=0;
-byte oldinputstate=0;
 
 void setup() {
 	lastPinState=0;
