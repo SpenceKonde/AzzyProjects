@@ -11,11 +11,11 @@ This is an adaptation of TXrxbasev21 for use with tiny841 tower light
 #define txpin 7
 #define CommandForgetTime 1000 //short, for testing
 
-#define led1 2
-#define led2 3
-#define led3 4
-#define led4 5
-#define led5 6
+#define ledO 2
+#define ledB 3
+#define ledG 4
+#define ledR 5
+#define ledW 6
 #define fridge 8
 #define doorup 1
 #define doordn 0
@@ -87,7 +87,11 @@ unsigned long lastChecksum; //Not the same as the CSC - this is our hack to dete
 unsigned long forgetCmdAt; 
 
 unsigned long lastfridge;
-unsigned long 
+unsigned long lastup;
+unsigned long lastdown;
+byte fridgeST;
+byte upst;
+byte downst;
 
 
 
@@ -125,10 +129,66 @@ void loop() {
 	} else {
 		MyState=ListenST; //in case we get into a bad state somehow.
 	}
-
+	checkInputs();
+}
+void doFade() {
+	if (fadeAt !=0 && fadeAt < millis() && fadest) {
+		analogWrite(ledW,fadest--)
+		fadeAt=fadest?millis()+50:0;
+	}
+}
+void checkInputs() {
+	if (upst != digitalRead(doorup)) {
+		lastup=millis();
+		upst=digitalRead(doorup);
+		doUpstairs(upst);
+	}
+	byte curdownst=analogRead(downst)>>2;
+	curdownst=(curdownst>225?0:(curdownst>128?1:2));
+	if (curdownst != downst) {
+		downst=curdownst;
+		lastdown=millis();
+		doDownstairs();
+	}
+	if (fridgest != digitalRead(fridge)) {
+		lastfridge=millis();
+		fridge=digitalRead(fridge);
+		if (fridge==1) {
+			fridgeSentWarn=0;
+		}
+	} 
+	byte fridgetmp=millis()-lastfridge;
+	if (fridgetmp > 5000) {
+		fridgetmp-=5000;
+		digitalWrite(ledB,fridgetmp%800 < 400);
+		if (fridgetmp>10000) {
+			fridgetmp-=10000;
+			digitalWrite(ledG,(fridgetmp%500<250));
+			if !fridgeSentWarning {
+				prepareNoticePacket(max(255,15+fridgetmp/1000),2);
+				fridgeSentWarning=1;
+			}
+		}
+	}
 }
 
-
+void doDownstairs() {
+	if (downst==0) {
+		digitalWrite(ledO,0);
+	else {
+		digitalWrite(ledO,1);
+	}
+	if (downst==2) {
+		digitalWrite(ledW,1);
+		fadest=255;
+		fadeAt=millis()+10000
+	}
+	prepareNoticePacket(downst,0);
+}
+void doUpstairs() {
+	digitalWrite(ledR,!upst);
+	prepareNoticePacket(!upst,1);
+}
 
 void onCommandST() {
 	Serial.print("onCommandST");
