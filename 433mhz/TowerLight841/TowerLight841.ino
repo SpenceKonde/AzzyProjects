@@ -160,8 +160,8 @@ void onCommandST() {
 
 
 void prepareEEPReadPayload() {
-	unsigned char Payload1=EEPROM.read(MyParam);
-	unsigned char Payload2=EEPROM.read(MyParam+MyExtParam);
+	//unsigned char Payload1=EEPROM.read(MyParam);
+	//unsigned char Payload2=EEPROM.read(MyParam+MyExtParam);
 	unsigned char oldcsc=((MyAddress&0xF0)>>4)^(MyAddress&0x0F)^(0x0F)^(0x02)^((MyParam&0xF0)>>4)^(MyParam&0x0F)^(MyExtParam&0x0F);
 	txrxbuffer[0]=MyAddress;
 	txrxbuffer[1]=EEPROM.read(MyParam);
@@ -170,9 +170,12 @@ void prepareEEPReadPayload() {
 	TXLength=4;
 }
 
-void prepareNoticePacket(){
-
-
+void prepareNoticePacket(byte etype, byte evalue){
+	txrxbuffer[0]=MyAddress;
+	txrxbuffer[1]=0xE1;
+	txrxbuffer[2]=evalue;
+	txrxbuffer[3]=etype<<4;
+	TXlength=4;
 }
 
 
