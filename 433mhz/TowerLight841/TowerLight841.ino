@@ -53,7 +53,7 @@ int rxLowMax=450; //longest low before packet discarded
 #define rxOneMin 450 //minimum length for a valid 1
 #define rxOneMax 750 //maximum length for a valid 1
 #define rxLowMax 600 //longest low before packet discarded
-
+#define TXLength 4
 
 unsigned long units[]={1000,60000,900000,14400000,3600000,1,10,86400000}; //units for the 8/12/16-bit time values. 
 
@@ -82,16 +82,19 @@ unsigned char MyExtParam;
 int count=0;
 int badcsc=0;
 byte pksize=32;
-byte TXLength;
+//byte TXLength;
 unsigned long lastChecksum; //Not the same as the CSC - this is our hack to determine if packets are identical
 unsigned long forgetCmdAt; 
 
 unsigned long lastfridge;
 unsigned long lastup;
 unsigned long lastdown;
-byte fridgeST;
+byte fridgest;
 byte upst;
 byte downst;
+unsigned long fadeAt;
+byte fadest;
+byte fridgeSentWarn;
 
 
 
@@ -133,7 +136,7 @@ void loop() {
 }
 void doFade() {
 	if (fadeAt !=0 && fadeAt < millis() && fadest) {
-		analogWrite(ledW,fadest--)
+		analogWrite(ledW,fadest--);
 		fadeAt=fadest?millis()+50:0;
 	}
 }
@@ -141,7 +144,7 @@ void checkInputs() {
 	if (upst != digitalRead(doorup)) {
 		lastup=millis();
 		upst=digitalRead(doorup);
-		doUpstairs(upst);
+		doUpstairs();
 	}
 	byte curdownst=analogRead(downst)>>2;
 	curdownst=(curdownst>225?0:(curdownst>128?1:2));
@@ -152,8 +155,8 @@ void checkInputs() {
 	}
 	if (fridgest != digitalRead(fridge)) {
 		lastfridge=millis();
-		fridge=digitalRead(fridge);
-		if (fridge==1) {
+		fridgest=digitalRead(fridge);
+		if (fridgest==1) {
 			fridgeSentWarn=0;
 		}
 	} 
@@ -164,9 +167,9 @@ void checkInputs() {
 		if (fridgetmp>10000) {
 			fridgetmp-=10000;
 			digitalWrite(ledG,(fridgetmp%500<250));
-			if !fridgeSentWarning {
+			if (!fridgeSentWarn) {
 				prepareNoticePacket(max(255,15+fridgetmp/1000),2);
-				fridgeSentWarning=1;
+				fridgeSentWarn=1;
 			}
 		}
 	}
@@ -175,13 +178,13 @@ void checkInputs() {
 void doDownstairs() {
 	if (downst==0) {
 		digitalWrite(ledO,0);
-	else {
+	} else {
 		digitalWrite(ledO,1);
 	}
 	if (downst==2) {
 		digitalWrite(ledW,1);
 		fadest=255;
-		fadeAt=millis()+10000
+		fadeAt=millis()+10000;
 	}
 	prepareNoticePacket(downst,0);
 }
@@ -227,7 +230,7 @@ void prepareEEPReadPayload() {
 	txrxbuffer[1]=EEPROM.read(MyParam);
 	txrxbuffer[2]=EEPROM.read(MyParam+MyExtParam);
 	txrxbuffer[3]=oldcsc<<4;
-	TXLength=4;
+	//TXLength=4;
 }
 
 void prepareNoticePacket(byte etype, byte evalue){
@@ -235,7 +238,7 @@ void prepareNoticePacket(byte etype, byte evalue){
 	txrxbuffer[1]=0xE1;
 	txrxbuffer[2]=evalue;
 	txrxbuffer[3]=etype<<4;
-	TXlength=4;
+	//TXLength=4;
 }
 
 
@@ -277,7 +280,7 @@ void doTransmit(int rep) { //rep is the number of repetitions
 		delayMicroseconds(2000); //wait 2ms before doing the next round. 
 	}
 	Serial.println("Transmit done");
-	TXLength=0;
+	//TXLength=0;
 }
 
 
