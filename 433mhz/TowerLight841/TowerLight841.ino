@@ -20,6 +20,7 @@ This is an adaptation of TXrxbasev21 for use with tiny841 tower light
 #define doorup 1
 #define doordn 0
 #define rxmaxlen 32 //
+#define FADE_TIME 4
 
 //These set the parameters for transmitting. 
 
@@ -54,7 +55,6 @@ int rxLowMax=450; //longest low before packet discarded
 #define rxOneMax 750 //maximum length for a valid 1
 #define rxLowMax 600 //longest low before packet discarded
 #define TXLength 4
-
 unsigned long units[]={1000,60000,900000,14400000,3600000,1,10,86400000}; //units for the 8/12/16-bit time values. 
 
 
@@ -92,8 +92,10 @@ unsigned long lastdown;
 byte fridgest;
 byte upst;
 byte downst;
-unsigned long fadeAt;
-byte fadest;
+unsigned long fadeAt[]={0,0,0,0,0};
+unsigned long fadeOff[]={0,0,0,0,0};
+byte fadest[]={0,0,0,0,0};
+byte fadedir=0;
 byte fridgeSentWarn;
 
 
@@ -135,6 +137,19 @@ void loop() {
 	checkInputs();
 }
 void doFade() {
+	for (i=0;i<5;i++) {
+		if (fadeAt[i] !=0 && fadeAt[i] < millis()) {
+			if (fadest[i]) {
+				analogWrite(ledW,((fadedir>>i)&0x01?fadest++:fadest--));
+				fadeAt=fadest?millis()+(i<4?FADE_TIME:FADE_TIME<<4):0; //hack to make white fade slow
+				if (fadest==255) {fadedir|=1<<i;}
+			} else {
+				if (fadeOff[i] > millis()) {
+					fadest=1;
+					fadedir&=~1<<i;
+				}
+			}
+	}
 	if (fadeAt !=0 && fadeAt < millis() && fadest) {
 		analogWrite(ledW,fadest--);
 		fadeAt=fadest?millis()+50:0;
