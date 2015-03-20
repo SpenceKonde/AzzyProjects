@@ -140,19 +140,23 @@ void doFade() {
 	for (i=0;i<5;i++) {
 		if (fadeAt[i] !=0 && fadeAt[i] < millis()) {
 			if (fadest[i]) {
-				analogWrite(ledW,((fadedir>>i)&0x01?fadest++:fadest--));
-				fadeAt=fadest?millis()+(i<4?FADE_TIME:FADE_TIME<<4):0; //hack to make white fade slow
-				if (fadest==255) {fadedir|=1<<i;}
+				analogWrite(i+2,((fadedir>>i)&0x01?fadest[i]++:fadest[i]--));
+				fadeAt[i]=fadest[i]?millis()+(i<4?FADE_TIME:FADE_TIME<<4):0; //hack to make white fade slow
+				if (fadest[i]==255) {fadedir|=1<<i;}
 			} else {
 				if (fadeOff[i] > millis()) {
-					fadest=1;
+					fadest[i]=1;
+					analogWrite(i+2,1);
 					fadedir&=~1<<i;
+				} else { //put the orange and red lights back where they should be if we've moved them.
+					if (i==0) {
+						digitalWrite(i+2,downst)	
+					} else if (i==3) {
+						digitalWrite(i+2,!upst)
+					}
 				}
 			}
-	}
-	if (fadeAt !=0 && fadeAt < millis() && fadest) {
-		analogWrite(ledW,fadest--);
-		fadeAt=fadest?millis()+50:0;
+		}
 	}
 }
 void checkInputs() {
