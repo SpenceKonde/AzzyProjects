@@ -19,6 +19,7 @@ This is an adaptation of TXrxbasev21 for use with tiny841 tower light
 #define fridge 8
 #define doorup 1
 #define doordn 0
+#define doordnanalog 11
 #define rxmaxlen 32 //
 #define FADE_TIME 4
 
@@ -108,9 +109,13 @@ void setup() {
 	bitsrx=0;
 	rxing=0;
 	MyState=ListenST;
-	pinMode(9,OUTPUT);  //lights for testing
-	pinMode(10,OUTPUT);
-	pinMode(11,OUTPUT);
+	pinMode(ledO,OUTPUT);
+	pinMode(ledB,OUTPUT);
+	pinMode(ledG,OUTPUT);
+	pinMode(ledR,OUTPUT);
+	pinMode(ledW,OUTPUT);
+	pinMode(txpin,OUTPUT);
+        pinMode(rxpin,INPUT);
 	pinMode(doorup,INPUT_PULLUP); 
 	pinMode(doordn,INPUT); //external pullup
 	Serial.begin(9600);
@@ -135,9 +140,10 @@ void loop() {
 		MyState=ListenST; //in case we get into a bad state somehow.
 	}
 	checkInputs();
+doFade();
 }
 void doFade() {
-	for (i=0;i<5;i++) {
+	for (byte i=0;i<5;i++) {
 		if (fadeAt[i] !=0 && fadeAt[i] < millis()) {
 			if (fadest[i]) {
 				analogWrite(i+2,((fadedir>>i)&0x01?fadest[i]++:fadest[i]--));
@@ -150,9 +156,9 @@ void doFade() {
 					fadedir&=~1<<i;
 				} else { //put the orange and red lights back where they should be if we've moved them.
 					if (i==0) {
-						digitalWrite(i+2,downst)	
+						digitalWrite(i+2,downst);	
 					} else if (i==3) {
-						digitalWrite(i+2,!upst)
+						digitalWrite(i+2,!upst);
 					}
 				}
 			}
@@ -160,13 +166,22 @@ void doFade() {
 	}
 }
 void checkInputs() {
+  Serial.print("B");
+  Serial.print(upst+0);
+  Serial.print(downst+0);
+  Serial.println(fridgest+0);
+  Serial.print(fadeAt[4]+0);
+  Serial.print(fadest[4]+0);
+  Serial.println(0+(fadedir>>4)&0x01);
+  Serial.println(analogRead(doordnanalog));
+ 
 	if (upst != digitalRead(doorup)) {
 		lastup=millis();
 		upst=digitalRead(doorup);
 		doUpstairs();
 	}
-	byte curdownst=analogRead(downst)>>2;
-	curdownst=(curdownst>225?0:(curdownst>128?1:2));
+	byte curdownst=analogRead(doordnanalog)>>2;
+	curdownst=(curdownst>225?1:(curdownst>128?0:2));
 	if (curdownst != downst) {
 		downst=curdownst;
 		lastdown=millis();
@@ -175,17 +190,22 @@ void checkInputs() {
 	if (fridgest != digitalRead(fridge)) {
 		lastfridge=millis();
 		fridgest=digitalRead(fridge);
-		if (fridgest==1) {
+		if (fridgest==0) {
 			fridgeSentWarn=0;
-		}
+		} else {
+		  digitalWrite(ledB,0);
+		  digitalWrite(ledG,0);
+}
+  
 	} 
-	byte fridgetmp=millis()-lastfridge;
+if (fridgest==0) {
+	unsigned long fridgetmp=millis()-lastfridge;
 	if (fridgetmp > 5000) {
 		fridgetmp-=5000;
-		digitalWrite(ledB,fridgetmp%800 < 400);
+		digitalWrite(ledB,fridgetmp%1200 < 600);
 		if (fridgetmp>10000) {
 			fridgetmp-=10000;
-			digitalWrite(ledG,(fridgetmp%500<250));
+			digitalWrite(ledG,(fridgetmp%800<400));
 			if (!fridgeSentWarn) {
 				prepareNoticePacket(max(255,15+fridgetmp/1000),2);
 				fridgeSentWarn=1;
@@ -194,30 +214,38 @@ void checkInputs() {
 	}
 }
 
+  delay(200);
+}
+
 void doDownstairs() {
 	if (downst==0) {
-		digitalWrite(ledO,0);
+		
+		
+		fadeAt[0]=millis()+50;
+
 	} else {
 		digitalWrite(ledO,1);
 	}
 	if (downst==2) {
 		digitalWrite(ledW,1);
-		fadest=255;
-		fadeAt=millis()+10000;
+		fadest[4]=255;
+		fadeAt[4]=millis()+10000;
 	}
 	prepareNoticePacket(downst,0);
+	doTransmit(5);
 }
 void doUpstairs() {
-	digitalWrite(ledR,!upst);
-	prepareNoticePacket(!upst,1);
+	digitalWrite(ledR,upst);
+	prepareNoticePacket(upst,1);
+		doTransmit(5);
 }
 
 void onCommandST() {
-	Serial.print("onCommandST");
+	//Serial.print("onCommandST");
 	Serial.println(MyCmd);
 	switch (MyCmd) {
 	case 0xF2: {
-		Serial.println("Starting transmit info");
+		//Serial.println("Starting transmit info");
 		prepareEEPReadPayload();
 		delay(500);
 		doTransmit(5);
@@ -252,7 +280,7 @@ void prepareEEPReadPayload() {
 	//TXLength=4;
 }
 
-void prepareNoticePacket(byte etype, byte evalue){
+void prepareNoticePacket(byte evalue, byte etype){
 	txrxbuffer[0]=MyAddress;
 	txrxbuffer[1]=0xE1;
 	txrxbuffer[2]=evalue;
@@ -298,6 +326,10 @@ void doTransmit(int rep) { //rep is the number of repetitions
 		digitalWrite(txpin, 0); //make sure it's off;
 		delayMicroseconds(2000); //wait 2ms before doing the next round. 
 	}
+Serial.print(txrxbuffer[0]);
+Serial.print(txrxbuffer[1]);
+Serial.print(txrxbuffer[2]);
+Serial.print(txrxbuffer[3]);
 	Serial.println("Transmit done");
 	//TXLength=0;
 }
@@ -332,7 +364,7 @@ void onListenST() {
 			if (bitsrx==2) {
 				pksize=32<<rxdata;
 				if (pksize>rxmaxlen) {
-					Serial.println("Packet this size not supported");
+					//Serial.println("Packet this size not supported");
 					resetListen();
 					return;
 				}
@@ -433,14 +465,7 @@ unsigned long decode12(unsigned int inp) { return (inp&0x01FF)*units[(inp>>9)&0x
 unsigned long decode16(unsigned int inp) { return (inp&0x1FFF)*units[inp>>13]; }
 
 //Just for test/debug purposes;
-void parseRx2(unsigned char rxd[],byte len) {
 
-	Serial.println("Parsing long packet");
-	for (byte i=0;i<len;i++) {
-		Serial.println(rxd[i]);
-	}
-	Serial.println("Done");
-}
 
 void ClearCMD() {  //This handles clearing of the commands, and also clears the lastChecksum value, which is used to prevent multiple identical packets received in succession from being processed.
 	if (MyCmd) {
