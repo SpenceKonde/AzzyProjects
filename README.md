@@ -1,0 +1,1 @@
+This repo is where I store random projects that I'm working on, but which are not expected to be useful to others. The only potentially useful (to others) code is the 433mhz RF code, which may be informative for someone rolling their own 433/315 mhz OOK RF protocol with those cheapo RF modules. 
