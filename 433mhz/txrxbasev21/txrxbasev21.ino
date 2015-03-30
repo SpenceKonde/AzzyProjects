@@ -79,12 +79,12 @@ The example commands are:
 //These set the parameters for transmitting. 
 
 
-#define txOneLength=550; //length of a 1
-#define txZeroLength=300; //length of a 0
-#define txLowTime=420; //length of the gap between bits
-#define txTrainRep=30; //number of pulses in training burst
-#define txSyncTime=2000; //length of sync
-#define txTrainLen=200; //length of each pulse in training burst
+#define txOneLength 550 //length of a 1
+#define txZeroLength 300 //length of a 0
+#define txLowTime 420 //length of the gap between bits
+#define txTrainRep 30 //number of pulses in training burst
+#define txSyncTime 2000 //length of sync
+#define txTrainLen 200 //length of each pulse in training burst
 
 
 /*
