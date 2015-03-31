@@ -10,96 +10,129 @@ onTimeout is called with one argument, the option group.
 */
 
 
-exports.connect = function(serial,onCm,onTo) {
-    return new EasyVR(serial,onCm,onTo);
+exports.connect = function(serial,onCm,onTo,onEr) {
+    return new EasyVR(serial,onCm,onTo,onEr);
 };
 
-function EasyVR(ser,onCm,onTo)) {
+function EasyVR(ser,onCm,onTo,onEr) {
   this.ser = ser;
-  this.ser.setup(9600);
-  this.onCommand=onCom;
+  this.onCommand=onCm;
   this.onTimeout=onTo;
-  this.ser.on('data',this.onWatch);
+  this.onErr=onEr;
+  this.ser.on('data',this.onData.bind(this));
+  this.stop();
   this.vrstate=-1;
   this.stsr='o';
-  this.rcvv=""
+  this.rcvv="";
+  this.tout=0;
 }
 
 EasyVR.prototype.argchar=function(val) {
 	if (val<-1 || val > 31) {throw "Bad arg";}
-	return String.fromCharCode(0x21-val);
-}
-EasyVR.prototype.chararg=function(char) {
-	return char.charCodeAt(0)-0x21;
+	return String.fromCharCode(0x41+val);
+};
 
-} 
+EasyVR.prototype.chararg=function(chr) {
+	return chr.charCodeAt(0)-0x41;
 
-EasyVR.prototype.onWatch=function(data) {
+}; 
+
+EasyVR.prototype.onData=function(data) {
+	//this=evr;
+	
+	console.log("serial data watch: "+data);
 	var rcv=data.charCodeAt(0);
+	console.log("serial data: "+rcv);
 	if (rcv>0x60) {
-		var temp=this.sts_idx.[data];
+		console.log("status");
+		var temp=this.sts_idx[data];
+		//console.log("serial lookup: "+temp);
 		if (temp[0]) {
 			this.stsr=data;
 			this.ser.print(' ');
 		} else {
-			eval(this.sts_idx[data][1]);
+			eval(temp[1]);
 		}
 	} else {
+		console.log("data");
 		this.rcvv+=data;
 		if (this.rcvv.length>=this.sts_idx[this.stsr][0]){
-			eval(this.sts_idx[this.stsr][0]);
+		    console.log("running callback "+this.sts_idx[this.stsr][1]);
+			eval(this.sts_idx[this.stsr][1]);
 			this.rcvv="";
 			this.stsr='o';
 		} else {
+		    console.log("need more data");
 			this.ser.print(' ');
 		}
 	}
 
-}
-
+};
 EasyVR.prototype.sts_idx={
 	"o":[0,"console.log('STS_SUCCESS');"],
 	"t":[0,"console.log('STS_TIMEOUT');"],
 	"v":[0,"console.log('STS_INVALID');"],
 	"i":[0,"console.log('STS_INTERR');"],
-	"e":[2,"console.log('STS_ERROR '+this.rcvv);"],
+	"e":[2,"console.log('STS_ERROR '+evr.rcvv);evr.onErr(evr.rcvv);"],
+	"s":[1,"console.log('STS_SIMILAR '+evr.rcvv);evr.onErr(evr.rcvv);"],
 	"r":[1,"console.log('STS_RESULT');"]
 };
 
 
 EasyVR.prototype.onResult=function(r) {
-	var r = this.onCommand(this.vrstate,r);
-	if (r.type!==undefined) {
-		this.setRecognize(r.type,r.timeout);
+	console.log("onresult");
+	console.log(r);
+	var rt = this.onCommand(this.vrstate,r);
+	if (rt.type!==undefined) {
+		this.stop();
+		this.setRecognize(rt.type,rt.timeout);
 	}
 };
 
-EasyVR.prototype.setRecognize=function(type,timeout) {
-	this.sts_idx.o[1]="this.startRec("+type+","+timeout");";
-	this.timeout(timeout);
-	if (timeout) {setTimeout("eval(this.sts_idx.t[1])",timeout*1000+1000);}
-}
+EasyVR.prototype.setRecognize=function(type,to) {
+	if (this.tout) {
+		clearTimeout(this.tout);
+		this.tout=0;
+	}
+	this.sts_idx.o[1]="evr.startRec("+type+","+to+");";
+	this.timeout(to);
+	if (to) {this.tout=setTimeout("eval(evr.sts_idx.t[1])",to*1000+1000);}
+};
 EasyVR.prototype.startRec=function(type,timeout){
 	this.sts_idx.o[1]="";
-	this.sts_idx.r[1]="this.onResult(arg1);";
-	this.sts_idx.t[1]="this.sts_idx.r[1]='';this.sts_idx.t[1]='';this.onTimeout(this.vrstate);";
-	this.sendCmd('b',argchar(type));
+	this.sts_idx.r[1]="evr.onResult(evr.chararg(evr.rcvv));";
+	this.sts_idx.t[1]="evr.sts_idx.r[1]='';evr.sts_idx.t[1]='';evr.onTimeout(evr.vrstate);";
+	this.sendCmd('d',type);
 	this.vrstate=type;
-}
+};
 
 
 EasyVR.prototype.sendCmd=function(cmd,arg) {
 	//lastCmd=[cmd,arg];
-	this.ser.print(cmd)
-	if (arg){this.ser.print(argchar(arg)+" ");}
-}
+	this.ser.print(cmd);
+	console.log("Sending command: "+cmd);
+	if (arg!==undefined){console.log("With arg: "+this.argchar(arg));this.ser.print(this.argchar(arg));}
+};
 
 EasyVR.prototype.stop=function(){
+	this.sts_idx={
+	"o":[0,"console.log('STS_SUCCESS');"],
+	"t":[0,"console.log('STS_TIMEOUT');"],
+	"v":[0,"console.log('STS_INVALID');"],
+	"i":[0,"console.log('STS_INTERR');"],
+	"e":[2,"console.log('STS_ERROR '+evr.rcvv);evr.onErr(evr.rcvv);"],
+	"s":[1,"console.log('STS_SIMILAR '+evr.rcvv);evr.onErr(evr.rcvv);"],
+	"r":[1,"console.log('STS_RESULT');"]
+	};
 	this.sendCmd('b');
-}
+};
 EasyVR.prototype.timeout=function(arg) {
-	this.sendCmd(o,argchar(arg));
-}
+	this.sendCmd('o',arg);
+};
+
+EasyVR.prototype.setStrict=function(arg) {
+	this.sendCmd('v',E.clip(arg,1,5));
+};
 
 
 /*
