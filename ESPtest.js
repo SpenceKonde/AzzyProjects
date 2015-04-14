@@ -45,7 +45,12 @@ wifi.procreq = function (path,query) {
 	// code goes here
 	switch (paths[1]) {
 		case "json": {
-			rd=getJSON(path,query);//if ()
+			if (this.json.hasOwnProperty(paths[0]))
+			{
+				rd=this.json[paths[0]](path,query);
+			} else {
+				rd.body="File "+path+" not found";
+			}
 			break;
 		}
 		case "cmd": {
@@ -55,7 +60,7 @@ wifi.procreq = function (path,query) {
 		default: {
 			var f = E.openFile(wifi.fpfx+"/"+path, "r");
 			if (f==undefined) {
-				rd.body="File "+path+" not found"
+				rd.body="File "+path+" not found";
 			} else {
 				rd.code=200;
 				rd.file=f;
@@ -64,7 +69,7 @@ wifi.procreq = function (path,query) {
 	}
 	return rd;
 }
-
-function getJSON(path,query) {
+wifi.json={}
+wifi.json.status= function (path,query) {
 	 return {code:200,body:'{gtg:true,dtf:false,missiles:["armed","armed","repair","mothballed"]}'};
 }
