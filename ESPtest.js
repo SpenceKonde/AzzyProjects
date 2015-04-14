@@ -20,5 +20,14 @@ function procreq(path,query) {
 	rd.code=404;
 	rd.body="";
 	// code goes here
+	switch (path) {
+		case "status.json": {
+			rd.body="{gtg:true,dtf:false,missiles:["armed","armed","repair","mothballed"]}";
+			break;
+		}
+		default: {
+			rd.body="Invalid command path"
+		}
+	}
 	return rd;
 }
