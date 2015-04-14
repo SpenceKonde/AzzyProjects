@@ -16,13 +16,14 @@ var wifi = require("ESP8266WiFi").connect(Serial4, function(err) {
 });
 
 function procreq(path,query) {
+	var paths=path.split(".")
 	var rd={};
 	rd.code=404;
 	rd.body="";
 	// code goes here
-	switch (path) {
-		case "status.json": {
-			rd.body="{gtg:true,dtf:false,missiles:["armed","armed","repair","mothballed"]}";
+	switch (paths[1]) {
+		case "json": {
+			rd=getJSON(path,query);
 			break;
 		}
 		default: {
@@ -30,4 +31,8 @@ function procreq(path,query) {
 		}
 	}
 	return rd;
+}
+
+function getJSON(path,query) {
+	 return {code:200,body:'{gtg:true,dtf:false,missiles:["armed","armed","repair","mothballed"]}'};
 }
