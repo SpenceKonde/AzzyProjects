@@ -1,21 +1,43 @@
 Serial4.setup(9600, { rx: C11, tx : C10 });
+
+
 var http = require("http");
 var wifi = require("ESP8266WiFi").connect(Serial4, function(err) {
   if (err) throw err;
   wifi.reset(function(err) {
     if (err) throw err;
     console.log("Connecting to WiFi");
-    wifi.connect("TwilightZone","L0st1nTheZ0ne", function(err) {
+    wifi.connect(wifi.config.ssid,wifi.config.pass, function(err) {
       if (err) throw err;
       console.log("Connected");
-      wifi.getIP(print);
-      setTimeout("server=require('http').createServer(function (req, res) {var par=url.parse(req.url,true);var q=par.query; var nam=par.pathname; nam=nam.split('/');nam=nam[1];var rd=procreq(nam,q);res.writeHead(rd.code,rd.head?rd.head:{'Content-Type': 'text/plain'}); res.write(rd.body);res.end();}).listen(80);",15000);
-
+      wifi.getIP(function(err,ip){wifi.config.ip=ip;});
+      setTimeout(wifi.userinit.bind(wifi),15000);
     });
   });
 });
+wifi.config={ssid:"TwilightZone", pass:"L0st1nTheZ0ne", port:80};
+wifi.fpfx="html"; //file prefix for serving files off SD card;
 
-function procreq(path,query) {
+wifi.userinit= function() { //set up the server. 
+	console.log("setting up server on "+this.config.ip+":"+this.config.port);
+	this.server=require('http').createServer(onRequest.bind(this)).listen(this.config.port);
+}
+wifi.onRequest=function (req, res) {
+	var par=url.parse(req.url,true);
+	var q=par.query; 
+	var nam=par.pathname; 
+	var l=nam.indexOf("/");
+	nam=nam.slice(l);
+	var rd=this.procreq(nam,q);
+	res.writeHead(rd.code,rd.head?rd.head:{'Content-Type': 'text/plain'});
+	if (!rd.file) {
+		res.end(rd.body);
+	} else {
+		rd.file.pipe(res);
+	}
+};
+
+wifi.procreq = function (path,query) {
 	var paths=path.split(".")
 	var rd={};
 	rd.code=404;
@@ -23,11 +45,21 @@ function procreq(path,query) {
 	// code goes here
 	switch (paths[1]) {
 		case "json": {
-			rd=getJSON(path,query);
+			rd=getJSON(path,query);//if ()
+			break;
+		}
+		case "cmd": {
+			rd=runCMD(path,query);
 			break;
 		}
 		default: {
-			rd.body="Invalid command path"
+			var f = E.openFile(wifi.fpfx+"/"+path, "r");
+			if (f==undefined) {
+				rd.body="File "+path+" not found"
+			} else {
+				rd.code=200;
+				rd.file=f;
+			}
 		}
 	}
 	return rd;
