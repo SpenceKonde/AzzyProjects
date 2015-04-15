@@ -74,5 +74,9 @@ wifi.handler.json._ = function (path,query) {
 };
 wifi.handler.run={};
 wifi.handler.run.code= function (path,query) {
-	 return {code:200,body:+eval(query.code)}; //danger! This is about as insecure as it gets!
+	 try {
+	 	return {code:200,body:+eval(query.code)}; //danger! This is about as insecure as it gets!
+	 } catch(err) {
+	 	return {code:500,body:"Error thrown: "+err};
+	 }
 };
