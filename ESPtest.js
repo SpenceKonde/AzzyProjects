@@ -47,9 +47,9 @@ wifi.procreq = function (path,query) {
 		case "json": {
 			if (this.json.hasOwnProperty(paths[0]))
 			{
-				rd=this.json[paths[0]](path,query);
+				rd=this.json[paths[0].slice(1)](path,query);
 			} else {
-				rd.body="File "+path+" not found";
+				rd.body="JSON "+path+" not found";
 			}
 			break;
 		}
