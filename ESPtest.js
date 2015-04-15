@@ -47,31 +47,32 @@ wifi.procreq = function (path,query) {
 	rd.body="";
 	// code goes here
     console.log(paths[1]);
-	switch (paths[1]) {
-		case "json": 
-			if (this.json.hasOwnProperty(paths[0].slice(1)))
-			{
-				rd=this.json[paths[0].slice(1)](path,query);
-			} else {
-				rd.body="json "+paths[0].slice(1)+" not found";
-			}
-			break;
-		case "cmd": 
-			rd=runCMD(path,query);
-			break;
-		default: 
-			var f = E.openFile(wifi.fpfx+"/"+path, "r");
-			if (f==undefined) {
-				rd.body="File "+path+" not found";
-			} else {
-				rd.code=200;
-				rd.file=f;
-			}
-		
+	if (paths[1] in this.handler) {
+		if (paths[0].slice(1) in this.handler[paths[1]])
+			rd=this.handler[paths[1]][paths[0].slice(1)](path,query);
+		} else if ("_" in this.handler[paths[1]]){
+			rd=this.handler[paths[1]]["_"](path,query);
+		} else { rd.body="Handler does not support this file.";}
+	else {
+		var f = E.openFile(wifi.fpfx+"/"+path, "r");
+		if (f==undefined) {
+			rd.body="File "+path+" not found";
+		} else {
+			rd.code=200;
+			rd.file=f;
+		}	
 	}
 	return rd;
 };
-wifi.json={};
-wifi.json.status= function (path,query) {
+wifi.handler={};
+wifi.handler.json={};
+wifi.handler.json.status= function (path,query) {
 	 return {code:200,body:'{gtg:true,dtf:false,missiles:["armed","armed","repair","mothballed"]}'};
+};
+wifi.handler.json._ = function (path,query) {
+	 return {code:404,body:"Invalid json data requested: "+path};
+};
+wifi.handler.run={};
+wifi.handler.run.code= function (path,query) {
+	 return {code:200,body:+eval(query.code)}; //danger! This is about as insecure as it gets!
 };
