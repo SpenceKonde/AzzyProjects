@@ -16,7 +16,7 @@ var wifi = require("ESP8266WiFi").connect(Serial4, function(err) {
     });
   });
 });
-wifi.config={ssid:"TwilightZone", pass:"L0st1nTheZ0ne", port:80};
+wifi.config={ssid:"TwilightZone", pass:"snip", port:80};
 wifi.fpfx="html"; //file prefix for serving files off SD card;
 
 wifi.userinit= function() { //set up the server. 
