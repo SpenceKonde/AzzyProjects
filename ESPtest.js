@@ -48,11 +48,12 @@ wifi.procreq = function (path,query) {
 	// code goes here
     console.log(paths[1]);
 	if (paths[1] in this.handler) {
-		if (paths[0].slice(1) in this.handler[paths[1]])
+		if (paths[0].slice(1) in this.handler[paths[1]]) {
 			rd=this.handler[paths[1]][paths[0].slice(1)](path,query);
 		} else if ("_" in this.handler[paths[1]]){
 			rd=this.handler[paths[1]]["_"](path,query);
 		} else { rd.body="Handler does not support this file.";}
+	}
 	else {
 		var f = E.openFile(wifi.fpfx+"/"+path, "r");
 		if (f==undefined) {
