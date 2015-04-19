@@ -78,12 +78,13 @@ wifi.handler.json._ = function (path,query) {
 	 return {code:404,body:"Invalid json data requested: "+path};
 };
 wifi.handler.run={};
-/*wifi.handler.run.code= function (path,query) {
-	 try {
+wifi.handler.run.code= function (path,query) {
+	 return {code:403,body:"Forbidden command: "+path};
+	 /*try {
 	 	return {code:200,body:+eval(query.code)}; //danger! This is about as insecure as it gets!
 	 } catch(err) {
-	 	return {code:500,body:"Error thrown: "+err};
-	 } */
+	 	return {code:500,body:"Error thrown: "+err};*/
+	 } 
 wifi.handler.run.delayed=function(path,query) {
 	if (1) {
 		setTimeout("wifi.cmdresp='{status:1}';",1500)
@@ -91,5 +92,5 @@ wifi.handler.run.delayed=function(path,query) {
 	}
 };
 wifi.handler.run._ = function (path,query) {
-	 return {code:403,body:"Forbidden command: "+path+" "+query};
+	 return {code:404,body:"Unknown command: "+path};
 };
