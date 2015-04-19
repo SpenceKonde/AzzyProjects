@@ -90,3 +90,6 @@ wifi.handler.run.delayed=function(path,query) {
 		return {code:200,body:"Running command",head:{'Content-Type': 'text/plain', 'Refresh':'5; url=cmdresp.json'};
 	}
 };
+wifi.handler.run._ = function (path,query) {
+	 return {code:403,body:"Forbidden command: "+path+" "+query};
+};
