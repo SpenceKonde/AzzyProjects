@@ -76,8 +76,8 @@ wifi.handler.json.status= function (path,query) {
 };
 wifi.cmdresp="";
 wifi.handler.json.cmdresp=function(path,query) {
-	setTimeout("wifi.cmdresp="",10);
-	return wifi.cmdresp==""?{code:400,body"'{error:"No command response available"}:{code:200,body:this.cmdresp};
+	setTimeout("wifi.cmdresp='';",10);
+	return wifi.cmdresp==""?{code:400,body:'{error:"No command response available"}'}:{code:200,body:this.cmdresp};
 };
 wifi.handler.json._ = function (path,query) {
 	 return {code:404,body:"Invalid json data requested: "+path};
@@ -93,7 +93,7 @@ wifi.handler.run.code= function (path,query) {
 wifi.handler.run.delayed=function(path,query) {
 	if (1) {
 		setTimeout("wifi.cmdresp='{status:1}';",1500)
-		return {code:200,body:"Running command",head:{'Content-Type': 'text/plain', 'Refresh':'5; url=cmdresp.json'};
+		return {code:200,body:"Running command",head:{'Content-Type': 'text/html', 'Refresh':'5; url=cmdresp.json'};
 	}
 };
 wifi.handler.run._ = function (path,query) {
