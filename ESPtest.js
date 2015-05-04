@@ -33,10 +33,10 @@ wifi.onRequest=function (req, res) {
 	res.writeHead(rd.code,rd.head?rd.head:{'Content-Type': 'text/plain'});
 	if (!rd.file) {
 		res.write(rd.body);
-        res.end();
+        	res.end();
 	} else {
 		rd.file.pipe(res);
-        res.end();
+        	res.end();
 	}
 };
 
