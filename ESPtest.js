@@ -1,8 +1,13 @@
-Serial4.setup(9600, { rx: C11, tx : C10 });
+//Serial4.setup(9600, { rx: C11, tx : C10 }); //Original Espruino Board
+Serial2.setup(9600, { rx: A3, tx : A2 }); //Pico
+
+SPI2.setup({mosi:B15,miso:B14,sck:B13});
+E.connectSDCard(spi,B10);
+
 
 
 var http = require("http");
-var wifi = require("ESP8266WiFi").connect(Serial4, function(err) {
+var wifi = require("ESP8266WiFi").connect(Serial2, function(err) {
   
   if (err) throw err;
   wifi.reset(function(err) {
