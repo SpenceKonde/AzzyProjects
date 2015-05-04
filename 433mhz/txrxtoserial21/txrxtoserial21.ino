@@ -128,6 +128,9 @@ byte bitsrx;
 byte rxing;
 byte rxaridx;
 unsigned char txrxbuffer[rxmaxlen>>3];
+byte SerRXidx;
+unsigned long lastSer;
+byte SerRXmax;
 
 byte MyState;
 unsigned char MyCmd;
@@ -196,40 +199,65 @@ void loop() {
 		onListenST();
 		if (rxing==1){
 			return; //don't do anything else while actively receiving.
+		} else {
+			processSerial();
 		}
 	} else if (MyState==CommandST){ 
 		onCommandST();
 	} else {
 		MyState=ListenST; //in case we get into a bad state somehow.
 	}
-}
-
-
-
-
-void prepareEEPReadPayload() {
-	unsigned char Payload1=EEPROM.read(MyParam);
-	unsigned char Payload2=EEPROM.read(MyParam+MyExtParam);
-	unsigned char oldcsc=((MyAddress&0xF0)>>4)^(MyAddress&0x0F)^(0x0F)^(0x02)^((MyParam&0xF0)>>4)^(MyParam&0x0F)^(MyExtParam&0x0F);
-	txrxbuffer[0]=MyAddress;
-	txrxbuffer[1]=EEPROM.read(MyParam);
-	txrxbuffer[2]=EEPROM.read(MyParam+MyExtParam);
-	txrxbuffer[3]=oldcsc<<4;
-	TXLength=4;
-}
-
-void prepareTestPayload() { //MyParam sets the size of the payload to send.
-	Serial.println("prepareTestPayload called...");
-	for (byte i=1;i<MyParam;i++) { //if we wanted, we could pick a return address, and start with i=2, and then set up address/etc in txrxbuffer[0]. But this is just a demo.
-		txrxbuffer[i-1]=100+i; 
-		txrxbuffer[MyParam-1]=txrxbuffer[MyParam-1]^(100+i);
-		Serial.print("B");
-		Serial.print(i);
-		Serial.print(": ");
-		Serial.println(txrxbuffer[i]);
+	if (millis()-lastSer  > 5000) {
+		resetSer();
 	}
-	Serial.println("Payload generated.");
-	TXLength=MyParam;
+}
+
+void processSerial() {
+	while (Serial.available() > 0) {
+		if (SerRXidx < SerRXmax && rxing==2) {
+                 txrxbuffer[SerRXidx]= Serial.read();
+                 SerRXidx++;
+                 if (SerRXidx==SerRXmax) {
+                 	preparePayloadFromSerial();
+                 	doTransmit();
+                 	resetSer();
+                 }
+		} else if (rxing==0) {
+			byte rcv=Serial.read();
+			if (rcv=='S') {
+				SerRXmax=4;
+				rxing=2;
+			} else if (rcv=='M') {
+				SerRXmax=7;
+				rxing=2;
+			} else if (rcv=='L') {
+				SerRXmax=15;
+				rxing=2;
+			} else if (rcv=='E') {
+				SerRXmax=31;
+				rxing=2;
+			}
+		}
+		lastSer=millis();
+        }
+}
+
+void resetSer() {
+	if (rxing==2) {
+		rxing=0;
+	}
+	SerRXmax=0;
+	SerRXidx=0;
+}
+void preparePayloadFromSerial() {
+	txrxbuffer[0]=(txrxbuffer[0] & 0x3F);
+	if (SerRXmax>4) {
+		txrxbuffer[0]=txrxbuffer[0]|(SerRXmax==7?0x40:(SerRXmax==15?0x80:0xC0));
+		TXLength=SerRXmax+1;
+	} else {
+		txrxbuffer[3]=txrxbuffer[3]<<4;
+		TXLength=4;
+	}
 }
 
 void doTransmit(int rep) { //rep is the number of repetitions
@@ -276,11 +304,13 @@ void doTransmit(int rep) { //rep is the number of repetitions
 
 void onCommandST() {
   byte tem=txrxbuffer[0]>>6;
-  tem=4<<tem;
-  for (byte x=0;x<tem;tem++) {
+  tem=4<<tem-1
+  for (byte x=0;x<tem;x++) {
     Serial.print(txrxbuffer[x]);
   }
-  Serial.println("");
+  if (tem==3) {Serial.print((txrxbuffer[3]&0xF0)>>4);}
+  Serial.println("\r\n");
+  MyState=LISTEN_ST
 }
 
 void onListenST() {
