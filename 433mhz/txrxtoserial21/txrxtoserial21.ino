@@ -65,15 +65,11 @@ The example commands are:
 #include <EEPROM.h>
 
 
-#define rxpin 19
-#define txpin 18
+#define rxpin 10
+#define txpin 7
 #define CommandForgetTime 1000 //short, for testing
 
-#define btn1 15
-#define btn2 14
-#define btn3 17
-#define btn4 16
-#define rcvled 3
+#define rcvled 2
 #define rxmaxlen 256 //Used to set the size of txrx buffer (and checked against this to prevent overflows from messing stuff up)
 
 //These set the parameters for transmitting. 
@@ -173,18 +169,10 @@ void setup() {
 	bitsrx=0;
 	rxing=0;
 	MyState=ListenST;
-	pinMode(btn1,INPUT_PULLUP); //buttons for testing
-	pinMode(btn2,INPUT_PULLUP);
-	pinMode(btn3,INPUT_PULLUP);
-	pinMode(btn4,INPUT_PULLUP);
-	pinMode(9,OUTPUT);  //lights for testing
-	pinMode(10,OUTPUT);
-	pinMode(11,OUTPUT);
 	pinMode(rcvled,OUTPUT);
+	pinMode(txpin,OUTPUT);
+	pinMode(rxpin,INPUT);
 	Serial.begin(9600);
-	digitalWrite(9,1);  // RGB LED for testing on demo board
-	digitalWrite(10,1); // set them to 1 to turn off, since it's inverted
-	digitalWrite(11,1); //
 	digitalWrite(rcvled,1);
 	delay(1000);
 	Serial.println("Startup OK");
@@ -219,7 +207,7 @@ void processSerial() {
                  SerRXidx++;
                  if (SerRXidx==SerRXmax) {
                  	preparePayloadFromSerial();
-                 	doTransmit();
+                 	doTransmit(5);
                  	resetSer();
                  }
 		} else if (rxing==0) {
@@ -237,6 +225,7 @@ void processSerial() {
 				SerRXmax=31;
 				rxing=2;
 			}
+			Serial.print(">");
 		}
 		lastSer=millis();
         }
@@ -297,20 +286,20 @@ void doTransmit(int rep) { //rep is the number of repetitions
 		digitalWrite(txpin, 0); //make sure it's off;
 		delayMicroseconds(2000); //wait 2ms before doing the next round. 
 	}
-	Serial.println("Transmit done");
+	Serial.println(F("Transmit done"));
 	TXLength=0;
 }
 
 
 void onCommandST() {
   byte tem=txrxbuffer[0]>>6;
-  tem=4<<tem-1
+  tem=4<<tem-1;
   for (byte x=0;x<tem;x++) {
     Serial.print(txrxbuffer[x]);
   }
   if (tem==3) {Serial.print((txrxbuffer[3]&0xF0)>>4);}
   Serial.println("\r\n");
-  MyState=LISTEN_ST
+  MyState=ListenST;
 }
 
 void onListenST() {
@@ -340,7 +329,7 @@ void onListenST() {
 			if (bitsrx==2) {
 				pksize=32<<rxdata;
 				if (pksize>rxmaxlen) {
-					Serial.println("Packet this size not supported");
+					Serial.println(F("Packet this size not supported"));
 					resetListen();
 					return;
 				}
@@ -349,7 +338,7 @@ void onListenST() {
 				rxdata=0;
 				rxaridx++;
 				if (rxaridx*8==pksize) {
-					Serial.println("Receive done");
+					Serial.println(F("Receive done"));
 					parseRx();
 					//parseRx2(txrxbuffer,pksize/8);
 					resetListen();
@@ -375,7 +364,7 @@ void onListenST() {
 
 
 void parseRx() { //uses the globals. 
-	Serial.println("Parsing");
+	Serial.println(F("Parsing"));
 	unsigned char calccsc=0;
 	unsigned char rcvAdd=txrxbuffer[0]&0x3F;
 	//if (rcvAdd==MyAddress) {
@@ -392,9 +381,9 @@ void parseRx() { //uses the globals.
 		    		Serial.println(MyCmd);
 		    		Serial.println(MyParam);
 		    		Serial.println(MyExtParam);
-		    		Serial.println("Valid transmission received");
+		    		Serial.println(F("Valid transmission received"));
 	    		} else {
-	    			Serial.println("Bad CSC on 4 byte packet");
+	    			Serial.println(F("Bad CSC on 4 byte packet"));
 	    		}
 			} else {
 				for (byte i=1;i<(pksize/8);i++) {
@@ -408,13 +397,13 @@ void parseRx() { //uses the globals.
 					Serial.println(MyCmd);
 					Serial.println(MyParam);
 					Serial.println(MyExtParam);
-					Serial.println("Valid long transmission received");
+					Serial.println(F("Valid long transmission received"));
 				} else {
-					Serial.println("Bad CSC on long packet");
+					Serial.println(F("Bad CSC on long packet"));
 				}  
 			}
 		} else {
-			Serial.println("Already got it");
+			Serial.println(F("Already got it"));
 		} 
 	//} else {
 	//	Serial.println("Not for me");
@@ -444,11 +433,11 @@ unsigned long decode16(unsigned int inp) { return (inp&0x1FFF)*units[inp>>13]; }
 //Just for test/debug purposes;
 void parseRx2(unsigned char rxd[],byte len) {
 
-	Serial.println("Parsing long packet");
+	Serial.println(F("Parsing long packet"));
 	for (byte i=0;i<len;i++) {
 		Serial.println(rxd[i]);
 	}
-	Serial.println("Done");
+	Serial.println(F("Done"));
 }
 
 void ClearCMD() {  //This handles clearing of the commands, and also clears the lastChecksum value, which is used to prevent multiple identical packets received in succession from being processed.
