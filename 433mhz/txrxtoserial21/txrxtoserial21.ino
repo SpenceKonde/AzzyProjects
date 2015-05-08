@@ -74,7 +74,7 @@ The example commands are:
 
 //These set the parameters for transmitting. 
 
-
+/*
 #define txOneLength 550 //length of a 1
 #define txZeroLength 300 //length of a 0
 #define txLowTime 420 //length of the gap between bits
@@ -83,7 +83,7 @@ The example commands are:
 #define txTrainLen 200 //length of each pulse in training burst
 
 
-/*
+
 //These set the parameters for receiving; any packet where these criteria are not met is discarded. 
 // Version 2.0
 int rxSyncMin=1900; //minimum valid sync length
@@ -94,7 +94,7 @@ int rxOneMin=400; //minimum length for a valid 1
 int rxOneMax=600; //maximum length for a valid 1
 int rxLowMax=450; //longest low before packet discarded
 
-*/
+
 
 // Version 2.1
 #define rxSyncMin 1900 //minimum valid sync length
@@ -104,12 +104,28 @@ int rxLowMax=450; //longest low before packet discarded
 #define rxOneMin 450 //minimum length for a valid 1
 #define rxOneMax 750 //maximum length for a valid 1
 #define rxLowMax 600 //longest low before packet discarded
+*/
+// Version 2.1
+int rxSyncMin=1900 //minimum valid sync length
+int  rxSyncMax=2100 //maximum valid sync length
+int  rxZeroMin=120 //minimum length for a valid 0
+int  rxZeroMax=400 //maximum length for a valid 0
+int  rxOneMin=450 //minimum length for a valid 1
+int  rxOneMax=750 //maximum length for a valid 1
+int  rxLowMax=600 //longest low before packet discarded
+
+int  txOneLength=550 //length of a 1
+int  txZeroLength=300 //length of a 0
+int txLowTime=420 //length of the gap between bits
+int txTrainRep=30 //number of pulses in training burst
+int txSyncTime=2000 //length of sync
+int txTrainLen=200 //length of each pulse in training burst
 
 
 unsigned long units[]={1000,60000,900000,14400000,3600000,1,10,86400000}; //units for the 8/12/16-bit time values. 
 
 
-unsigned char MyAddress=31;
+byte MyAddress=0;
 
 
 //Pin state tracking and data for receiving. 
@@ -125,7 +141,7 @@ byte rxing;
 byte rxaridx;
 unsigned char txrxbuffer[rxmaxlen>>3];
 byte SerRXidx;
-unsigned long lastSer;
+unsigned long lastSer = 0;
 byte SerRXmax;
 
 byte MyState;
@@ -139,17 +155,19 @@ byte pksize=32;
 byte TXLength;
 unsigned long lastChecksum; //Not the same as the CSC - this is our hack to determine if packets are identical
 unsigned long forgetCmdAt; 
-byte last1;
-byte last2;
-byte last3;
-byte last4;
 int reccount;
 
 // digital out stuff
 
 // format: (enable)(pwm)pin - enable = 0, disable =1 (so unprogrammed eeprom reads as disabled) 
+/* 
 byte  digOutOpts[16]={0x49,0x0A,0x4B,255,255,255,255,255,255,255,255,255,255,255,255,255};
 
+
+byte last1;
+byte last2;
+byte last3;
+byte last4;
 
 unsigned long digOutOnAt[4]={0,0,0,0};
 unsigned long digOutOffAt[4]={0,0,0,0};
@@ -158,7 +176,7 @@ byte digOutOnPWM[4]={255,255,255,255};
 byte digOutOffPWM[4]={0,0,0,0};
 byte digOutFade[4]={0,0,0,0};
 byte digOutMode[4]={0,0,0,0};
-
+*/
 
 
 void setup() {
@@ -172,10 +190,13 @@ void setup() {
 	pinMode(rcvled,OUTPUT);
 	pinMode(txpin,OUTPUT);
 	pinMode(rxpin,INPUT);
+	if (EEPROM.read(0)<255) {
+		initFromEEPROM();
+	}
 	Serial.begin(9600);
 	digitalWrite(rcvled,1);
 	delay(1000);
-	Serial.println("Startup OK");
+	Serial.println(F("Startup OK"));
 
 }
 
@@ -195,9 +216,37 @@ void loop() {
 	} else {
 		MyState=ListenST; //in case we get into a bad state somehow.
 	}
-	if (millis()-lastSer  > 5000) {
+	if (millis()-lastSer  > 10000 && lastSer) {
 		resetSer();
 	}
+}
+
+void writeConfigToEEPROM() {
+	for (var i=0;i<28;i++) {
+		EEPROM.write(i,txrxbuffer[i])
+	}
+	initFromEEPROM();
+}
+
+void initFromEEPROM() {
+	MyAddress=EEPROM.read(0);
+	// Version 2.1 EEPROM.read(2)+(EEPROM.read(1)<<8);
+	
+	txSyncTime=EEPROM.read(2)+(EEPROM.read(1)<<8); //length of sync
+	txTrainRep=EEPROM.read(3); //number of pulses in training burst
+	txTrainLen=EEPROM.read(5)+(EEPROM.read(4)<<8); //length of each pulse in training burst
+	
+	txOneLength=EEPROM.read(7)+(EEPROM.read(6)<<8); //length of a 1
+	txZeroLength=EEPROM.read(9)+(EEPROM.read(8)<<8); //length of a 0
+	txLowTime=EEPROM.read(11)+(EEPROM.read(10)<<8); //length of the gap between bits
+	
+	rxSyncMin=EEPROM.read(13)+(EEPROM.read(12)<<8); //minimum valid sync length
+	rxSyncMax=EEPROM.read(15)+(EEPROM.read(14)<<8); //maximum valid sync length
+	rxZeroMin=EEPROM.read(17)+(EEPROM.read(16)<<8); //minimum length for a valid 0
+	rxZeroMax=EEPROM.read(19)+(EEPROM.read(18)<<8); //maximum length for a valid 0
+	rxOneMin=EEPROM.read(21)+(EEPROM.read(20)<<8); //minimum length for a valid 1
+	rxOneMax=EEPROM.read(23)+(EEPROM.read(22)<<8); //maximum length for a valid 1
+	rxLowMax=EEPROM.read(25)+(EEPROM.read(24)<<8); //longest low before packet discarded
 }
 
 void processSerial() {
@@ -206,8 +255,12 @@ void processSerial() {
                  txrxbuffer[SerRXidx]= Serial.read();
                  SerRXidx++;
                  if (SerRXidx==SerRXmax) {
-                 	preparePayloadFromSerial();
-                 	doTransmit(5);
+                 	if (SerRXMax==26) {
+                 		writeConfigToEEPROM();
+                 	} else {
+                 		preparePayloadFromSerial();
+                 		doTransmit(5);
+                 	}
                  	resetSer();
                  }
 		} else if (rxing==0) {
@@ -224,6 +277,11 @@ void processSerial() {
 			} else if (rcv=='E') {
 				SerRXmax=31;
 				rxing=2;
+			} else if (rcv=='C') {
+				SerRXmax=26;
+				rxing=2;
+			} else {
+				
 			}
 			Serial.print(">");
 		}
@@ -234,6 +292,10 @@ void processSerial() {
 void resetSer() {
 	if (rxing==2) {
 		rxing=0;
+	}
+	if (lastSer) {
+		lastSer=0;
+		Serial.print("\r\n");
 	}
 	SerRXmax=0;
 	SerRXidx=0;
@@ -294,6 +356,7 @@ void doTransmit(int rep) { //rep is the number of repetitions
 void onCommandST() {
   byte tem=txrxbuffer[0]>>6;
   tem=4<<tem-1;
+  Serial.println("$");
   for (byte x=0;x<tem;x++) {
     Serial.print(txrxbuffer[x]);
   }
@@ -318,10 +381,10 @@ void onListenST() {
 			} else if (bitlength > rxOneMin && bitlength < rxOneMax ) {
 				rxdata=(rxdata<<1)+1;
 			} else {
-  				//Serial.print("Reset wrong high len ");
-  				//Serial.print(bitlength);
-  				//Serial.print(" ");
-  				//Serial.println(bitsrx);
+  				Serial.print(F("Reset wrong high len "));
+  				Serial.print(bitlength);
+  				Serial.print(" ");
+  				Serial.println(bitsrx);
 				resetListen();
 				return;
 			}
@@ -353,7 +416,7 @@ void onListenST() {
 			return;
 		}
 		if (lastPinHighTime-lastPinLowTime > rxLowMax && rxing==1) {
-			//Serial.println(bitsrx);
+			Serial.println(bitsrx);
 			resetListen();
 			return;
 		}
@@ -367,7 +430,7 @@ void parseRx() { //uses the globals.
 	Serial.println(F("Parsing"));
 	unsigned char calccsc=0;
 	unsigned char rcvAdd=txrxbuffer[0]&0x3F;
-	//if (rcvAdd==MyAddress) {
+	if (rcvAdd==MyAddress || MyAddress==0) {
 		if (lastChecksum!=calcBigChecksum(byte(pksize/8))) {
 			lastChecksum=calcBigChecksum(byte(pksize/8));
 		    if (pksize==32) { //4 byte packet
@@ -405,9 +468,9 @@ void parseRx() { //uses the globals.
 		} else {
 			Serial.println(F("Already got it"));
 		} 
-	//} else {
-	//	Serial.println("Not for me");
-	//}
+	} else {
+		Serial.println(F("Not for me"));
+	}
 }
 
 unsigned long calcBigChecksum(byte len) {
