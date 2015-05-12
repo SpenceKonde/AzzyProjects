@@ -8,7 +8,7 @@
 <div class="section">
 <h2>Basics</h2>
 
-Packets are either normal (4 byte), or long (8, 16, or 32 byte). Firsty byte is destination address, second byte identifies the command. Checksum is last byte for long packets, last 4 bits for normal packets. 
+Packets are either normal (4 byte), or long (8, 16, or 32 byte). First byte is destination address, second byte identifies the command. Checksum is last byte for long packets, last 4 bits for normal packets. All devices have an address specified (either with #define or stored in EEPROM); If this is specified as 0, the device will process all packets. Likewise, packets with destination address of 0 may be processed by any device. 
 
 <h2> Timing </h2>
 
