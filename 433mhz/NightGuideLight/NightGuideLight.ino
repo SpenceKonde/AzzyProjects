@@ -1,8 +1,5 @@
 /*
-Remote control outlet driver
-
-This accepts commands 0x40 and 0x41 (Digital Set and Advanced Digital Set) over RF, controlling 3 relays and one 5V PWM output, using protocol v2.1
-
+Night guidance light, will respond to AzzyRF signal indicating that the door has closed, and respond by turning on an LED for 20 seconds, followed by fade. 
 */
 
 #define ListenST 1
@@ -11,13 +8,6 @@ This accepts commands 0x40 and 0x41 (Digital Set and Advanced Digital Set) over 
 
 #define rxpin 3
 #define CommandForgetTime 10000 
-
-#define btn1 15
-#define btn2 14
-#define btn3 17
-#define btn4 16
-#define rcvled 3
-#define rxmaxlen 64
 
 //These set the parameters for transmitting. 
 
@@ -34,7 +24,7 @@ This accepts commands 0x40 and 0x41 (Digital Set and Advanced Digital Set) over 
 unsigned long units[]={1000,60000,900000,14400000,3600000,1,10,86400000}; //units for the 8/12/16-bit time values. 
 
 
-byte MyAddress=20;
+byte MyAddress=0x00;
 
 
 //Pin state tracking and data for receiving. 
@@ -68,16 +58,13 @@ unsigned long forgetCmdAt;
 // format: (enable)(pwm)pin - enable = 0, disable =1 (so unprogrammed eeprom reads as disabled) 
 //byte  digOutOpts[16]={0x09,0x0A,0x0B,0x43,255,255,255,255,255,255,255,255,255,255,255,255};
 
+byte fadeSt;
+byte shelfSt;
+byte shelfst=0;
+unsigned long fadeAt;
+unsigned long shelfTimeout;
+unsigned long lastShelfBtn;
 
-unsigned long digOutOnAt[4]={0,0,0,0};
-unsigned long digOutOffAt[4]={0,0,0,0};
-unsigned long digOutTimer[4]={0,0,0,0};  //cycle time for blinking, fade step size for fading
-byte digOutOnPWM[4]={255,255,255,255};
-byte digOutOffPWM[4]={0,0,0,0};
-byte digOutFade[4]={0,0,0,0};
-byte digOutMode[4]={0,0,0,0};
-//byte last1;
-//byte last2;
 
 
 
@@ -95,18 +82,6 @@ void setup() {
 	//pinMode(btn3,INPUT_PULLUP);
 	//pinMode(btn4,INPUT_PULLUP);
 	//Serial.begin(9600);
-	for (byte i=0;i<4;i++) {
-		byte opt=EEPROM.read(i+0x20);
-
-		if (opt<128) {
-			if (opt>64) {
-				analogWrite(opt&0x3F,EEPROM.read(i+0x10));
-			} else {
-				digitalWrite(opt&0x3F,EEPROM.read(i+0x10)>>7);
-  				pinMode(opt&0x3F,OUTPUT);
-			}
-		}
-	}
 	//Serial.println("Startup OK");
 
 }
@@ -125,214 +100,56 @@ void loop() {
 	} else {
 		MyState=ListenST; //in case we get into a bad state somehow.
 	}
-//	handleButtons();
+	handleButtons();
 	handleDigOut();
+}
+
+void handleButtons() {
+	if (digitalRead(switchPin)==0) {
+		if (millis() - lastShelfBtn>100) { //debounce
+			if (shelfSt) {
+				shelfTimeout=millis(); 
+			} else {
+				shelfOnAt=millis();
+			}
+		} 
+		lastShelfBtn=millis(); 
+	}
 }
 
 void handleDigOut() {
 	unsigned long curMillis=millis();
-	for (byte i=0;i<4;i++) {
-		//byte opt=digOutOpts[i];
-		byte opt=EEPROM.read(i+0x20);
-		if (digOutMode[i]&2){
-			if (((digOutMode[i]&4)==4) && curMillis>digOutOffAt[i]) {
-				////Serial.println("Reverse fade active");
-				if (digOutFade[i]>digOutOffPWM[i] ){
-					digOutFade[i]--;
-					analogWrite(opt&0x3F,digOutFade[i]);
-					digOutOffAt[i]=curMillis+digOutTimer[i];
-				} else {
-					if (digOutMode[i]&8) {
-						digOutMode[i]=2;
-						digOutOnAt[i]=curMillis+digOutTimer[i];
-					} else if (digOutMode[i]&1) {
-						digOutMode[i]=3;
-						digOutOnAt[i]=curMillis+digOutTimer[i];
-					}
-				}
-			} else if (((digOutMode[i]&4)==0) && curMillis>digOutOnAt[i]) {
-				////Serial.println("Forward fade active");
-				if (digOutFade[i]<digOutOnPWM[i] ){
-					digOutFade[i]++;
-					analogWrite(opt&0x3F,digOutFade[i]);
-					digOutOnAt[i]=curMillis+digOutTimer[i];
-				} else {
-					if (digOutMode[i]&8) {
-						digOutMode[i]=6;
-						digOutOffAt[i]=curMillis+digOutTimer[i];
-					} else if (digOutMode[i]&1) {
-						digOutMode[i]=7;
-						digOutOffAt[i]=curMillis+digOutTimer[i];
-					}
-				}
-			}
-		} else if (digOutOnAt[i] && curMillis > digOutOnAt[i] ) {
-			digOutOnAt[i]=digOutTimer[i]*(digOutMode[i]&1)+millis();
-			analogWrite(opt&0x3F,digOutOnPWM[i]);
-			////Serial.println("Delayed turnon");
-		} else if (digOutOffAt[i] && curMillis > digOutOffAt[i]) {
-			digOutOffAt[i]=digOutTimer[i]*(digOutMode[i]&1)+millis();
-			analogWrite(opt&0x3F,digOutOffPWM[i]);
-			////Serial.println("Delayed turnoff");
+	if (curMillis>fadeAt && fadeSt) {
+		analogWrite(RED_PIN,fadeSt--);
+		fadeAt+=40;
+	}
+	if (curMillis>shelfTimeout) {
+		if (shelfSt) {
+			analogWrite(SHELF_PIN,shelfSt--);
+			shelfTimeout+=2
+		}
+	} else if (curMillis>shelfOnTimer){
+		if (shelfSt < SHELF_MAX) {
+			analogWrite(SHELF_PIN,shelfSt++);
+			shelfOnAt+=2
 		}
 	}
+	if (shelfSt==SHELF_MAX || shelfSt==0) {shelfTimeout=0; shelfOnTimer=0;}
 
 }
 
 
 void onCommandST() {
-	//Serial.print("onCommandST");
-	//Serial.println(MyCmd);
-	//Serial.println("and another test");
 	switch (MyCmd) {
-	//EEPROM.write(0x36,MyCmd);
-	case 0x40: {
-		//byte opt=digOutOpts[MyExtParam];
-		byte opt=EEPROM.read(0x20+MyExtParam);
-		//Serial.print(opt);
-		//Serial.println("Set command received");
-		if (opt < 128) {
-			if (opt < 64){ //no pwm
- 				//EEPROM.write(0x30,MyParam);
-				if (MyParam>127){
-  					digitalWrite(opt&0x3F,1);
-  				} else {
-    				digitalWrite(opt&0x3F,0);
-    				}
-				//Serial.println("Digital set");
-			} else {
- 				//EEPROM.write(0x31,MyParam);
-				analogWrite(opt&0x3F,MyParam);
-				//Serial.println("Analog set");
+	case 0xE1: {
+		if (MyExtParam==1 && MyParam==0) { //Upstairs door has been closed
+			if (analogRead(LDR_PIN) > LDR_THRESH) {
+				analogWrite(RED_PIN,RED_MAX);
+				fadeAt=millis()+20000;
+				fadeSt=255;
 			}
-			//EEPROM.write(0x32,0);
-		} 
-		digOutOffAt[MyExtParam]=0;
-		digOutMode[MyExtParam]=0;
-		digOutOnAt[MyExtParam]=0;
-		MyState=ListenST;
-		break;
+		}
 	}
-	case 0x41: {
-		byte pinid=MyParam>>4;
-		//Serial.println("Advanced set:");
-		//byte opt=digOutOpts[pinid];
-		byte opt=EEPROM.read(0x20+pinid);
-			//Serial.print("opt is");
-			//Serial.println(opt);
-		if (opt < 128) {
-			digOutOffAt[pinid]=0;
-			digOutMode[pinid]=0;
-			digOutOnAt[pinid]=0;
-			byte digpin=opt&0x3F;
-			//if (opt < 64){ //no pwm
-			//Serial.print("digital pin is");
-			//Serial.println(digpin);
-			//Serial.print("MyParam&0x0F is");
-			//Serial.println(MyParam&0x0F);
-			//switch-case on low 4 bits of the parameter, which specifies the type of operation. 
-			//Note the extensive use of fall-through in the interest of code reuse; many of the commands are similar to eachother.
-			switch (MyParam&0x0F) {
-				case 1:
-					if (opt>63) {
-						analogWrite(opt&0x3F,txrxbuffer[6]);
-						//Serial.println("Set delay set - analog");
-					} else {
-						digitalWrite(opt&0x3F,txrxbuffer[6]>>7);
-						//Serial.println("Set delay set - digital");
-					}
-					/* falls through */
-				case 0:
-					if (txrxbuffer[5]>127) {
-						digOutOnAt[pinid]=decode16(txrxbuffer[4]+(txrxbuffer[3]<<8))+millis();
-						digOutOnPWM[pinid]=txrxbuffer[5];
-						//Serial.println(" delay set - on");
-						//Serial.println(decode16(txrxbuffer[4]+(txrxbuffer[3]<<8)));
-					} else {
-						digOutOffAt[pinid]=decode16(txrxbuffer[4]+(txrxbuffer[3]<<8))+millis();
-						digOutOffPWM[pinid]=txrxbuffer[5];
-						//Serial.println(" delay set - off");
-						//Serial.println(decode16(txrxbuffer[4]+(txrxbuffer[3]<<8)));
-					}
-					break;
-				case 4:
-					digOutTimer[pinid]=decode16(txrxbuffer[4]+(txrxbuffer[3]<<8))+decode16(txrxbuffer[6]+(txrxbuffer[5]<<8)); //repeat (blink), this is sum of both times provided;
-					digOutMode[pinid]=1; //set mode to repeat
-					/* falls through */
-				case 2:
-					digOutOnAt[pinid]=decode16(txrxbuffer[4]+(txrxbuffer[3]<<8))+millis();  //set it to go on after the first delay supplied
-					digOutOffAt[pinid]=decode16(txrxbuffer[6]+(txrxbuffer[5]<<8))+digOutOnAt[pinid]; //and off after the second delay supplied. 
-					break;
-				case 5:
-					digOutTimer[pinid]=decode16(txrxbuffer[4]+(txrxbuffer[3]<<8))+decode16(txrxbuffer[6]+(txrxbuffer[5]<<8)); //repeat, inverted
-					digOutMode[pinid]=1;
-					/* falls through */
-				case 3:
-					digOutOffAt[pinid]=decode16(txrxbuffer[4]+(txrxbuffer[3]<<8))+millis();  //set it to go off after the first delay supplied
-					digOutOnAt[pinid]=decode16(txrxbuffer[6]+(txrxbuffer[5]<<8))+digOutOffAt[pinid]; //and onn after the second delay supplied. 
-					break;
-				case 10:
-					digOutMode[pinid]=1;
-					/* falls through */
-				case 9:
-					if (digOutMode[pinid]==0){ //make sure we haven't already set digOutMode (by fall through)
-						digOutMode[pinid]=8;
-					}
-					/* falls through */
-				case 8: //fade
-					if (opt<64) {
-						////Serial.print(opt);
-						//Serial.println("Fade not supported on non-PWM pins");
-						digOutMode[pinid]=0;
-						break;
-					}
-					digOutFade[pinid]=txrxbuffer[3];
-					if (txrxbuffer[3]<txrxbuffer[6]) {
-						digOutOffPWM[pinid]=txrxbuffer[3];
-						digOutOnPWM[pinid]=txrxbuffer[6];
-						digOutMode[pinid]=2|digOutMode[pinid];
-						digOutOnAt[pinid]=millis()+digOutTimer[pinid];
-						//Serial.print("digOutOnAt (for fade) set: ");
-						//Serial.println(digOutOnAt[pinid]);
-					} else {
-						digOutOnPWM[pinid]=txrxbuffer[3];
-						digOutOffPWM[pinid]=txrxbuffer[6];
-						digOutMode[pinid]=6|digOutMode[pinid];
-						digOutOffAt[pinid]=millis()+digOutTimer[pinid];
-						//Serial.print("digOutOffAt (for fade) set: ");
-						//Serial.println(digOutOffAt[pinid]);
-					}
-					digOutTimer[pinid]=decode16(txrxbuffer[5]+(txrxbuffer[4]<<8))/(digOutOnPWM[pinid]-digOutOffPWM[pinid]);
-					//Serial.print("digOutOnPWM (for fade) set: ");
-					//Serial.println(digOutOnPWM[pinid]);
-					//Serial.print("digOutOffPWM (for fade) set: ");
-					//Serial.println(digOutOffPWM[pinid]);
-					//Serial.print("digOutMode (for fade) set: ");
-					//Serial.println(digOutMode[pinid]);
-					//Serial.print("digOutTimer (for fade) set: ");
-					//Serial.println(digOutTimer[pinid]);
-					analogWrite(digpin,txrxbuffer[3]);
-					break;
-				//default:
-					//Serial.println("Invalid parameter");
-			}
-			//} else {
-			//	digOutState[MyExtParam]=MyParam;
-			//	analogWrite(opt&0x3F,MyParam);
-			//	//Serial.println("Analog set");
-			//}
-		} //else {
-			//Serial.println("Invalid output");
-		//}
-	}
-	MyState=ListenST;
-	break;
-	//case 0xF1: {
-	//	//Serial.println("checking flash");
-	//	if ((EEPROM.read(0x10+MyExtParam) != MyParam)&&MyExtParam<16&&MyCmd==0xF1 ) {
-	//		EEPROM.write(0x10+MyExtParam,MyParam);
-	//	}
-	//}
 		/* falls through */
 	default:
 		//Serial.print("Invalid command type");
@@ -406,7 +223,7 @@ void parseRx() { //uses the globals.
 	//Serial.println("Parsing");
 	unsigned char calccsc=0;
 	unsigned char rcvAdd=txrxbuffer[0]&0x3F;
-	if (rcvAdd==MyAddress) {
+	if (rcvAdd==MyAddress || MyAddress==0) {
 		if (lastChecksum!=calcBigChecksum(byte(pksize/8))) {
 			lastChecksum=calcBigChecksum(byte(pksize/8));
 		    if (pksize==32) { //4 byte packet
