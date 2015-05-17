@@ -64,12 +64,25 @@ The example commands are:
 #define CommandST 2
 #include <EEPROM.h>
 
+//Pin definitions:
 
-#define rxpin 10
+//pins 0 and 1 for xtal
+#define LED1 2
+#define LED2 3
+#define LED3 4
+//pins 5 and 6 used for serial 1 (command)
 #define txpin 7
+//pin 8 and 9 for serial 0 (program+debug)
+#define rxpin 10
+
+#define LED_ON 0
+#define LED_OFF 1
+
+
+
 #define CommandForgetTime 1000 //short, for testing
 
-#define rcvled 2
+#define rcvled LED1
 #define rxmaxlen 256 //Used to set the size of txrx buffer (and checked against this to prevent overflows from messing stuff up)
 
 //These set the parameters for transmitting. 
@@ -106,20 +119,20 @@ int rxLowMax=450; //longest low before packet discarded
 #define rxLowMax 600 //longest low before packet discarded
 */
 // Version 2.1
-int rxSyncMin=1900 //minimum valid sync length
-int  rxSyncMax=2100 //maximum valid sync length
-int  rxZeroMin=120 //minimum length for a valid 0
-int  rxZeroMax=400 //maximum length for a valid 0
-int  rxOneMin=450 //minimum length for a valid 1
-int  rxOneMax=750 //maximum length for a valid 1
-int  rxLowMax=600 //longest low before packet discarded
+int rxSyncMin=1900; //minimum valid sync length
+int  rxSyncMax=2100; //maximum valid sync length
+int  rxZeroMin=120; //minimum length for a valid 0
+int  rxZeroMax=400; //maximum length for a valid 0
+int  rxOneMin=450; //minimum length for a valid 1
+int  rxOneMax=750; //maximum length for a valid 1
+int  rxLowMax=600; //longest low before packet discarded
 
-int  txOneLength=550 //length of a 1
-int  txZeroLength=300 //length of a 0
-int txLowTime=420 //length of the gap between bits
-int txTrainRep=30 //number of pulses in training burst
-int txSyncTime=2000 //length of sync
-int txTrainLen=200 //length of each pulse in training burst
+int  txOneLength=550; //length of a 1
+int  txZeroLength=300; //length of a 0
+int txLowTime=420; //length of the gap between bits
+int txTrainRep=30; //number of pulses in training burst
+int txSyncTime=2000; //length of sync
+int txTrainLen=200; //length of each pulse in training burst
 
 
 unsigned long units[]={1000,60000,900000,14400000,3600000,1,10,86400000}; //units for the 8/12/16-bit time values. 
@@ -157,26 +170,7 @@ unsigned long lastChecksum; //Not the same as the CSC - this is our hack to dete
 unsigned long forgetCmdAt; 
 int reccount;
 
-// digital out stuff
 
-// format: (enable)(pwm)pin - enable = 0, disable =1 (so unprogrammed eeprom reads as disabled) 
-/* 
-byte  digOutOpts[16]={0x49,0x0A,0x4B,255,255,255,255,255,255,255,255,255,255,255,255,255};
-
-
-byte last1;
-byte last2;
-byte last3;
-byte last4;
-
-unsigned long digOutOnAt[4]={0,0,0,0};
-unsigned long digOutOffAt[4]={0,0,0,0};
-unsigned long digOutTimer[4]={0,0,0,0};  //cycle time for blinking, fade step size for fading
-byte digOutOnPWM[4]={255,255,255,255};
-byte digOutOffPWM[4]={0,0,0,0};
-byte digOutFade[4]={0,0,0,0};
-byte digOutMode[4]={0,0,0,0};
-*/
 
 
 void setup() {
@@ -187,16 +181,21 @@ void setup() {
 	bitsrx=0;
 	rxing=0;
 	MyState=ListenST;
-	pinMode(rcvled,OUTPUT);
+	pinMode(LED1,OUTPUT);
+	pinMode(LED2,OUTPUT);
+	pinMode(LED3,OUTPUT);
 	pinMode(txpin,OUTPUT);
 	pinMode(rxpin,INPUT);
+	Serial.begin(9600);
 	if (EEPROM.read(0)<255) {
 		initFromEEPROM();
+                Serial.println(F("Load from EEPROM"));
 	}
-	Serial.begin(9600);
-	digitalWrite(rcvled,1);
+        Serial1.begin(9600);
+	digitalWrite(LED2,LED_ON);
 	delay(1000);
-	Serial.println(F("Startup OK"));
+        digitalWrite(LED2,LED_OFF);
+       	Serial.println(F("Startup OK"));
 
 }
 
@@ -222,14 +221,16 @@ void loop() {
 }
 
 void writeConfigToEEPROM() {
-	for (var i=0;i<28;i++) {
-		EEPROM.write(i,txrxbuffer[i])
+	for (byte i=0;i<28;i++) {
+		EEPROM.write(i,txrxbuffer[i]);
 	}
 	initFromEEPROM();
 }
 
 void initFromEEPROM() {
-	MyAddress=EEPROM.read(0);
+  byte tAddr=EEPROM.read(0);
+  if (tAddr < 64) {
+	MyAddress=tAddr;
 	// Version 2.1 EEPROM.read(2)+(EEPROM.read(1)<<8);
 	
 	txSyncTime=EEPROM.read(2)+(EEPROM.read(1)<<8); //length of sync
@@ -247,6 +248,7 @@ void initFromEEPROM() {
 	rxOneMin=EEPROM.read(21)+(EEPROM.read(20)<<8); //minimum length for a valid 1
 	rxOneMax=EEPROM.read(23)+(EEPROM.read(22)<<8); //maximum length for a valid 1
 	rxLowMax=EEPROM.read(25)+(EEPROM.read(24)<<8); //longest low before packet discarded
+  }
 }
 
 void processSerial() {
@@ -255,7 +257,7 @@ void processSerial() {
                  txrxbuffer[SerRXidx]= Serial.read();
                  SerRXidx++;
                  if (SerRXidx==SerRXmax) {
-                 	if (SerRXMax==26) {
+                 	if (SerRXmax==26) {
                  		writeConfigToEEPROM();
                  	} else {
                  		preparePayloadFromSerial();
@@ -281,9 +283,9 @@ void processSerial() {
 				SerRXmax=26;
 				rxing=2;
 			} else {
-				
+				resetSer();
 			}
-			Serial.print(">");
+			if (rxing==2) {Serial.print(">");}
 		}
 		lastSer=millis();
         }

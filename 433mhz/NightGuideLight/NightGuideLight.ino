@@ -23,6 +23,15 @@ Night guidance light, will respond to AzzyRF signal indicating that the door has
 
 unsigned long units[]={1000,60000,900000,14400000,3600000,1,10,86400000}; //units for the 8/12/16-bit time values. 
 
+#define rxmaxlen 32
+
+#define RED_PIN 0
+#define SHELF_PIN 1
+#define SWITCH_PIN 2
+#define LDR_PIN 2 //adc number
+#define RED_MAX 255
+#define SHELF_MAX 255
+#define LDR_THRESH 200
 
 byte MyAddress=0x00;
 
@@ -38,6 +47,7 @@ byte lastTempPinState;
 byte bitsrx;
 byte rxing;
 byte rxaridx;
+
 unsigned char txrxbuffer[rxmaxlen>>3];
 
 byte MyState;
@@ -63,6 +73,7 @@ byte shelfSt;
 byte shelfst=0;
 unsigned long fadeAt;
 unsigned long shelfTimeout;
+unsigned long shelfOnAt;
 unsigned long lastShelfBtn;
 
 
@@ -105,8 +116,8 @@ void loop() {
 }
 
 void handleButtons() {
-	if (digitalRead(switchPin)==0) {
-		if (millis() - lastShelfBtn>100) { //debounce
+	if (digitalRead(SWITCH_PIN)==0) {
+		if (millis() - lastShelfBtn>1000) { //debounce
 			if (shelfSt) {
 				shelfTimeout=millis(); 
 			} else {
@@ -123,18 +134,18 @@ void handleDigOut() {
 		analogWrite(RED_PIN,fadeSt--);
 		fadeAt+=40;
 	}
-	if (curMillis>shelfTimeout) {
+	if (curMillis>shelfTimeout && shelfTimeout) {
 		if (shelfSt) {
 			analogWrite(SHELF_PIN,shelfSt--);
-			shelfTimeout+=2
+			shelfTimeout+=2;
 		}
-	} else if (curMillis>shelfOnTimer){
+	} else if (curMillis>shelfOnAt && shelfOnAt){
 		if (shelfSt < SHELF_MAX) {
 			analogWrite(SHELF_PIN,shelfSt++);
-			shelfOnAt+=2
+			shelfOnAt+=2;
 		}
 	}
-	if (shelfSt==SHELF_MAX || shelfSt==0) {shelfTimeout=0; shelfOnTimer=0;}
+	if (shelfSt==SHELF_MAX || shelfSt==0) {shelfTimeout=0; shelfOnAt=0;}
 
 }
 
