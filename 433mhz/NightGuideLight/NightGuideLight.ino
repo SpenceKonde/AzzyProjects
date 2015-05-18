@@ -31,9 +31,12 @@ unsigned long units[]={1000,60000,900000,14400000,3600000,1,10,86400000}; //unit
 #define LDR_PIN 2 //adc number
 #define RED_MAX 255
 #define SHELF_MAX 255
-#define LDR_THRESH 200
+#define LDR_THRESH 900
+#define RED_MAX_TIME 20000
+#define SHELF_MAX_TIME 300000L
 
-byte MyAddress=0x00;
+
+byte MyAddress=0x1F;
 
 
 //Pin state tracking and data for receiving. 
@@ -88,12 +91,6 @@ void setup() {
 	bitsrx=0;
 	rxing=0;
 	MyState=ListenST;
-	//pinMode(btn1,INPUT_PULLUP); //buttons for testing
-	//pinMode(btn2,INPUT_PULLUP);
-	//pinMode(btn3,INPUT_PULLUP);
-	//pinMode(btn4,INPUT_PULLUP);
-	//Serial.begin(9600);
-	//Serial.println("Startup OK");
 
 }
 
@@ -116,7 +113,7 @@ void loop() {
 }
 
 void handleButtons() {
-	if (digitalRead(SWITCH_PIN)==0) {
+	if (digitalRead(SWITCH_PIN)==1) {
 		if (millis() - lastShelfBtn>1000) { //debounce
 			if (shelfSt) {
 				shelfTimeout=millis(); 
@@ -145,7 +142,7 @@ void handleDigOut() {
 			shelfOnAt+=2;
 		}
 	}
-	if (shelfSt==SHELF_MAX || shelfSt==0) {shelfTimeout=0; shelfOnAt=0;}
+	if (shelfSt==SHELF_MAX || shelfSt==0) {shelfTimeout=((shelfSt==SHELF_MAX)?(millis()+SHELF_MAX_TIME):0); shelfOnAt=0;}
 
 }
 
@@ -156,8 +153,8 @@ void onCommandST() {
 		if (MyExtParam==1 && MyParam==0) { //Upstairs door has been closed
 			if (analogRead(LDR_PIN) > LDR_THRESH) {
 				analogWrite(RED_PIN,RED_MAX);
-				fadeAt=millis()+20000;
-				fadeSt=255;
+				fadeAt=millis()+RED_MAX_TIME;
+				fadeSt=RED_MAX;
 			}
 		}
 	}

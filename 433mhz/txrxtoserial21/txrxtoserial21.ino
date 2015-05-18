@@ -181,6 +181,9 @@ void setup() {
 	bitsrx=0;
 	rxing=0;
 	MyState=ListenST;
+        digitalWrite(LED1,LED_OFF);
+        digitalWrite(LED2,LED_OFF);
+        digitalWrite(LED3,LED_OFF);
 	pinMode(LED1,OUTPUT);
 	pinMode(LED2,OUTPUT);
 	pinMode(LED3,OUTPUT);
@@ -383,13 +386,13 @@ void onListenST() {
 			} else if (bitlength > rxOneMin && bitlength < rxOneMax ) {
 				rxdata=(rxdata<<1)+1;
 			} else {
-  				Serial.print(F("Reset wrong high len "));
-  				Serial.print(bitlength);
-  				Serial.print(" ");
-  				Serial.println(bitsrx);
+  				//Serial.print(F("Reset wrong high len "));
+  				//Serial.print(bitlength);
+  				//Serial.print(" ");
+  				//Serial.println(bitsrx);
 				resetListen();
 				return;
-			}
+			} 
 			bitsrx++;
 			if (bitsrx==2) {
 				pksize=32<<rxdata;
@@ -418,14 +421,23 @@ void onListenST() {
 			return;
 		}
 		if (lastPinHighTime-lastPinLowTime > rxLowMax && rxing==1) {
-			Serial.println(bitsrx);
+			//Serial.println(bitsrx);
 			resetListen();
 			return;
 		}
 	}
 }
 
-
+void showHex (const byte b)
+  {
+  // try to avoid using sprintf
+  char buf [4] = { ((b >> 4) & 0x0F) | '0', (b & 0x0F) | '0', ' ' , 0 };
+  if (buf [0] > '9')
+    buf [0] += 7;
+  if (buf [1] > '9')
+    buf [1] += 7;
+  Serial.println (buf);
+  }  // end of showHex
 
 
 void parseRx() { //uses the globals. 
@@ -443,9 +455,10 @@ void parseRx() { //uses the globals.
 		    		MyParam=txrxbuffer[2];
 		    		MyExtParam=txrxbuffer[3]>>4;
 		    		MyState=CommandST;
-		    		Serial.println(MyCmd);
-		    		Serial.println(MyParam);
-		    		Serial.println(MyExtParam);
+		    		showHex(txrxbuffer[0]);
+		    		showHex(MyCmd);
+		    		showHex(MyParam);
+		    		showHex(MyExtParam);
 		    		Serial.println(F("Valid transmission received"));
 	    		} else {
 	    			Serial.println(F("Bad CSC on 4 byte packet"));
