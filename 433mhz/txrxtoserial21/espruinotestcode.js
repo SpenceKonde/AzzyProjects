@@ -5,11 +5,18 @@ Serial1.on('data', function (data) {
   while (idx>=0) { 
     var line = cmd.substr(0,idx);
     cmd = cmd.substr(idx+1);
-    console.log(line);
+    processLine(line);
     idx = cmd.indexOf("\r");
   }
 });
 var cmd="";
+
+function processLine(l) {
+  console.log(l)
+  if (l.indexOf("$"==0){
+    recpack=E.toUint8Array();
+  }
+}
 
 function sendCmd(dat) {
   var len=dat.length;
