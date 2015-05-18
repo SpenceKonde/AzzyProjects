@@ -156,6 +156,7 @@ unsigned char txrxbuffer[rxmaxlen>>3];
 byte SerRXidx;
 unsigned long lastSer = 0;
 byte SerRXmax;
+byte SerCmBuff[16];
 
 byte MyState;
 unsigned char MyCmd;
@@ -256,6 +257,13 @@ void initFromEEPROM() {
 
 void processSerial() {
 	while (Serial.available() > 0) {
+		byte rcv=Serial.read();
+		if (rxing==0) {
+			if (rcv=='A') {
+				rxing=2;
+			} 
+		}
+		
 		if (SerRXidx < SerRXmax && rxing==2) {
                  txrxbuffer[SerRXidx]= Serial.read();
                  SerRXidx++;
@@ -270,6 +278,10 @@ void processSerial() {
                  }
 		} else if (rxing==0) {
 			byte rcv=Serial.read();
+			if (rcv=='A') {rxing=2;}
+		} else if (rxing==2) {
+			if (rcv=='T') {rxing=3;}
+		} else {
 			if (rcv=='S') {
 				SerRXmax=4;
 				rxing=2;
@@ -301,6 +313,9 @@ void resetSer() {
 	if (lastSer) {
 		lastSer=0;
 		Serial.print("\r\n");
+	}
+	for (int i=0;i<16;i++) {
+		SerCmBuff[i]=0;
 	}
 	SerRXmax=0;
 	SerRXidx=0;
