@@ -1,8 +1,8 @@
 //Serial4.setup(9600, { rx: C11, tx : C10 }); //Original Espruino Board
 Serial2.setup(9600, { rx: A3, tx : A2 }); //Pico
 
-SPI2.setup({mosi:B15,miso:B14,sck:B13});
-E.connectSDCard(spi,B10);
+//SPI2.setup({mosi:B15,miso:B14,sck:B13});
+//E.connectSDCard(spi,B10);
 
 
 
@@ -59,12 +59,12 @@ wifi.procreq = function (path,query) {
 		} else { rd.body="Handler does not support this file.";}
 	}
 	else {
-		var f = E.openFile(wifi.fpfx+"/"+path, "r");
-		if (f==undefined) {
+		//var f = E.openFile(wifi.fpfx+"/"+path, "r");
+		//if (f==undefined) {
 			rd.body="File "+path+" not found";
-		} else {
-			rd.code=200;
-			rd.file=f;
+		//} else {
+		//	rd.code=200;
+		//	rd.file=f;
 		}	
 	}
 	return rd;
