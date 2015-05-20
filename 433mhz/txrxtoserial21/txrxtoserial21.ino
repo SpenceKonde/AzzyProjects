@@ -161,6 +161,8 @@ byte SerCmBuff[16];
 #define SerialDbg Serial
 #define SerialCmd Serial
 #define HEX_OUT
+#define MAX_SER_LEN 15
+char serBuffer[numChars];
 
 byte MyState;
 unsigned char MyCmd;
@@ -278,13 +280,10 @@ void initFromEEPROM() {
 }
 
 void processSerial() {
+	static byte ndx = 0;
+	char endMarker = '\r';
+	char endMarker2 = '\n';
   while (SerialCmd.available() > 0) {
-    byte rcv = SerialCmd.read();
-    if (rxing == 0) {
-      if (rcv == 'A') {
-        rxing = 2;
-      }
-    }
 
     if (SerRXidx < SerRXmax && rxing == 2) {
       txrxbuffer[SerRXidx] = SerialCmd.read();
@@ -299,39 +298,59 @@ void processSerial() {
         resetSer();
       }
     } else if (rxing == 0) {
-      byte rcv = SerialCmd.read();
-      if (rcv == 'A') {
-        rxing = 2;
-      }
-    } else if (rxing == 2) {
-      if (rcv == 'T') {
-        rxing = 3;
-      }
-    } else {
-      if (rcv == 'S') {
-        SerRXmax = 4;
-        rxing = 2;
-      } else if (rcv == 'M') {
-        SerRXmax = 7;
-        rxing = 2;
-      } else if (rcv == 'L') {
-        SerRXmax = 15;
-        rxing = 2;
-      } else if (rcv == 'E') {
-        SerRXmax = 31;
-        rxing = 2;
-      } else if (rcv == 'C') {
-        SerRXmax = 26;
-        rxing = 2;
-      } else {
-        resetSer();
-      }
+      char rc=SerialCmd.read();
+      if (rc != endMarker && rc != endMarker2) {
+			  receivedChars[ndx] = rc;
+			  ndx++;
+			  if (ndx >= MAX_SER_LEN) {
+				  ndx = 0;
+			  }
+		  } else {
+		    if(ndx) { //index 0? means it's a \r\n pattern. 
+			    receivedChars[ndx] = '\0'; // terminate the string
+		      ndx = 0;
+			    checkCommand();
+		    }
+		  }
       if (rxing == 2) {
         SerialCmd.print(">");
       }
     }
     lastSer = millis();
   }
+}
+
+void checkCommand() {
+  switch (receivedChars) {
+    case "AT+SEND":
+        SerRXmax = 4;
+        rxing = 2;
+        break;
+    case "AT+SENDM":
+        SerRXmax = 7;
+        rxing = 2;
+        break;
+    case "AT+SENDL":
+        SerRXmax = 15;
+        rxing = 2;
+        break;
+    case "AT+SENDE":
+        SerRXmax = 31;
+        rxing = 2;
+        break;
+    case "AT+CONF":
+        SerRXmax = 26;
+        rxing = 2;
+        break;
+    default:
+        SerialCmd.println(F("ERROR\r"))
+        resetSer();
+  }
+  if (rxing == 2) {
+    SerialCmd.print(">");
+  }
+  
+
 }
 
 void resetSer() {
@@ -397,7 +416,7 @@ void doTransmit(int rep) { //rep is the number of repetitions
     digitalWrite(txpin, 0); //make sure it's off;
     delayMicroseconds(2000); //wait 2ms before doing the next round.
   }
-  SerialCmd.println(F("Transmit done"));
+  SerialCmd.println(F("TX OK\r"));
   TXLength = 0;
 }
 
