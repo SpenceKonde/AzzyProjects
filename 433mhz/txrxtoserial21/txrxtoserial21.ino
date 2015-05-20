@@ -240,14 +240,14 @@ void writeConfigToEEPROM() {
 void showHex (const byte b, const byte c = 0)
 {
   // try to avoid using sprintf
-  char buf [4] = { ((b >> 4) & 0x0F) | '0', (b & 0x0F) | '0', ' ' , 0 };
+  char buf [3] = { ((b >> 4) & 0x0F) | '0', (b & 0x0F) | '0',0};
   if (buf [0] > '9')
     buf [0] += 7;
   if (buf [1] > '9')
     buf [1] += 7;
 
   if (c) {
-    SerialCmd.print (buf);
+    SerialCmd.print(buf);
   } else {
     SerialDbg.print(buf);
   }
@@ -405,7 +405,7 @@ void doTransmit(int rep) { //rep is the number of repetitions
 void onCommandST() {
   byte tem = txrxbuffer[0] >> 6;
   tem = 4 << tem - 1;
-  SerialCmd.println("+");
+  SerialCmd.print(F("+"));
 #ifdef HEX_OUT
   for (byte x = 0; x < tem; x++) {
     showHex(txrxbuffer[x]);
@@ -505,9 +505,13 @@ void parseRx() { //uses the globals.
           MyExtParam = txrxbuffer[3] >> 4;
           MyState = CommandST;
           showHex(txrxbuffer[0],0);
+          SerialDbg.print(":");
           showHex(MyCmd);
+          SerialDbg.print(":");
           showHex(MyParam);
+          SerialDbg.print(":");
           showHex(MyExtParam);
+          SerialDbg.println();
           SerialDbg.println(F("Valid transmission received"));
         } else {
           SerialDbg.println(F("Bad CSC on 4 byte packet"));
@@ -521,9 +525,11 @@ void parseRx() { //uses the globals.
           MyParam = txrxbuffer[2];
           MyExtParam = txrxbuffer[3];
           MyState = CommandST; //The command state needs to handle the rest of the buffer if sending long commands.
-          SerialDbg.println(MyCmd);
-          SerialDbg.println(MyParam);
-          SerialDbg.println(MyExtParam);
+          for (byte i = 0; i < (pksize/8); i++) {
+            showHex(txrxbuffer[i]);
+            SerialDbg.print(":");
+          }
+          SerialDbg.println();
           SerialDbg.println(F("Valid long transmission received"));
         } else {
           SerialDbg.println(F("Bad CSC on long packet"));
@@ -561,16 +567,6 @@ unsigned long decode12(unsigned int inp) {
 }
 unsigned long decode16(unsigned int inp) {
   return (inp & 0x1FFF) * units[inp >> 13];
-}
-
-//Just for test/debug purposes;
-void parseRx2(unsigned char rxd[], byte len) {
-
-  SerialDbg.println(F("Parsing long packet"));
-  for (byte i = 0; i < len; i++) {
-    SerialDbg.println(rxd[i]);
-  }
-  SerialDbg.println(F("Done"));
 }
 
 void ClearCMD() {  //This handles clearing of the commands, and also clears the lastChecksum value, which is used to prevent multiple identical packets received in succession from being processed.
