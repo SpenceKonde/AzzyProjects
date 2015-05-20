@@ -73,12 +73,12 @@ unsigned long lastShelfBtn;
 #define SHELF_PIN 1
 #define SWITCH_PIN 2
 #define LDR_PIN 2 //adc number
-#define RED_MAX 255
-#define SHELF_MAX 192
+#define RED_MAX 192
+#define SHELF_MAX 255
 #define LDR_THRESH 850
-#define RED_MAX_TIME 12000L
+#define RED_MAX_TIME 14000L
 #define SHELF_MAX_TIME 300000L
-#define SHELF_FADE_DELAY 5
+#define SHELF_FADE_DELAY 4
 #define RED_FADE_DELAY 48
 
 
