@@ -161,6 +161,7 @@ byte SerCmBuff[16];
 #define SerialDbg Serial
 #define SerialCmd Serial
 #define HEX_OUT
+#define HEX_IN
 #define MAX_SER_LEN 15
 char serBuffer[numChars];
 
@@ -280,15 +281,29 @@ void initFromEEPROM() {
 }
 
 void processSerial() {
+	static byte minb[3]={0,0,0};
 	static byte ndx = 0;
 	char endMarker = '\r';
 	char endMarker2 = '\n';
   while (SerialCmd.available() > 0) {
 
     if (SerRXidx < SerRXmax && rxing == 2) {
+#ifdef HEX_IN
+    	if (ndx==1) {
+    		minb[1]=SerialCmd.read();
+    		ndx=0;
+    		txrxbuffer[SerRXidx]=strtol(minb,,16);
+      SerRXidx++;
+    	} else {
+    		minb[0]=SerialCmd.read();
+    		ndx=1;
+    	}
+#else     	
       txrxbuffer[SerRXidx] = SerialCmd.read();
       SerRXidx++;
+#endif
       if (SerRXidx == SerRXmax) {
+    		ndx=0;
         if (SerRXmax == 26) {
           writeConfigToEEPROM();
         } else {
@@ -307,7 +322,7 @@ void processSerial() {
 			  }
 		  } else {
 		    if(ndx) { //index 0? means it's a \r\n pattern. 
-			    receivedChars[ndx] = '\0'; // terminate the string
+			receivedChars[ndx] = '\0'; // terminate the string
 		      ndx = 0;
 			    checkCommand();
 		    }
