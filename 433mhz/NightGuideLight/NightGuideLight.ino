@@ -88,10 +88,10 @@ void setup() {
   lastPinState = 0;
   lastPinLowTime = 0;
   lastPinHighTime = 0;
-  pinMode(LDR_PIN,INPUT);
-  pinMode(SHELF_PIN,OUTPUT);
-  pinMode(RED_PIN,OUTPUT);
-  pinMode(SWITCH_PIN,INPUT);
+  pinMode(LDR_PIN, INPUT);
+  pinMode(SHELF_PIN, OUTPUT);
+  pinMode(RED_PIN, OUTPUT);
+  pinMode(SWITCH_PIN, INPUT);
   rxdata = 0;
   bitsrx = 0;
   rxing = 0;
@@ -125,43 +125,43 @@ void handleButtons() {
       } else {
         shelfOnAt = millis();
       }
-      lastShelfBtn=millis();
+      lastShelfBtn = millis();
     }
   }
 }
 
 void handleDigOut() {
   unsigned long curMillis = millis();
-  if (curMillis > fadeAt && fadeSt <255)  {
+  if (curMillis > fadeAt && fadeSt < 255)  {
     analogWrite(RED_PIN, ++fadeSt);
     fadeAt += RED_FADE_DELAY;
   }
   if (curMillis >= shelfTimeout && shelfTimeout) {
     if (shelfSt > 0) {
       //digitalWrite(RED_PIN,1);
-  //delay(90);
-  //digitalWrite(RED_PIN,0);
+      //delay(90);
+      //digitalWrite(RED_PIN,0);
       //delay(10);
-     // digitalWrite(RED_PIN,1);
+      // digitalWrite(RED_PIN,1);
       analogWrite(SHELF_PIN, --shelfSt);
       shelfTimeout += SHELF_FADE_DELAY;
     }
   }
   if (curMillis >= shelfOnAt && shelfOnAt > 0) {
-   
+
     if (shelfSt <= SHELF_MAX) {
-      
+
       analogWrite(SHELF_PIN, ++shelfSt);
       shelfOnAt += SHELF_FADE_DELAY;
     }
   }
-  if (shelfSt >= SHELF_MAX && shelfTimeout<curMillis) {
-    shelfOnAt=0;
-    shelfTimeout=curMillis+SHELF_MAX_TIME;
-  } else if (shelfSt==0 && (shelfOnAt || shelfTimeout)) {
+  if (shelfSt >= SHELF_MAX && shelfTimeout < curMillis) {
+    shelfOnAt = 0;
+    shelfTimeout = curMillis + SHELF_MAX_TIME;
+  } else if (shelfSt == 0 && (shelfOnAt || shelfTimeout)) {
     shelfTimeout = 0;
     shelfOnAt = 0;
-  
+
   }
 
 }
@@ -171,14 +171,17 @@ void onCommandST() {
   switch (MyCmd) {
     case 0xE1: {
         if (MyExtParam == 1 && MyParam == 0) { //Upstairs door has been closed
-          if (analogRead(LDR_PIN) > LDR_THRESH) {
-            analogWrite(RED_PIN, 255-RED_MAX);
+          analogRead(LDR_PIN);
+          analogRead(LDR_PIN);
+          int lightread=(analogRead(LDR_PIN)+analogRead(LDR_PIN)+analogRead(LDR_PIN)+analogRead(LDR_PIN))/4; //sometimes first reads are wacky
+          if (lightread > LDR_THRESH) {
+            analogWrite(RED_PIN, 255 - RED_MAX);
             fadeAt = millis() + RED_MAX_TIME;
-            fadeSt = 255-RED_MAX;
-            
-          } 
+            fadeSt = 255 - RED_MAX;
+
+          }
+        }
       }
-    }   
   }
   MyState = ListenST;
 }
