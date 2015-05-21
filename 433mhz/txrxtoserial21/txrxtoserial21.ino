@@ -440,7 +440,7 @@ void doTransmit(int rep) { //rep is the number of repetitions
 
 void onCommandST() {
   byte tem = txrxbuffer[0] >> 6;
-  tem = 4 << tem - 1;
+  tem = (4 << tem) - 1;
   SerialCmd.print(F("+"));
 #ifdef HEX_OUT
   for (byte x = 0; x < tem; x++) {
