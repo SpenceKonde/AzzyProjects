@@ -149,7 +149,7 @@ unsigned long lastTempHighTime = 0;
 unsigned long lastTempLowTime = 0;
 byte rxdata;
 byte lastTempPinState;
-byte bitsrx;
+int bitsrx;
 byte rxing;
 byte rxaridx;
 unsigned char txrxbuffer[rxmaxlen >> 3];
