@@ -400,8 +400,9 @@ void doTransmit(int rep) { //rep is the number of repetitions
   } else {
     txrxbuffer[TXLength - 1] = txchecksum;
   }
+  
   for (byte r = 0; r < rep; r++) {
-    ;
+    //noInterrupts();
     for (byte j = 0; j < txTrainRep; j++) {
       delayMicroseconds(txTrainLen);
       digitalWrite(txpin, 1);
@@ -425,6 +426,7 @@ void doTransmit(int rep) { //rep is the number of repetitions
     }
     //done with sending this packet;
     digitalWrite(txpin, 0); //make sure it's off;
+  //interrupts();
     delayMicroseconds(2000); //wait 2ms before doing the next round.
   }
   showHex(txrxbuffer[0], 0);
@@ -519,7 +521,9 @@ void onListenST() {
       return;
     }
     if (lastPinHighTime - lastPinLowTime > rxLowMax && rxing == 1) {
-      //Serial.println(bitsrx);
+      SerialDbg.println(F("Low time too long"));
+      SerialDbg.println(lastPinHighTime - lastPinLowTime);
+      showHex(bitsrx);
       resetListen();
       return;
     }
