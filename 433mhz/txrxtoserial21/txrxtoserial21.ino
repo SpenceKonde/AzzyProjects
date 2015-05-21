@@ -164,7 +164,7 @@ char * pEnd; //dummy pointer for sto
 #define SerialCmd Serial
 #define HEX_OUT
 #define HEX_IN
-#define MAX_SER_LEN 15
+#define MAX_SER_LEN 10
 char serBuffer[MAX_SER_LEN];
 
 byte MyState;
@@ -245,7 +245,7 @@ void writeConfigToEEPROM() {
 void showHex (const byte b, const byte c = 0)
 {
   // try to avoid using sprintf
-  char buf [3] = { ((b >> 4) & 0x0F) | '0', (b & 0x0F) | '0',0};
+  char buf [3] = { ((b >> 4) & 0x0F) | '0', (b & 0x0F) | '0', 0};
   if (buf [0] > '9')
     buf [0] += 7;
   if (buf [1] > '9')
@@ -259,7 +259,7 @@ void showHex (const byte b, const byte c = 0)
 }  // end of showHex
 
 void initFromEEPROM() {
-  byte tAddr = EEPROM.read(0);
+  /*byte tAddr = EEPROM.read(0);
   if (tAddr < 64) {
     MyAddress = tAddr;
     // Version 2.1 EEPROM.read(2)+(EEPROM.read(1)<<8);
@@ -280,32 +280,34 @@ void initFromEEPROM() {
     rxOneMax = EEPROM.read(23) + (EEPROM.read(22) << 8); //maximum length for a valid 1
     rxLowMax = EEPROM.read(25) + (EEPROM.read(24) << 8); //longest low before packet discarded
   }
+  */
+
 }
 
 void processSerial() {
-	static char minb[3]={0,0,0};
-	static byte ndx = 0;
-	char endMarker = '\r';
-	char endMarker2 = '\n';
+  static char minb[3] = {0, 0, 0};
+  static byte ndx = 0;
+  char endMarker = '\r';
+  char endMarker2 = '\n';
   while (SerialCmd.available() > 0) {
 
     if (SerRXidx < SerRXmax && rxing == 2) {
 #ifdef HEX_IN
-    	if (ndx==1) {
-    		minb[1]=SerialCmd.read();
-    		ndx=0;
-    		txrxbuffer[SerRXidx]=strtol(minb,&pEnd,16);
-      SerRXidx++;
-    	} else {
-    		minb[0]=SerialCmd.read();
-    		ndx=1;
-    	}
-#else     	
+      if (ndx == 1) {
+        minb[1] = SerialCmd.read();
+        ndx = 0;
+        txrxbuffer[SerRXidx] = strtol(minb, &pEnd, 16);
+        SerRXidx++;
+      } else {
+        minb[0] = SerialCmd.read();
+        ndx = 1;
+      }
+#else
       txrxbuffer[SerRXidx] = SerialCmd.read();
       SerRXidx++;
 #endif
       if (SerRXidx == SerRXmax) {
-    		ndx=0;
+        ndx = 0;
         if (SerRXmax == 26) {
           writeConfigToEEPROM();
         } else {
@@ -315,50 +317,50 @@ void processSerial() {
         resetSer();
       }
     } else if (rxing == 0) {
-      char rc=SerialCmd.read();
+      char rc = SerialCmd.read();
       if (rc != endMarker && rc != endMarker2) {
-			  serBuffer[ndx] = rc;
-			  ndx++;
-			  if (ndx >= MAX_SER_LEN) {
-				  ndx = 0;
-			  }
-		  } else {
-		    if(ndx) { //index 0? means it's a \r\n pattern. 
-			serBuffer[ndx] = '\0'; // terminate the string
-		      ndx = 0;
-			    checkCommand();
-		    }
-		  }
+        serBuffer[ndx] = rc;
+        ndx++;
+        if (ndx >= MAX_SER_LEN) {
+          ndx = 0;
+        }
+      } else {
+        if (ndx) { //index 0? means it's a \r\n pattern.
+          serBuffer[ndx] = '\0'; // terminate the string
+          ndx = 0;
+          checkCommand();
+        }
+      }
     }
     lastSer = millis();
   }
 }
 
 void checkCommand() {
-  if (strcmp (serBuffer,"AT+SEND")==0) {
-        SerRXmax = 4;
-        rxing = 2;
-  } else if (strcmp (serBuffer,"AT+SENDM")==0){
-        SerRXmax = 7;
-        rxing = 2;
-  } else if (strcmp (serBuffer,"AT+SENDL")==0){
-        SerRXmax = 15;
-        rxing = 2;
-  } else if (strcmp (serBuffer,"AT+SENDE")==0){
-        SerRXmax = 31;
-        rxing = 2;
-  } else if (strcmp (serBuffer,"AT+CONF")==0){
-        SerRXmax = 26;
-        rxing = 2;
+  if (strcmp (serBuffer, "AT+SEND") == 0) {
+    SerRXmax = 4;
+    rxing = 2;
+  } else if (strcmp (serBuffer, "AT+SENDM") == 0) {
+    SerRXmax = 7;
+    rxing = 2;
+  } else if (strcmp (serBuffer, "AT+SENDL") == 0) {
+    SerRXmax = 15;
+    rxing = 2;
+  } else if (strcmp (serBuffer, "AT+SENDE") == 0) {
+    SerRXmax = 31;
+    rxing = 2;
+  } else if (strcmp (serBuffer, "AT+CONF") == 0) {
+    SerRXmax = 26;
+    rxing = 2;
   } else {
-        SerialCmd.println(F("ERROR\r"));
-        SerialCmd.println(serBuffer);
-        resetSer();
+    SerialCmd.println(F("ERROR\r"));
+    SerialCmd.println(serBuffer);
+    resetSer();
   }
   if (rxing == 2) {
     SerialCmd.print(">");
   }
-  
+
 
 }
 
@@ -425,14 +427,14 @@ void doTransmit(int rep) { //rep is the number of repetitions
     digitalWrite(txpin, 0); //make sure it's off;
     delayMicroseconds(2000); //wait 2ms before doing the next round.
   }
-          showHex(txrxbuffer[0],0);
-          SerialDbg.print(":");
-          showHex(txrxbuffer[1],0);
-          SerialDbg.print(":");
-          showHex(txrxbuffer[2],0);
-          SerialDbg.print(":");
-          showHex(txrxbuffer[3],0);
-          SerialDbg.print(":");
+  showHex(txrxbuffer[0], 0);
+  SerialDbg.print(":");
+  showHex(txrxbuffer[1], 0);
+  SerialDbg.print(":");
+  showHex(txrxbuffer[2], 0);
+  SerialDbg.print(":");
+  showHex(txrxbuffer[3], 0);
+  SerialDbg.print(":");
   SerialCmd.println(F("TX OK\r"));
   TXLength = 0;
 }
@@ -440,26 +442,26 @@ void doTransmit(int rep) { //rep is the number of repetitions
 
 void onCommandST() {
   byte tem = txrxbuffer[0] >> 6;
-  tem = (4 << tem) - 1;
+  tem = (4 << tem);
   SerialCmd.print(F("+"));
 #ifdef HEX_OUT
   for (byte x = 0; x < tem; x++) {
     showHex(txrxbuffer[x]);
   }
-  if (tem == 3) { //means it was a short 
+  if (tem == 3) { //means it was a short
     showHex((txrxbuffer[3] & 0xF0) >> 4);
   }
 #else
-  SerialCmd.print(tem==3?4:tem);
+  SerialCmd.print(tem == 3 ? 4 : tem);
   SerialCmd.print(F(",");
   for (byte x = 0; x < tem; x++) {
-    SerialCmd.print(txrxbuffer[x]);
+  SerialCmd.print(txrxbuffer[x]);
   }
-  if (tem == 3) { //means it was a short 
-    SerialCmd.print((txrxbuffer[3] & 0xF0) >> 4);
+  if (tem == 3) { //means it was a short
+  SerialCmd.print((txrxbuffer[3] & 0xF0) >> 4);
   }
 #endif
-  
+
   SerialCmd.println("\r");
   MyState = ListenST;
 }
@@ -480,10 +482,12 @@ void onListenST() {
       } else if (bitlength > rxOneMin && bitlength < rxOneMax ) {
         rxdata = (rxdata << 1) + 1;
       } else {
-        //Serial.print(F("Reset wrong high len "));
-        //Serial.print(bitlength);
-        //Serial.print(" ");
-        //Serial.println(bitsrx);
+        if (bitsrx > 10) {
+          Serial.print(F("Reset wrong high len "));
+          Serial.print(bitlength);
+          Serial.print(" ");
+          Serial.println(bitsrx);
+        }
         resetListen();
         return;
       }
@@ -540,7 +544,7 @@ void parseRx() { //uses the globals.
           MyParam = txrxbuffer[2];
           MyExtParam = txrxbuffer[3] >> 4;
           MyState = CommandST;
-          showHex(txrxbuffer[0],0);
+          showHex(txrxbuffer[0], 0);
           SerialDbg.print(":");
           showHex(MyCmd);
           SerialDbg.print(":");
@@ -561,7 +565,7 @@ void parseRx() { //uses the globals.
           MyParam = txrxbuffer[2];
           MyExtParam = txrxbuffer[3];
           MyState = CommandST; //The command state needs to handle the rest of the buffer if sending long commands.
-          for (byte i = 0; i < (pksize/8); i++) {
+          for (byte i = 0; i < (pksize / 8); i++) {
             showHex(txrxbuffer[i]);
             SerialDbg.print(":");
           }
