@@ -174,7 +174,7 @@ unsigned char MyExtParam;
 unsigned long curTime;
 int count = 0;
 int badcsc = 0;
-byte pksize = 32;
+int pksize = 32;
 byte TXLength;
 unsigned long lastChecksum; //Not the same as the CSC - this is our hack to determine if packets are identical
 unsigned long forgetCmdAt;
