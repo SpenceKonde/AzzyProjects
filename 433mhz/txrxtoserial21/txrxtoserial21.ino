@@ -166,7 +166,7 @@ char * pEnd; //dummy pointer for sto
 #define HEX_IN
 #define MAX_SER_LEN 10
 char serBuffer[MAX_SER_LEN];
-//#define USE_ACK
+#define USE_ACK
 
 byte MyState;
 unsigned char MyCmd;
@@ -205,8 +205,8 @@ void setup() {
   pinMode(rxpin, INPUT);
   Serial.begin(9600);
   if (EEPROM.read(0) < 255) {
-    initFromEEPROM();
-    SerialDbg.println(F("Load from EEPROM"));
+    //initFromEEPROM();
+    //SerialDbg.println(F("Load from EEPROM"));
   }
   Serial1.begin(9600);
   digitalWrite(LED2, LED_ON);
