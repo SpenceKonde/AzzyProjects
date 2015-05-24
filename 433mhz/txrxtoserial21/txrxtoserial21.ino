@@ -358,7 +358,7 @@ void checkCommand() {
     resetSer();
   }
   if (rxing == 2) {
-    SerialCmd.print(">");
+    SerialCmd.print(F(">"));
   }
 
 
@@ -370,7 +370,7 @@ void resetSer() {
   }
   if (lastSer) {
     lastSer = 0;
-    SerialCmd.print("\r");
+    SerialCmd.print(F("\r"));
   }
   for (int i = 0; i < 16; i++) {
     SerCmBuff[i] = 0;
@@ -429,14 +429,6 @@ void doTransmit(int rep) { //rep is the number of repetitions
   //interrupts();
     delayMicroseconds(2000); //wait 2ms before doing the next round.
   }
-  showHex(txrxbuffer[0], 0);
-  SerialDbg.print(":");
-  showHex(txrxbuffer[1], 0);
-  SerialDbg.print(":");
-  showHex(txrxbuffer[2], 0);
-  SerialDbg.print(":");
-  showHex(txrxbuffer[3], 0);
-  SerialDbg.print(":");
   SerialCmd.println(F("TX OK\r"));
   TXLength = 0;
 }
@@ -484,12 +476,12 @@ void onListenST() {
       } else if (bitlength > rxOneMin && bitlength < rxOneMax ) {
         rxdata = (rxdata << 1) + 1;
       } else {
-        if (bitsrx > 10) {
-          Serial.print(F("Reset wrong high len "));
-          Serial.print(bitlength);
-          Serial.print(" ");
-          Serial.println(bitsrx);
-        }
+        //if (bitsrx > 10) {
+        //  Serial.print(F("Reset wrong high len "));
+        //  Serial.print(bitlength);
+        //  Serial.print(" ");
+        //  Serial.println(bitsrx);
+        //}
         resetListen();
         return;
       }
@@ -521,9 +513,6 @@ void onListenST() {
       return;
     }
     if (lastPinHighTime - lastPinLowTime > rxLowMax && rxing == 1) {
-      SerialDbg.println(F("Low time too long"));
-      SerialDbg.println(lastPinHighTime - lastPinLowTime);
-      showHex(bitsrx);
       resetListen();
       return;
     }
@@ -548,14 +537,14 @@ void parseRx() { //uses the globals.
           MyParam = txrxbuffer[2];
           MyExtParam = txrxbuffer[3] >> 4;
           MyState = CommandST;
-          showHex(txrxbuffer[0], 0);
-          SerialDbg.print(":");
+         /* showHex(txrxbuffer[0], 0);
+          SerialDbg.print(F(":"));
           showHex(MyCmd);
-          SerialDbg.print(":");
+          SerialDbg.print(F(":"));
           showHex(MyParam);
-          SerialDbg.print(":");
+          SerialDbg.print(F(":"));
           showHex(MyExtParam);
-          SerialDbg.println();
+          SerialDbg.println(); */
           SerialDbg.println(F("Valid transmission received"));
         } else {
           SerialDbg.println(F("Bad CSC on 4 byte packet"));
