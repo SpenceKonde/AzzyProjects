@@ -166,6 +166,7 @@ char * pEnd; //dummy pointer for sto
 #define HEX_IN
 #define MAX_SER_LEN 10
 char serBuffer[MAX_SER_LEN];
+//#define USE_ACK
 
 byte MyState;
 unsigned char MyCmd;
@@ -180,6 +181,8 @@ unsigned long lastChecksum; //Not the same as the CSC - this is our hack to dete
 unsigned long forgetCmdAt;
 int reccount;
 
+byte lastCmdSent;
+byte lastCscSent;
 
 
 
@@ -389,6 +392,18 @@ void preparePayloadFromSerial() {
   }
 }
 
+void prepareAckPayload() {
+  byte plen=txrxbuffer[0]>>6;
+  plen = 4<<plen;
+  txrxbuffer[0] = (txrxbuffer[0] & 0x3F);
+  txrxbuffer[2] = txrxbuffer[1];
+  txrxbuffer[1] = 0xE8;
+  txrxbuffer[3] = (txrxbuffer[plen-1] && 0x0F);
+  TXLength=4;
+}
+
+
+
 void doTransmit(int rep) { //rep is the number of repetitions
   byte txchecksum = 0;
   for (byte i = 0; i < TXLength - 1; i++) {
@@ -400,7 +415,8 @@ void doTransmit(int rep) { //rep is the number of repetitions
   } else {
     txrxbuffer[TXLength - 1] = txchecksum;
   }
-  
+  lastCmdSent=txrxbuffer[1];
+  lastCscSent=txchecksum;
   for (byte r = 0; r < rep; r++) {
     //noInterrupts();
     for (byte j = 0; j < txTrainRep; j++) {
@@ -429,12 +445,23 @@ void doTransmit(int rep) { //rep is the number of repetitions
   //interrupts();
     delayMicroseconds(2000); //wait 2ms before doing the next round.
   }
-  SerialCmd.println(F("TX OK\r"));
+  #ifdef USE_ACK
+  if (txrxbuffer[1]==0xE8) {
+    SerialCmd.println(F("RX ACK"));
+  } else {
+  #endif
+  SerialCmd.println(F("TX OK"));
+  #ifdef USE_ACK
+  }
+  #endif
   TXLength = 0;
 }
 
 
 void onCommandST() {
+  if (txrxbuffer[1]==0xE8 && txrxbuffer[2]==lastCmdSent && (txrxbuffer[3]>>4)==(lastCscSent&0x0F)){
+    SerialCmd.print(F("ACK"));
+  } else {
   byte tem = txrxbuffer[0] >> 6;
   tem = (4 << tem);
   SerialCmd.print(F("+"));
@@ -455,7 +482,13 @@ void onCommandST() {
   SerialCmd.print((txrxbuffer[3] & 0xF0) >> 4);
   }
 #endif
-
+SerialCmd.println();
+#ifdef USE_ACK
+prepareAckPayload();
+delay(1000);
+doTransmit(5);
+#endif
+  }
   SerialCmd.println("\r");
   MyState = ListenST;
 }
