@@ -393,13 +393,13 @@ void preparePayloadFromSerial() {
 }
 
 void prepareAckPayload() {
-  byte plen=txrxbuffer[0]>>6;
-  plen = 4<<plen;
+  byte plen = txrxbuffer[0] >> 6;
+  plen = 4 << plen;
   txrxbuffer[0] = (txrxbuffer[0] & 0x3F);
   txrxbuffer[2] = txrxbuffer[1];
   txrxbuffer[1] = 0xE8;
-  txrxbuffer[3] = (txrxbuffer[plen-1] && 0x0F);
-  TXLength=4;
+  txrxbuffer[3] = (txrxbuffer[plen - 1] && 0x0F);
+  TXLength = 4;
 }
 
 
@@ -415,8 +415,8 @@ void doTransmit(int rep) { //rep is the number of repetitions
   } else {
     txrxbuffer[TXLength - 1] = txchecksum;
   }
-  lastCmdSent=txrxbuffer[1];
-  lastCscSent=txchecksum;
+  lastCmdSent = txrxbuffer[1];
+  lastCscSent = txchecksum;
   for (byte r = 0; r < rep; r++) {
     //noInterrupts();
     for (byte j = 0; j < txTrainRep; j++) {
@@ -442,52 +442,58 @@ void doTransmit(int rep) { //rep is the number of repetitions
     }
     //done with sending this packet;
     digitalWrite(txpin, 0); //make sure it's off;
-  //interrupts();
+    //interrupts();
     delayMicroseconds(2000); //wait 2ms before doing the next round.
   }
-  #ifdef USE_ACK
-  if (txrxbuffer[1]==0xE8) {
+#ifdef USE_ACK
+  if (txrxbuffer[1] == 0xE8) {
     SerialCmd.println(F("RX ACK"));
   } else {
-  #endif
-  SerialCmd.println(F("TX OK"));
-  #ifdef USE_ACK
+#endif
+    SerialCmd.println(F("TX OK"));
+#ifdef USE_ACK
   }
-  #endif
+#endif
   TXLength = 0;
 }
 
 
 void onCommandST() {
-  if (txrxbuffer[1]==0xE8 && txrxbuffer[2]==lastCmdSent && (txrxbuffer[3]>>4)==(lastCscSent&0x0F)){
-    SerialCmd.print(F("ACK"));
-  } else {
-  byte tem = txrxbuffer[0] >> 6;
-  tem = (4 << tem);
-  SerialCmd.print(F("+"));
+  if (txrxbuffer[1] == 0xE8) {
+    if ( txrxbuffer[2] == lastCmdSent && (txrxbuffer[3] >> 4) == (lastCscSent & 0x0F)) {
+      SerialCmd.print(F("ACK"));
+    } else {
+      SerialDbg.print(F("lastCmdSent"));
+      showHex(lastCmdSent);
+      SerialDbg.print(F("lastCscSent"));
+      showHex(lastCscSent);
+      byte tem = txrxbuffer[0] >> 6;
+      tem = (4 << tem);
+      SerialCmd.print(F("+"));
 #ifdef HEX_OUT
-  for (byte x = 0; x < tem; x++) {
-    showHex(txrxbuffer[x]);
-  }
-  if (tem == 3) { //means it was a short
-    showHex((txrxbuffer[3] & 0xF0) >> 4);
-  }
+      for (byte x = 0; x < tem; x++) {
+        showHex(txrxbuffer[x]);
+      }
+      if (tem == 3) { //means it was a short
+        showHex((txrxbuffer[3] & 0xF0) >> 4);
+      }
 #else
-  SerialCmd.print(tem == 3 ? 4 : tem);
-  SerialCmd.print(F(",");
-  for (byte x = 0; x < tem; x++) {
-  SerialCmd.print(txrxbuffer[x]);
-  }
-  if (tem == 3) { //means it was a short
-  SerialCmd.print((txrxbuffer[3] & 0xF0) >> 4);
-  }
+      SerialCmd.print(tem == 3 ? 4 : tem);
+      SerialCmd.print(F(",");
+      for (byte x = 0; x < tem; x++) {
+      SerialCmd.print(txrxbuffer[x]);
+      }
+      if (tem == 3) { //means it was a short
+      SerialCmd.print((txrxbuffer[3] & 0xF0) >> 4);
+      }
 #endif
-SerialCmd.println();
+      SerialCmd.println();
 #ifdef USE_ACK
-prepareAckPayload();
-delay(1000);
-doTransmit(5);
+      prepareAckPayload();
+      delay(1000);
+      doTransmit(5);
 #endif
+    }
   }
   SerialCmd.println("\r");
   MyState = ListenST;
@@ -570,14 +576,14 @@ void parseRx() { //uses the globals.
           MyParam = txrxbuffer[2];
           MyExtParam = txrxbuffer[3] >> 4;
           MyState = CommandST;
-         /* showHex(txrxbuffer[0], 0);
-          SerialDbg.print(F(":"));
-          showHex(MyCmd);
-          SerialDbg.print(F(":"));
-          showHex(MyParam);
-          SerialDbg.print(F(":"));
-          showHex(MyExtParam);
-          SerialDbg.println(); */
+          /* showHex(txrxbuffer[0], 0);
+           SerialDbg.print(F(":"));
+           showHex(MyCmd);
+           SerialDbg.print(F(":"));
+           showHex(MyParam);
+           SerialDbg.print(F(":"));
+           showHex(MyExtParam);
+           SerialDbg.println(); */
           SerialDbg.println(F("Valid transmission received"));
         } else {
           SerialDbg.println(F("Bad CSC on 4 byte packet"));
