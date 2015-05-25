@@ -468,6 +468,7 @@ void onCommandST() {
       SerialDbg.print(F("lastCscSent"));
       showHex(lastCscSent);
     }
+  } else {
     byte tem = txrxbuffer[0] >> 6;
     tem = (4 << tem);
     SerialCmd.print(F("+"));
