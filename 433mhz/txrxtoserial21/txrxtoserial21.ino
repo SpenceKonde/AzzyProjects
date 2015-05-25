@@ -467,34 +467,35 @@ void onCommandST() {
       showHex(lastCmdSent);
       SerialDbg.print(F("lastCscSent"));
       showHex(lastCscSent);
-      byte tem = txrxbuffer[0] >> 6;
-      tem = (4 << tem);
-      SerialCmd.print(F("+"));
-#ifdef HEX_OUT
-      for (byte x = 0; x < tem; x++) {
-        showHex(txrxbuffer[x]);
-      }
-      if (tem == 3) { //means it was a short
-        showHex((txrxbuffer[3] & 0xF0) >> 4);
-      }
-#else
-      SerialCmd.print(tem == 3 ? 4 : tem);
-      SerialCmd.print(F(",");
-      for (byte x = 0; x < tem; x++) {
-      SerialCmd.print(txrxbuffer[x]);
-      }
-      if (tem == 3) { //means it was a short
-      SerialCmd.print((txrxbuffer[3] & 0xF0) >> 4);
-      }
-#endif
-      SerialCmd.println();
-#ifdef USE_ACK
-      prepareAckPayload();
-      delay(1000);
-      doTransmit(5);
-#endif
     }
+    byte tem = txrxbuffer[0] >> 6;
+    tem = (4 << tem);
+    SerialCmd.print(F("+"));
+#ifdef HEX_OUT
+    for (byte x = 0; x < tem; x++) {
+      showHex(txrxbuffer[x]);
+    }
+    if (tem == 3) { //means it was a short
+      showHex((txrxbuffer[3] & 0xF0) >> 4);
+    }
+#else
+    SerialCmd.print(tem == 3 ? 4 : tem);
+    SerialCmd.print(F(",");
+    for (byte x = 0; x < tem; x++) {
+    SerialCmd.print(txrxbuffer[x]);
+    }
+    if (tem == 3) { //means it was a short
+    SerialCmd.print((txrxbuffer[3] & 0xF0) >> 4);
+    }
+#endif
+    SerialCmd.println();
+#ifdef USE_ACK
+    prepareAckPayload();
+    delay(2000);
+    doTransmit(5);
+#endif
   }
+
   SerialCmd.println("\r");
   MyState = ListenST;
 }
