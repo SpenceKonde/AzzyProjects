@@ -398,7 +398,7 @@ void prepareAckPayload() {
   txrxbuffer[0] = (txrxbuffer[0] & 0x3F);
   txrxbuffer[2] = txrxbuffer[1];
   txrxbuffer[1] = 0xE8;
-  txrxbuffer[3] = (txrxbuffer[plen - 1] && 0x0F);
+  txrxbuffer[3] = (txrxbuffer[plen - 1] & 0x0F)<<4;
   TXLength = 4;
 }
 
@@ -463,10 +463,7 @@ void onCommandST() {
     if ( txrxbuffer[2] == lastCmdSent && (txrxbuffer[3] >> 4) == (lastCscSent & 0x0F)) {
       SerialCmd.print(F("ACK"));
     } else {
-      SerialDbg.print(F("lastCmdSent"));
-      showHex(lastCmdSent);
-      SerialDbg.print(F("lastCscSent"));
-      showHex(lastCscSent);
+      SerialDbg.print(F("Other ACK"));
     }
   } else {
     byte tem = txrxbuffer[0] >> 6;
@@ -492,7 +489,7 @@ void onCommandST() {
     SerialCmd.println();
 #ifdef USE_ACK
     prepareAckPayload();
-    delay(2000);
+    delay(1000);
     doTransmit(5);
 #endif
   }

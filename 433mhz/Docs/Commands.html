@@ -319,6 +319,29 @@ Several timing schemes have been utilized, varying in the length of each given b
 
 </div>
 
+
+<div class="section">
+<h2>Communications</h2>
+<span class="subtitle">This special category of packets are used for tasks relating to RF communications, such as multi-packet data transfer and command acknowledgement</span>
+
+<div class="command">
+<table class="cmddesc">
+<tr><th colspan=2>ACK (standard) </th><th class="dummy"></th></tr>
+<tr><td>Command:</td><td>0xE8</td><td class="dummy"></td></tr>
+<tr><td>Address:</td><td>Slave device address </td><td class="dummy"></td></tr>
+<tr><td>Data:</td><td> old command </td><td class="dummy"></td></tr>
+<tr><td>Ext Data:</td><td>4 low bits of old checksum</td><td class="dummy"></td></tr>
+<tr><td colspan=3 class="dummy">
+Used to acknowledge receipt of a packet. 
+ </td></tr>
+</table>
+
+</div>
+
+</div>
+
+
+
 <div class="section">
 
 <h2>System Commands </h2>
