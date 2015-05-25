@@ -467,10 +467,10 @@ void onCommandST() {
     }
   } else {
     byte tem = txrxbuffer[0] >> 6;
-    tem = (4 << tem);
+    tem = (4 << tem)-1;
     SerialCmd.print(F("+"));
 #ifdef HEX_OUT
-    for (byte x = 0; x < tem; x++) {
+    for (byte x = 0; x < tem ; x++) {
       showHex(txrxbuffer[x]);
     }
     if (tem == 3) { //means it was a short
