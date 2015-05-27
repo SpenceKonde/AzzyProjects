@@ -3,13 +3,14 @@ var rxpin = B8;
 var n="";
 var wf;
 
-txOneLength=1.100; //length of a 1
-txZeroLength=0.600; //length of a 0
-txLowTime=0.650; //length of the gap between bits
+
+txOneLength=0.55; //length of a 1
+txZeroLength=0.300; //length of a 0
+txLowTime=0.420; //length of the gap between bits
 txTrainRep=30; //number of pulses in training burst
 txSyncTime=2; //length of sync
-txTrainOneLen=0.400;
-txTrainZeroLen=0.400;
+txTrainOneLen=0.200;
+txTrainZeroLen=0.200;
 
 
 var z=32; //This is the length of packet to receive, in bits. 
@@ -23,11 +24,7 @@ txTrainZeroLen=0.200;
 */
 
 ///*
-txOneLength=0.55;
-txZeroLength=0.3;
-txLowTime=0.42;
-txTrainOneLen=0.200;
-txTrainZeroLen=0.200;
+
 
 //*/
 
@@ -106,11 +103,9 @@ function sendRaw2(dat,rep) {
 
 function sigOff(e) {
 	var d=e.time-e.lastTime;
-	if (d>0.0005 && d<0.0013) n+=d>0.0008?1:0;
-	else{
-	n="";
-	}
-	if (n.length==z)	parseRx(n);
+	if (d>0.00012 && d<0.00075) n+=d>0.000425?1:0;
+	else n="";
+	if (n.length==z) parseRx(n);
 }
 
 function parseRx(rxdat) {
