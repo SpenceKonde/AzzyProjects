@@ -1,4 +1,4 @@
-require("AT");
+//require("AT");
 
 var ocm=function(menu,option) {
   console.log("menu:"+menu+" option: "+option);
@@ -121,26 +121,26 @@ function getDate() {
 function onInit() {
   Serial1.setup(9600,{tx:B6,rx:B7});
   evr=require("easyvr").connect(Serial1,ocm,otm,otm);
-  Serial2.setup(9600, { rx: A3, tx : A2 });
-  //SPI2.setup({ mosi:B15, miso:B14, sck:B13 });
+  //Serial2.setup(9600, { rx: A3, tx : A2 });
+  SPI2.setup({ mosi:B15, miso:B14, sck:B13 });
 
-  //eth = require("WIZnet").connect(SPI2, B10);
+  eth = require("WIZnet").connect(SPI2, B10);
   
-  //eth.setIP();
-  wifi = require("ESP8266WiFi").connect(Serial2, function(err) {
-  if (err) throw err;
-  wifi.reset(function(err) {
-    if (err) throw err;
-    console.log("Connecting to WiFi");
-    wifi.connect("TwilightZone","L0st1nTheZ0ne", function(err) {
-      if (err) throw err;
-      console.log("Connected");
+  eth.setIP();
+  //wifi = require("ESP8266WiFi").connect(Serial2, function(err) {
+  //if (err) throw err;
+  //wifi.reset(function(err) {
+  //  if (err) throw err;
+  //  console.log("Connecting to WiFi");
+  //  wifi.connect("TwilightZone","L0st1nTheZ0ne", function(err) {
+   //   if (err) throw err;
+  //    console.log("Connected");
        //Now you can do something, like an HTTP request
       evr.setRecognize(1,0);
       setTimeout(getFargostatus,1000);
       setInterval(getFargostatus,30000);
-    });
-  });
-});
+//    });
+//  });
+//});
   
 }
