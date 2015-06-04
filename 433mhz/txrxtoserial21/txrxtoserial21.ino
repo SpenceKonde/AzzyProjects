@@ -62,7 +62,7 @@ The example commands are:
 
 #define ListenST 1
 #define CommandST 2
-#include <avr/eeprom.h>
+#include <EEPROM.h>
 
 //Pin definitions:
 
@@ -382,7 +382,7 @@ void resetSer() {
   }
   if (lastSer) {
     lastSer = 0;
-    SerialCmd.println());
+    SerialCmd.println();
   }
   for (int i = 0; i < 16; i++) {
     SerCmBuff[i] = 0;
