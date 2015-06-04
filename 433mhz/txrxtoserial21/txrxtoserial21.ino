@@ -62,7 +62,7 @@ The example commands are:
 
 #define ListenST 1
 #define CommandST 2
-#include <EEPROM.h>
+#include <avr/eeprom.h>
 
 //Pin definitions:
 
@@ -83,7 +83,7 @@ The example commands are:
 #define CommandForgetTime 1000 //short, for testing
 
 #define rcvled LED1
-#define rxmaxlen 256 //Used to set the size of txrx buffer (and checked against this to prevent overflows from messing stuff up)
+#define RX_MAX_LEN 256 //Used to set the size of txrx buffer (and checked against this to prevent overflows from messing stuff up)
 
 //These set the parameters for transmitting.
 
@@ -152,7 +152,7 @@ byte lastTempPinState;
 int bitsrx;
 byte rxing;
 byte rxaridx;
-unsigned char txrxbuffer[rxmaxlen >> 3];
+unsigned char txrxbuffer[RX_MAX_LEN >> 3];
 byte SerRXidx;
 unsigned long lastSer = 0;
 byte SerRXmax;
@@ -169,9 +169,9 @@ char serBuffer[MAX_SER_LEN];
 #define USE_ACK
 
 byte MyState;
-unsigned char MyCmd;
-unsigned char MyParam;
-unsigned char MyExtParam;
+//unsigned char MyCmd;
+//unsigned char MyParam;
+//unsigned char MyExtParam;
 unsigned long curTime;
 int count = 0;
 int badcsc = 0;
@@ -181,9 +181,10 @@ unsigned long lastChecksum; //Not the same as the CSC - this is our hack to dete
 unsigned long forgetCmdAt;
 int reccount;
 
+#ifdef USE_ACK
 byte lastCmdSent;
 byte lastCscSent;
-
+#endif
 
 
 
@@ -232,7 +233,7 @@ void loop() {
   } else {
     MyState = ListenST; //in case we get into a bad state somehow.
   }
-  if (millis() - lastSer  > 10000 && lastSer) {
+  if (millis() - lastSer  > 10000) {
     resetSer();
   }
 }
@@ -313,6 +314,9 @@ void processSerial() {
         ndx = 0;
         if (SerRXmax == 26) {
           writeConfigToEEPROM();
+        //} else if (SerRXmax==1) {
+        //  MyAddress=txrxbuffer[0];
+        //  EEPROM.write(0,MyAddress)
         } else {
           preparePayloadFromSerial();
           doTransmit(5);
@@ -355,6 +359,11 @@ void checkCommand() {
   } else if (strcmp (serBuffer, "AT+CONF") == 0) {
     SerRXmax = 26;
     rxing = 2;
+  //} else if (strcmp (serBuffer, "AT+ADR?") == 0) {
+  //  SerialCmd.println(MyAddress);
+  //} else if (strcmp (serBuffer, "AT+ADR") == 0) {
+  //  SerRXmax = 1;
+  //  rxing = 2;
   } else {
     SerialCmd.println(F("ERROR\r"));
     SerialCmd.println(serBuffer);
@@ -373,7 +382,7 @@ void resetSer() {
   }
   if (lastSer) {
     lastSer = 0;
-    SerialCmd.print(F("\r"));
+    SerialCmd.println());
   }
   for (int i = 0; i < 16; i++) {
     SerCmBuff[i] = 0;
@@ -418,12 +427,9 @@ void doTransmit(int rep) { //rep is the number of repetitions
   lastCmdSent = txrxbuffer[1];
   lastCscSent = txchecksum;
   for (byte r = 0; r < rep; r++) {
-    //noInterrupts();
-    for (byte j = 0; j < txTrainRep; j++) {
+    for (byte j = 0; j < 2*txTrainRep; j++) {
       delayMicroseconds(txTrainLen);
-      digitalWrite(txpin, 1);
-      delayMicroseconds(txTrainLen);
-      digitalWrite(txpin, 0);
+      digitalWrite(txpin, j&1);
     }
     delayMicroseconds(txSyncTime);
     for (byte k = 0; k < TXLength; k++) {
@@ -461,9 +467,9 @@ void doTransmit(int rep) { //rep is the number of repetitions
 void onCommandST() {
   if (txrxbuffer[1] == 0xE8) {
     if ( txrxbuffer[2] == lastCmdSent && (txrxbuffer[3] >> 4) == (lastCscSent & 0x0F)) {
-      SerialCmd.print(F("ACK"));
+      SerialCmd.println(F("ACK"));
     } else {
-      SerialDbg.print(F("Other ACK"));
+      SerialDbg.println(F("Other ACK"));
     }
   } else {
     byte tem = txrxbuffer[0] >> 6;
@@ -526,17 +532,18 @@ void onListenST() {
       bitsrx++;
       if (bitsrx == 2) {
         pksize = 32 << rxdata;
-        if (pksize > rxmaxlen) {
+#if (RX_MAX_LEN < 256)        
+        if (pksize > RX_MAX_LEN) {
           SerialDbg.println(F("Packet this size not supported"));
           resetListen();
           return;
         }
-      } else if (bitsrx == 8 * (1 + rxaridx)) {
-        txrxbuffer[rxaridx] = rxdata;
+#endif
+      } else if ((bitsrx & 0x0F) == 8) {
+        txrxbuffer[bitsrx>>4] = rxdata;
         rxdata = 0;
-        rxaridx++;
-        if (rxaridx * 8 == pksize) {
-          SerialDbg.println(F("Receive done"));
+        if (bitsrx == pksize) {
+          SerialDbg.println(F("RX done"));
           parseRx();
           //parseRx2(txrxbuffer,pksize/8);
           resetListen();
@@ -571,9 +578,9 @@ void parseRx() { //uses the globals.
         calccsc = txrxbuffer[0] ^ txrxbuffer[1] ^ txrxbuffer[2];
         calccsc = (calccsc & 15) ^ (calccsc >> 4) ^ (txrxbuffer[3] >> 4);
         if (calccsc == (txrxbuffer[3] & 15)) {
-          MyCmd = txrxbuffer[1];
-          MyParam = txrxbuffer[2];
-          MyExtParam = txrxbuffer[3] >> 4;
+          //MyCmd = txrxbuffer[1];
+          //MyParam = txrxbuffer[2];
+          //MyExtParam = txrxbuffer[3] >> 4;
           MyState = CommandST;
           /* showHex(txrxbuffer[0], 0);
            SerialDbg.print(F(":"));
@@ -583,27 +590,27 @@ void parseRx() { //uses the globals.
            SerialDbg.print(F(":"));
            showHex(MyExtParam);
            SerialDbg.println(); */
-          SerialDbg.println(F("Valid transmission received"));
+          SerialDbg.println(F("Valid RX"));
         } else {
-          SerialDbg.println(F("Bad CSC on 4 byte packet"));
+          SerialDbg.println(F("Bad CSC RX"));
         }
       } else {
         for (byte i = 1; i < (pksize / 8); i++) {
           calccsc = calccsc ^ txrxbuffer[i - 1];
         }
         if (calccsc == txrxbuffer[(pksize / 8) - 1]) {
-          MyCmd = txrxbuffer[1];
-          MyParam = txrxbuffer[2];
-          MyExtParam = txrxbuffer[3];
+          //MyCmd = txrxbuffer[1];
+          //MyParam = txrxbuffer[2];
+          //MyExtParam = txrxbuffer[3];
           MyState = CommandST; //The command state needs to handle the rest of the buffer if sending long commands.
           for (byte i = 0; i < (pksize / 8); i++) {
             showHex(txrxbuffer[i]);
             SerialDbg.print(":");
           }
           SerialDbg.println();
-          SerialDbg.println(F("Valid long transmission received"));
+          SerialDbg.println(F("Valid long RX"));
         } else {
-          SerialDbg.println(F("Bad CSC on long packet"));
+          SerialDbg.println(F("Bad CSC long RX"));
         }
       }
     } else {
@@ -641,11 +648,11 @@ unsigned long decode16(unsigned int inp) {
 }
 
 void ClearCMD() {  //This handles clearing of the commands, and also clears the lastChecksum value, which is used to prevent multiple identical packets received in succession from being processed.
-  if (MyCmd) {
+  if (lastChecksum) {
     forgetCmdAt = millis() + CommandForgetTime;
-    MyParam = 0;
-    MyExtParam = 0;
-    MyCmd = 0;
+    //MyParam = 0;
+    //MyExtParam = 0;
+    //MyCmd = 0;
   } else if (millis() > forgetCmdAt) {
     forgetCmdAt = 0;
     lastChecksum = 0;
