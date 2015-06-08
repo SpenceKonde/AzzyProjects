@@ -28,7 +28,9 @@ var ocm=function(menu,option) {
       if (option < 8) {
         setFargo(option,!fargo[option]);
         console.log("set fargo"+option);
-      } 
+      } else {
+        switchRF(option-8);
+      }
     } else if (menu==3) { // control desk lamp
       console.log("desk lamp "+option);
     } else if (menu==4) { // control nixie clock
@@ -69,6 +71,8 @@ fargourl="http://192.168.2.14/api/relay/";
 deskurl="http://192.168.2.16/code.run?code=";
 fargo=new Uint8Array(8);
 
+va
+
 
 function setDesk(command) {
   console.log("setDesk:"+deskurl+command);
@@ -106,8 +110,37 @@ function setFargo(relay,state) {
   });
 }
 
+function switchRF(dev) {
+  if (dev==0) {
+    setInterval()
+  }
+}
 
+var RFDevs=[ 
+  ["Plasma Cube",20,]]
+]
+var RFDevState=[0,0,0];
 
+function sendRF(addr,cmd,parm,ext) {
+  Serial2.println("AT+SEND");
+  Serial2.println(E.toString([addr,cmd,parm,ext]));
+}
+function sendLRF(addr,data) {
+  if (addr>63) throw "bad address";
+  if (data.length==6) { //subtract 1 for address, 1 for checksum
+    Serial2.println("AT+SENDM");
+    addr+=64;
+  } else if (data.length==14) {
+    Serial2.println("AT+SENDL");
+    addr+=128;
+  } else if (data.length==30) {
+    Serial2.println("AT+SENDE");
+    addr+=192;
+  } else {
+    throw "Invalid length";
+  }
+  Serial2.print(String.fromCharCode(addr)+E.toString(data));
+}
 function getDate() {
   console.log("getDate called");
   var date="";
@@ -121,7 +154,7 @@ function getDate() {
 function onInit() {
   Serial1.setup(9600,{tx:B6,rx:B7});
   evr=require("easyvr").connect(Serial1,ocm,otm,otm);
-  //Serial2.setup(9600, { rx: A3, tx : A2 });
+  Serial2.setup(9600, { rx: A3, tx : A2 });
   SPI2.setup({ mosi:B15, miso:B14, sck:B13 });
 
   eth = require("WIZnet").connect(SPI2, B10);
