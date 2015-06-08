@@ -311,7 +311,7 @@ Several timing schemes have been utilized, varying in the length of each given b
 <tr><td>Data:</td><td>1 byte of data </td><td class="dummy"></td></tr>
 <tr><td>Ext Data:</td><td>4 bits of data</td><td class="dummy"></td></tr>
 <tr><td colspan=3 class="dummy">
- This sends a notification of 12 bits of data, associated with the slave address. Masters may listen for notifications from more than one slave based on address. 
+ This sends a notification of 12 bits of data, associated with the slave address. Another device with a receiver may listen for the same address, or the "master" may listen on multiple addresses. Which of these two alert notice styles is appropriate depends on the design of the rest of the system.
  </td></tr>
 </table>
 
