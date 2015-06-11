@@ -221,13 +221,13 @@ void setup() {
 void loop() {
   curTime = micros();
   //if (MyState == ListenST) {
-    ClearCMD(); //do the command reset only if we are in listenst but NOT receiving.
-    onListenST();
-    if (rxing == 1) {
-      return; //don't do anything else while actively receiving.
-    } else {
-      processSerial();
-    }
+  ClearCMD(); //do the command reset only if we are in listenst but NOT receiving.
+  onListenST();
+  if (rxing == 1) {
+    return; //don't do anything else while actively receiving.
+  } else {
+    processSerial();
+  }
   //} else if (MyState == CommandST) {
   //  onCommandST();
   //} else {
@@ -314,9 +314,9 @@ void processSerial() {
         ndx = 0;
         if (SerRXmax == 26) {
           writeConfigToEEPROM();
-        //} else if (SerRXmax==1) {
-        //  MyAddress=txrxbuffer[0];
-        //  EEPROM.write(0,MyAddress)
+          //} else if (SerRXmax==1) {
+          //  MyAddress=txrxbuffer[0];
+          //  EEPROM.write(0,MyAddress)
         } else {
           preparePayloadFromSerial();
           doTransmit(5);
@@ -360,22 +360,22 @@ void checkCommand() {
     SerRXmax = 26;
     rxing = 2;
   } else if (strcmp (serBuffer, "AT+HEX?") == 0) {
-    #ifdef HEX_IN
-    #ifdef HEX_OUT
+#ifdef HEX_IN
+#ifdef HEX_OUT
     SerialCmd.println("03");
-    #else
-    byte a=2;
+#else
+    byte a = 2;
     SerialCmd.println(a);
-    #endif
-    #else
-    #ifdef HEX_OUT
+#endif
+#else
+#ifdef HEX_OUT
     SerialCmd.println("01");
-    #else
-    byte a=0;
+#else
+    byte a = 0;
     SerialCmd.println(a);
-    #endif
-    #endif
-    
+#endif
+#endif
+
   } else if (strcmp (serBuffer, "AT+ADR?") == 0) {
     SerialCmd.println(MyAddress);
   } else if (strcmp (serBuffer, "AT+ADR") == 0) {
@@ -424,7 +424,7 @@ void prepareAckPayload() {
   txrxbuffer[0] = (txrxbuffer[0] & 0x3F);
   txrxbuffer[2] = txrxbuffer[1];
   txrxbuffer[1] = 0xE8;
-  txrxbuffer[3] = (txrxbuffer[plen - 1] & 0x0F)<<4;
+  txrxbuffer[3] = (txrxbuffer[plen - 1] & 0x0F) << 4;
   TXLength = 4;
 }
 
@@ -446,9 +446,9 @@ void doTransmit(int rep) { //rep is the number of repetitions
   lastCscSent = txchecksum;
 #endif
   for (byte r = 0; r < rep; r++) {
-    for (byte j = 0; j < 2*txTrainRep; j++) {
+    for (byte j = 0; j < 2 * txTrainRep; j++) {
       delayMicroseconds(txTrainLen);
-      digitalWrite(txpin, j&1);
+      digitalWrite(txpin, j & 1);
     }
     delayMicroseconds(txSyncTime);
     for (byte k = 0; k < TXLength; k++) {
@@ -495,33 +495,35 @@ void outputPayload() {
 #endif
 
     byte tem = txrxbuffer[0] >> 6;
-    tem = (4 << tem)-1;
+    tem = (4 << tem) - 1;
     SerialCmd.print(F("+"));
 #ifdef HEX_OUT
     for (byte x = 0; x < tem ; x++) {
       showHex(txrxbuffer[x]);
     }
     if (tem == 3) { //means it was a short
-      showHex((txrxbuffer[3] & 0xF0) >> 4);
+      showHex(txrxbuffer[3]);// & 0xF0) >> 4);
     }
 #else
     SerialCmd.print(tem == 3 ? 4 : tem);
     SerialCmd.print(F(","));
     for (byte x = 0; x < tem; x++) {
-    SerialCmd.print(txrxbuffer[x]);
+      SerialCmd.print(txrxbuffer[x]);
     }
     if (tem == 3) { //means it was a short
-    SerialCmd.print((txrxbuffer[3] & 0xF0) >> 4);
+      SerialCmd.print((txrxbuffer[3] & 0xF0) >> 4);
     }
 #endif
     SerialCmd.println();
 #ifdef USE_ACK
+    if ((txrxbuffer[0]&0x3F)==MyAddress) {
     prepareAckPayload();
     delay(1000);
     doTransmit(5);
+    }
   }
 #endif
-  
+
 
   SerialCmd.println();
 }
@@ -554,23 +556,27 @@ void onListenST() {
       bitsrx++;
       if (bitsrx == 2) {
         pksize = 32 << rxdata;
-#if (RX_MAX_LEN < 256)        
+#if (RX_MAX_LEN < 256)
         if (pksize > RX_MAX_LEN) {
           SerialDbg.println(F("Packet this size not supported"));
           resetListen();
           return;
         }
 #endif
-      } else if ((bitsrx & 0x0F) == 8) {
-        txrxbuffer[bitsrx>>4] = rxdata;
+        
+      } else if ((bitsrx & 0x07) == 0 && bitsrx) {
+        txrxbuffer[(bitsrx >> 3)-1] = rxdata;
+        //showHex(rxdata);
         rxdata = 0;
-        if (bitsrx == pksize) {
-          SerialDbg.println(F("RX done"));
-          parseRx();
-          //parseRx2(txrxbuffer,pksize/8);
-          resetListen();
-        }
       }
+      //SerialDbg.println(bitsrx);
+      if (bitsrx == pksize) {
+        SerialDbg.println(F("RX done"));
+        parseRx();
+        //parseRx2(txrxbuffer,pksize/8);
+        resetListen();
+      }
+
       return;
     }
   } else {
@@ -603,7 +609,7 @@ void parseRx() { //uses the globals.
           //MyCmd = txrxbuffer[1];
           //MyParam = txrxbuffer[2];
           //MyExtParam = txrxbuffer[3] >> 4;
-          
+
           /* showHex(txrxbuffer[0], 0);
            SerialDbg.print(F(":"));
            showHex(MyCmd);
@@ -616,6 +622,7 @@ void parseRx() { //uses the globals.
           outputPayload();
         } else {
           SerialDbg.println(F("Bad CSC RX"));
+          outputPayload();
         }
       } else {
         for (byte i = 1; i < (pksize / 8); i++) {
