@@ -446,7 +446,7 @@ void doTransmit(int rep) { //rep is the number of repetitions
   lastCscSent = txchecksum;
 #endif
   for (byte r = 0; r < rep; r++) {
-    for (byte j = 0; j < 2 * txTrainRep; j++) {
+    for (byte j = 0; j <= 2 * txTrainRep; j++) {
       delayMicroseconds(txTrainLen);
       digitalWrite(txpin, j & 1);
     }
