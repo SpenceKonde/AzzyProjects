@@ -1,5 +1,29 @@
 //require("AT");
 
+
+
+/*
+Menu 1:
+Lights On
+Lights Off
+White XMas Lights
+Colored XMas Lights
+Wizard Light
+Tentacle Light
+Desk Light
+Microwave
+Fan
+Under-desk light
+Ozone
+Plasma Cube
+Plasma Tower
+Desk-lamp
+
+
+
+
+
+*/
 var ocm=function(menu,option) {
   console.log("menu:"+menu+" option: "+option);
   if (menu==1) {
@@ -10,27 +34,21 @@ var ocm=function(menu,option) {
       console.log("LIGHTS OFF");
       //do lights off calls
     } else if (option==2) {
-      console.log("SWITCH :");
+      console.log("DESK :");
       digitalWrite(LED1,1);
       return {type:2,timeout:15};
     } else if (option==3) {
-      console.log("DESK :");
-      digitalWrite(LED1,1);
-      return {type:3,timeout:15};
-    } else if (option==4) {
       console.log("NIXIE :");
       digitalWrite(LED1,1);
-      return {type:4,timeout:15};
+      return {type:3,timeout:15};
+    } else if (option < 12) {
+      setFargo(option,!fargo[option-4]);
+      console.log("set fargo"+(option-4);
+    } else {
+      switchRF(option-12);
+      }
     }
   } else {
-    if (menu==2) { // toggle a fargo or RF controlled device
-      console.log("toggle device "+option);
-      if (option < 8) {
-        setFargo(option,!fargo[option]);
-        console.log("set fargo"+option);
-      } else {
-        switchRF(option-8);
-      }
     } else if (menu==3) { // control desk lamp
       console.log("desk lamp "+option);
     } else if (menu==4) { // control nixie clock
@@ -69,6 +87,7 @@ fargosturl="http://192.168.2.12/fargostatus.php";
 dateurl="http://192.168.2.12/date.php";
 fargourl="http://192.168.2.14/api/relay/";
 deskurl="http://192.168.2.16/code.run?code=";
+mirrorurl="http://192.168.2.12/mirrorup.php";
 fargo=new Uint8Array(8);
 
 va
@@ -111,13 +130,26 @@ function setFargo(relay,state) {
 }
 
 function switchRF(dev) {
-  if (dev==0) {
-    setInterval()
+  dinf=RFDevs[dev];
+  if (dev==0 && RFDevState[0]==0) {
+    sendLRF(dinf.addr,[0x41,1+(dinf.devnum<<4),2,170,85,170]);
+    setTimeout("RFDevState[0]=0;updateRFStatus(0,0);",682000)
+  } else {
+    sendRF(dinf.addr,0x40,170>>RFDevState[dev],dinf.devnum);
   }
+  RFDevState[dev]=!RFDevState[dev];
+  updateRFStatus(dev,RFDevState[dev]);
+}
+
+function updateRFStatus(dev,val) {
+  //require("http").get(mirrorurl+"?RFDev"+(dev).toString()+"="+(val).toString(),function(res){return;})
 }
 
 var RFDevs=[ 
-  ["Plasma Cube",20,]]
+  {name:"Ozone Generator",addr:20,devnum:0,pwm:0},
+  {name:"Plasma Cube",addr:20,devnum:1,pwm:0},
+  {name:"Plasma Tower",addr:20,devnum:2,pwm:0}
+  ]
 ]
 var RFDevState=[0,0,0];
 

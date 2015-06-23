@@ -314,8 +314,8 @@ void processSerial() {
         ndx = 0;
         if (SerRXmax == 26) {
           writeConfigToEEPROM();
-          //} else if (SerRXmax==1) {
-          //  MyAddress=txrxbuffer[0];
+          } else if (SerRXmax==1) {
+            MyAddress=txrxbuffer[0];
           //  EEPROM.write(0,MyAddress)
         } else {
           preparePayloadFromSerial();
