@@ -184,8 +184,8 @@ function getDate() {
 }
 
 function onInit() {
-  Serial1.setup(9600,{tx:B6,rx:B7});
-  evr=require("easyvr").connect(Serial1,ocm,otm,otm);
+  //Serial1.setup(9600,{tx:B6,rx:B7});
+  //evr=require("easyvr").connect(Serial1,ocm,otm,otm);
   Serial2.setup(9600, { rx: A3, tx : A2 });
   SPI2.setup({ mosi:B15, miso:B14, sck:B13 });
 
@@ -201,7 +201,7 @@ function onInit() {
    //   if (err) throw err;
   //    console.log("Connected");
        //Now you can do something, like an HTTP request
-      evr.setRecognize(1,0);
+      //evr.setRecognize(1,0);
       setTimeout(getFargostatus,1000);
       setInterval(getFargostatus,30000);
 //    });
