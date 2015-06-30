@@ -78,6 +78,8 @@ The example commands are:
 #define LED_ON 0
 #define LED_OFF 1
 
+#define TWO_WIRE_FLOW
+
 
 
 #define CommandForgetTime 1000 //short, for testing
@@ -198,10 +200,14 @@ void setup() {
   //MyState = ListenST;
   digitalWrite(LED1, LED_OFF);
   digitalWrite(LED2, LED_OFF);
+  #ifdef TWO_WIRE_FLOW
+  pinMode(LED3, INPUT);
+  #else
+  pinMode(LED3, OUTPUT);
   digitalWrite(LED3, LED_OFF);
+  #endif
   pinMode(LED1, OUTPUT);
   pinMode(LED2, OUTPUT);
-  pinMode(LED3, OUTPUT);
   pinMode(txpin, OUTPUT);
   pinMode(rxpin, INPUT);
   Serial.begin(9600);
@@ -484,6 +490,13 @@ void doTransmit(int rep) { //rep is the number of repetitions
 
 
 void outputPayload() {
+#ifdef TWO_WIRE_FLOW 
+digitalWrite(LED2,1);
+while (digitalRead(LED3)==0){
+  ; //do nothing until that pin driven high
+}
+digitalWrite(LED2,0);
+#endif
 #ifdef USE_ACK
   if (txrxbuffer[1] == 0xE8) {
     if ( txrxbuffer[2] == lastCmdSent && (txrxbuffer[3] >> 4) == (lastCscSent & 0x0F)) {
