@@ -78,7 +78,7 @@ The example commands are:
 #define LED_ON 0
 #define LED_OFF 1
 
-#define TWO_WIRE_FLOW
+//#define TWO_WIRE_FLOW
 
 
 
@@ -163,7 +163,7 @@ byte SerCmBuff[16];
 char * pEnd; //dummy pointer for sto
 
 #define SerialDbg Serial
-#define SerialCmd Serial
+#define SerialCmd Serial1
 #define HEX_OUT
 #define HEX_IN
 #define MAX_SER_LEN 10
