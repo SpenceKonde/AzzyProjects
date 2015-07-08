@@ -43,28 +43,25 @@ var ocm=function(menu,option) {
       return {type:3,timeout:15};
     } else if (option < 12) {
       setFargo(option,!fargo[option-4]);
-      console.log("set fargo"+(option-4);
+      console.log("set fargo"+(option-4));
     } else {
       switchRF(option-12);
-      }
     }
-  } else {
-    } else if (menu==3) { // control desk lamp
+  } else if (menu==3) { // control desk lamp
       console.log("desk lamp "+option);
-    } else if (menu==4) { // control nixie clock
-      if (option==0) { //clock on
-        setDesk("nixs=1;uplcd();");
-      } else if (option==1) { //clock off
-        setDesk("nixs=0;uplcd();");
-      } else if (option==2) { //time
-        setDesk("nixs=1;MnuS=0;MnuO=0;uplcd();");
-      } else if (option==3) { //temp
-        setDesk("nixs=1;MnuS=0;MnuO=1;uplcd();");
-      } else if (option==4) { //humidity
-        setDesk("nixs=1;MnuS=0;MnuO=2;uplcd();");
+  } else if (menu==4) { // control nixie clock
+    if (option==0) { //clock on
+      setDesk("nixs=1;uplcd();");
+    } else if (option==1) { //clock off
+      setDesk("nixs=0;uplcd();");
+    } else if (option==2) { //time
+      setDesk("nixs=1;MnuS=0;MnuO=0;uplcd();");
+    } else if (option==3) { //temp
+      setDesk("nixs=1;MnuS=0;MnuO=1;uplcd();");
+    } else if (option==4) { //humidity
+      setDesk("nixs=1;MnuS=0;MnuO=2;uplcd();");
       //} else if (option==5) { //pressure
-      //  setDesk("nixs=1;MnuS=0;Mnu0=3;uplcd();")
-      } 
+      //  setDesk("nixs=1;MnuS=0;Mnu0=3;uplcd();") 
     }
   }
   digitalWrite(LED1,0);
@@ -89,8 +86,6 @@ fargourl="http://192.168.2.14/api/relay/";
 deskurl="http://192.168.2.16/code.run?code=";
 mirrorurl="http://192.168.2.12/mirrorup.php";
 fargo=new Uint8Array(8);
-
-va
 
 
 function setDesk(command) {
@@ -130,10 +125,11 @@ function setFargo(relay,state) {
 }
 
 function switchRF(dev) {
+  console.log("switchrf called"+dev);
   dinf=RFDevs[dev];
   if (dev==0 && RFDevState[0]==0) {
     sendLRF(dinf.addr,[0x41,1+(dinf.devnum<<4),2,170,85,170]);
-    setTimeout("RFDevState[0]=0;updateRFStatus(0,0);",682000)
+    setTimeout("RFDevState[0]=0;updateRFStatus(0,0);",682000);
   } else {
     sendRF(dinf.addr,0x40,170>>RFDevState[dev],dinf.devnum);
   }
@@ -149,8 +145,7 @@ var RFDevs=[
   {name:"Ozone Generator",addr:20,devnum:0,pwm:0},
   {name:"Plasma Cube",addr:20,devnum:1,pwm:0},
   {name:"Plasma Tower",addr:20,devnum:2,pwm:0}
-  ]
-]
+  ];
 var RFDevState=[0,0,0];
 
 function sendRF(addr,cmd,parm,ext) {
@@ -184,28 +179,20 @@ function getDate() {
 }
 
 function onInit() {
-  //Serial1.setup(9600,{tx:B6,rx:B7});
-  //evr=require("easyvr").connect(Serial1,ocm,otm,otm);
+  //pinMode(A4,'input_pullup'); //button '4'
+  pinMode(B1,'input_pullup'); //button '3'
+  setWatch("switchRF(2)",B1,{edge:'falling',repeat:true, debounce:10});
+  pinMode(A10,'input_pullup'); //button '2'
+  setWatch("switchRF(1)",A10,{edge:'falling',repeat:true, debounce:10});
+  pinMode(A0,'input_pullup'); //button '1'
+  setWatch("switchRF(0)",A0,{edge:'falling',repeat:true, debounce:10});
+  Serial1.setup(9600,{tx:B6,rx:B7});
+  evr=require("easyvr").connect(Serial1,ocm,otm,otm);
   Serial2.setup(9600, { rx: A3, tx : A2 });
   SPI2.setup({ mosi:B15, miso:B14, sck:B13 });
 
   eth = require("WIZnet").connect(SPI2, B10);
   
   eth.setIP();
-  //wifi = require("ESP8266WiFi").connect(Serial2, function(err) {
-  //if (err) throw err;
-  //wifi.reset(function(err) {
-  //  if (err) throw err;
-  //  console.log("Connecting to WiFi");
-  //  wifi.connect("TwilightZone","L0st1nTheZ0ne", function(err) {
-   //   if (err) throw err;
-  //    console.log("Connected");
-       //Now you can do something, like an HTTP request
-      //evr.setRecognize(1,0);
-      setTimeout(getFargostatus,1000);
-      setInterval(getFargostatus,30000);
-//    });
-//  });
-//});
   
 }
