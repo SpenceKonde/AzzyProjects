@@ -178,21 +178,48 @@ function getDate() {
   //delete getDate;
 }
 
+
 function onInit() {
+  //initiating hardware...
+  //status lights
+  SPI1.setup({mosi:A7,baud:3200000});
+  stLD={};
+  stLD.leds=new Uint8Array(6);
+  stLD.set=function(led,color){
+    if (led<2 && color.length==3) {
+      stLD.leds[led*3]=color[0];
+      stLD.leds[led*3+1]=color[1];
+      stLD.leds[led*3+2]=color[2];
+      SPI1.send4bit(stLD.leds,1,3);
+    } else {
+      throw "Invalid led or color";
+    }
+  };
+  stLD.set(0,[0,255,0]);
+  //keypad
   //pinMode(A4,'input_pullup'); //button '4'
   pinMode(B1,'input_pullup'); //button '3'
-  setWatch("switchRF(2)",B1,{edge:'falling',repeat:true, debounce:10});
+  setWatch("switchRF(2);",B1,{edge:'falling',repeat:true, debounce:10});
   pinMode(A10,'input_pullup'); //button '2'
-  setWatch("switchRF(1)",A10,{edge:'falling',repeat:true, debounce:10});
+  setWatch("switchRF(1);",A10,{edge:'falling',repeat:true, debounce:10});
   pinMode(A0,'input_pullup'); //button '1'
-  setWatch("switchRF(0)",A0,{edge:'falling',repeat:true, debounce:10});
+  setWatch("switchRF(0);",A0,{edge:'falling',repeat:true, debounce:10});
+  //easyvr
   Serial1.setup(9600,{tx:B6,rx:B7});
   evr=require("easyvr").connect(Serial1,ocm,otm,otm);
+  //azzyrf
   Serial2.setup(9600, { rx: A3, tx : A2 });
+  stLD.set(0,[128,255,0]);
+  //ethernet
   SPI2.setup({ mosi:B15, miso:B14, sck:B13 });
-
   eth = require("WIZnet").connect(SPI2, B10);
-  
+  stLD.set(0,[128,255,128]);
   eth.setIP();
+  stLD.set(0,[255,0,0]);
+  //I2C devices
+  I2C1.setup({scl:B8,sda:B9});
+  eep=require("AT24").connect(I2C1,64,256,0);
+  //tcs=require("TCS3472x").connect(I2C1,1,64);
+  //bmp=require("BMP180",I2C1);
   
 }
