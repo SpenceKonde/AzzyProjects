@@ -219,7 +219,7 @@ function onInit() {
   //I2C devices
   I2C1.setup({scl:B8,sda:B9});
   eep=require("AT24").connect(I2C1,64,256,0);
-  //tcs=require("TCS3472x").connect(I2C1,1,64);
+  tcs=require("TCS3472x").connect(I2C1,64,1);
   //bmp=require("BMP180",I2C1);
   
 }
