@@ -7,7 +7,10 @@ systemStatus={
   },
   temperature:-1,
   pressure: -1,
-  RFDevs:[0,0,0]
+  RFDevs:[0,0,0],
+  door_upstairs:0,
+  door_downstairs:0,
+  fridge:0
 }
 
 function updateSensors() 
