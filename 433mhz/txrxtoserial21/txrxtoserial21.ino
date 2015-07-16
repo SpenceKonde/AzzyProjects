@@ -165,10 +165,10 @@ char * pEnd; //dummy pointer for sto
 #define SerialDbg Serial
 #define SerialCmd Serial1
 #define HEX_OUT
-#define HEX_IN
+//#define HEX_IN
 #define MAX_SER_LEN 10
 char serBuffer[MAX_SER_LEN];
-#define USE_ACK
+//#define USE_ACK
 
 //byte MyState;
 //unsigned char MyCmd;
@@ -215,7 +215,7 @@ void setup() {
     //initFromEEPROM();
     //SerialDbg.println(F("Load from EEPROM"));
   }
-  //Serial1.begin(9600);
+  Serial1.begin(9600);
   digitalWrite(LED2, LED_ON);
   delay(1000);
   digitalWrite(LED2, LED_OFF);
@@ -512,10 +512,10 @@ digitalWrite(LED2,0);
     SerialCmd.print(F("+"));
 #ifdef HEX_OUT
     for (byte x = 0; x < tem ; x++) {
-      showHex(txrxbuffer[x]);
+      showHex(txrxbuffer[x],1);
     }
     if (tem == 3) { //means it was a short
-      showHex(txrxbuffer[3]);// & 0xF0) >> 4);
+      showHex((txrxbuffer[3] & 0xF0) >> 4,1);
     }
 #else
     SerialCmd.print(tem == 3 ? 4 : tem);
