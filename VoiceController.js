@@ -84,7 +84,7 @@ fargosturl="http://192.168.2.12/fargostatus.php";
 dateurl="http://192.168.2.12/date.php";
 fargourl="http://192.168.2.14/api/relay/";
 deskurl="http://192.168.2.16/code.run?code=";
-mirrorurl="http://192.168.2.12/mirrorup.php";
+mirrorurl="http://192.168.2.123/mirrorup.php";
 fargo=new Uint8Array(8);
 
 
@@ -139,7 +139,7 @@ function switchRF(dev) {
 }
 
 function updateRFStatus(dev,val) {
-  //require("http").get(mirrorurl+"?RFDev"+(dev).toString()+"="+(val).toString(),function(res){return;})
+  require("http").get(mirrorurl+"?RFDev"+dev.toString()+"="+(val?1:0),function(){return;});
 }
 
 var RFDevs=[ 
@@ -185,6 +185,7 @@ function getDate() {
 
 
 function onInit() {
+  Clock = require("clock").Clock;
   //initiating hardware...
   //status lights
   SPI1.setup({mosi:A7,baud:3200000});
@@ -218,6 +219,8 @@ function onInit() {
   setWatch("switchRF(1);",A10,{edge:'falling',repeat:true, debounce:250});
   pinMode(A0,'input_pullup'); //button '1'
   setWatch("switchRF(0);",A0,{edge:'falling',repeat:true, debounce:250});
+  pinMode(A8,'input');
+  setWatch("systemStatus.lastMotion=getTime();")
   //easyvr
   Serial1.setup(9600,{tx:B6,rx:B7});
   evr=require("easyvr").connect(Serial1,ocm,otm,otm,function(){stLD.set(1,1,0);});
@@ -233,7 +236,7 @@ function onInit() {
   I2C1.setup({scl:B8,sda:B9});
   eep=require("AT24").connect(I2C1,64,256,0);
   tcs=require("TCS3472x").connect(I2C1,64,1);
-  //bmp=require("BMP180",I2C1);
+  bmp=require("BMP085").connect(I2C1);
   setInterval("updateSensors();",30000);
   systemStatus={
     light:{
@@ -269,13 +272,23 @@ function onInit() {
   });
 }
 
-function updateSensors() 
-{
+function getDate() {
+  var date="";
+  require("http").get(dateurl, function(res) {
+    res.on('data',function (data) {date+=data;});
+    res.on('close',function() {clk=new Clock(date);});
+  });
+  //delete getDate;
+}
+
+function updateSensors() {
   var tColors=tcs.getValue();
-  if (tColors.clear >0) {
+  if (tColors.clear >0) 
+  {
     systemStatus.light=tColors;
+    require("http").get(mirrorurl+"?clear="+tColors.clear+"&red="+tColors.red+"&green="+tColors.green+"&blue="+tColors.blue,function(){return;});
   }
-  // handle BMP180
+  bmp.getPressure(function(b){if (systemStatus.pressure==-1){systemStatus.pressure=b.pressure;} else {systemStatus.pressure=systemStatus.pressure*0.8+b.pressure*0.2;}});
 }
 
 
@@ -301,13 +314,14 @@ function processRF(msg) {
 }
 
 RFMessages = {
-  "1FE10001":"systemStatus.door_upstairs=0;"
-  "1FE10101":"systemStatus.door_upstairs=1;"
-  "1FE10002":"systemStatus.door_downstairs=0;"
+  "1FE10001":"systemStatus.door_upstairs=0;",
+  "1FE10101":"systemStatus.door_upstairs=1;",
+  "1FE10002":"systemStatus.door_downstairs=0;",
   "1FE10102":"systemStatus.door_downstairs=1;"
-}
+};
 
 RFCommands = {
   "ERROR":"console.log('ERROR received from AzzyRF');",
-  "RX ACK":"console.log('acknowledgement of last message received');"
+  "RX ACK":"console.log('acknowledgement of last message received');",
+  "TX OK":"console.log('transmit OK');"
 };
