@@ -139,7 +139,8 @@ function switchRF(dev) {
 }
 
 function updateRFStatus(dev,val) {
-  require("http").get(mirrorurl+"?RFDev"+dev.toString()+"="+(val?1:0),function(){return;});
+  
+  require("http").get(mirrorurl+"?RFDev"+dev.toString()+"="+(vals?1:0),function(){return;});
 }
 
 var RFDevs=[ 
@@ -150,7 +151,6 @@ var RFDevs=[
 
 function sendRF(addr,cmd,parm,ext) {
   //setTimeout(function(a,c,p,e){
-  
   tstr=addr+','+cmd+','+parm+','+ext;
   RFCommands[">"]='console.log(E.toUint8Array(['+tstr+']));RFCommands[">"]=undefined;cmd="";Serial2.print(E.toString(['+tstr+']));'; //},25,addr,cmd,parm,ext);
   Serial2.print("AT+SEND\r");
@@ -183,7 +183,6 @@ function getDate() {
   //delete getDate;
 }
 
-
 function onInit() {
   Clock = require("clock").Clock;
   //initiating hardware...
@@ -194,9 +193,24 @@ function onInit() {
   stLD.set=function(led,color,brightness){
     if (led<2 && color <3) {
       stLD.leds[led*3+color]=brightness;
-      SPI1.send4bit(stLD.leds,1,3);
+      this.upd();
     } else {
       throw "Invalid led or color";
+    }
+  };
+  stLD.upd=function(){
+    var tled=new Uint8Array(this.leds);
+    var rat=this.maxb/256;
+    for(var i=0;i<6;i++){
+        tled[i]*=rat;
+    }
+    SPI1.send4bit(tled,1,3);
+  };
+  stLD.maxb=256;
+  stLD.sMax=function(a){
+    if (this.maxb!=a) {
+      this.maxb=a;
+      this.upd();
     }
   };
   stLD.sets=function(led,color){
@@ -204,7 +218,7 @@ function onInit() {
       stLD.leds[led*3]=color[0];
       stLD.leds[led*3+1]=color[1];
       stLD.leds[led*3+2]=color[2];
-      SPI1.send4bit(stLD.leds,1,3);
+      this.upd();
     } else {
       throw "Invalid led or color";
     }
@@ -220,7 +234,7 @@ function onInit() {
   pinMode(A0,'input_pullup'); //button '1'
   setWatch("switchRF(0);",A0,{edge:'falling',repeat:true, debounce:250});
   pinMode(A8,'input');
-  setWatch("systemStatus.lastMotion=getTime();")
+  setWatch("systemStatus.lastMotion=clk.getDate().getTime();",A8,{edge:'rising',repeat:true});
   //easyvr
   Serial1.setup(9600,{tx:B6,rx:B7});
   evr=require("easyvr").connect(Serial1,ocm,otm,otm,function(){stLD.set(1,1,0);});
@@ -237,7 +251,6 @@ function onInit() {
   eep=require("AT24").connect(I2C1,64,256,0);
   tcs=require("TCS3472x").connect(I2C1,64,1);
   bmp=require("BMP085").connect(I2C1);
-  setInterval("updateSensors();",30000);
   systemStatus={
     light:{
       clear:-1,
@@ -252,14 +265,15 @@ function onInit() {
     door_downstairs:0,
     fridge:0
   };
-  updateSensors();
+  updateSensors(1);
+  getDate();
   setInterval(updateSensors,30000);
   cmd="";
   Serial2.on('data', function (data) { 
     cmd+=data;
     if (cmd.charCodeAt(0)==10){cmd=cmd.substr(1);}
     if (cmd==">"){eval(RFCommands[">"]);}
-    console.log(E.toUint8Array(cmd));
+    //console.log(E.toUint8Array(cmd));
     var idx = cmd.indexOf("\r");
     while (idx>=0) { 
       var line = cmd.substr(0,idx);
@@ -272,21 +286,21 @@ function onInit() {
   });
 }
 
-function getDate() {
-  var date="";
-  require("http").get(dateurl, function(res) {
-    res.on('data',function (data) {date+=data;});
-    res.on('close',function() {clk=new Clock(date);});
-  });
-  //delete getDate;
-}
 
-function updateSensors() {
+function updateSensors(nohttp) {
   var tColors=tcs.getValue();
   if (tColors.clear >0) 
   {
+    if(tColors.clear < 10000) {
+      stLD.sMax((tColors.clear<1000?0:(tColors.clear<5000?64:128)));
+    } else {
+      stLD.sMax(256);
+    }
     systemStatus.light=tColors;
-    require("http").get(mirrorurl+"?clear="+tColors.clear+"&red="+tColors.red+"&green="+tColors.green+"&blue="+tColors.blue,function(){return;});
+    if(!nohttp){
+      console.log("CallingMirror");
+      require("http").get(mirrorurl+"?clear="+tColors.clear+"&red="+tColors.red+"&green="+tColors.green+"&blue="+tColors.blue,function(){return;});
+    }
   }
   bmp.getPressure(function(b){if (systemStatus.pressure==-1){systemStatus.pressure=b.pressure;} else {systemStatus.pressure=systemStatus.pressure*0.8+b.pressure*0.2;}});
 }
