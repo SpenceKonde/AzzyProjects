@@ -139,7 +139,6 @@ function switchRF(dev) {
 }
 
 function updateRFStatus(dev,val) {
-  
   require("http").get(mirrorurl+"?RFDev"+dev.toString()+"="+(vals?1:0),function(){return;});
 }
 
@@ -264,6 +263,7 @@ function onInit() {
     door_upstairs:0,
     door_downstairs:0,
     fridge:0
+    lastMotion:0
   };
   updateSensors(1);
   getDate();
@@ -299,13 +299,18 @@ function updateSensors(nohttp) {
     systemStatus.light=tColors;
     if(!nohttp){
       console.log("CallingMirror");
-      require("http").get(mirrorurl+"?clear="+tColors.clear+"&red="+tColors.red+"&green="+tColors.green+"&blue="+tColors.blue,function(){return;});
+      require("http").get(mirrorurl+getMirrorString(),function(){return;});
     }
   }
   bmp.getPressure(function(b){if (systemStatus.pressure==-1){systemStatus.pressure=b.pressure;} else {systemStatus.pressure=systemStatus.pressure*0.8+b.pressure*0.2;}});
 }
 
-
+function getMirrorString() {
+  var s=systemStatus;
+  var tstr="?door_up="+s.door_upstairs+"&door_down="+s.door_downstairs+"&fridge="+s.fridge;
+  tstr+=(s.light.clear>=0?"&clear="+s.light.clear+"&red="+s.light.red+"&green="+s.light.green+"&blue="+s.light.blue:"");
+  tstr+=(systemStatus.pressure>0?"&pressure="+systemStatus.pressure)
+}
 
 function handleCommand(cmd) {
   if (cmd.charAt(0)=='+') {
