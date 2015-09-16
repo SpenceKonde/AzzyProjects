@@ -20,12 +20,13 @@ void loop() {
   } else {
     if (!(BLINK_IN_PIN_REG & BLINK_IN_BIT)) {
       unsigned long mcount=mstart-millis();
-      on=0
+      on=0;
       if (process(mcount)) {
         digitalWrite(LED_DONE,1);
         EEPROM.write(0,OSCCAL);
         while 1; //all done. 
       }
+      delay(100); //let new clock stabilize
     }
   }
 }
