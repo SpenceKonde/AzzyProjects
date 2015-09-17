@@ -76,7 +76,7 @@ var otm=function(){
 
 
 
-
+var systemStatus= {};
 
 
 //My standard fargo network commands
@@ -102,12 +102,23 @@ function setDesk(command) {
 }
 
 
-function getFargostatus() {
+function getFargoStatus() {
   console.log("getFargoStatus called");
   var fargost="";
   require("http").get(fargosturl, function(res) {
     res.on('data',function (data) {fargost+=data;});
-    res.on('close',function() {var tfs=JSON.parse(fargost); vtfs=tfs; for (var i=0;i<8;i++) { fargo[i]=tfs.relaystate[i].state;} if(MnuS==3){uplcd(1);}});
+    res.on('close',function() {
+      var tem=0;
+      var tfs=JSON.parse(fargost);
+      vtfs=tfs; 
+      for (var i=0;i<8;i++) {
+        tem+=(systemStatus.fargo[i]!=tfs.relaystate[i].state);
+        systemStatus.fargo[i]=tfs.relaystate[i].state;
+      }
+      if (tem){
+        updateMirrorFargo();
+      }
+    });
   });
 }
 
@@ -118,7 +129,10 @@ function setFargo(relay,state) {
     res.on('close',function () {
           console.log("onClose called");
       if(this.code==200) {
-        fargo[relay]=state;
+        systemStatus.fargo[relay]=state;
+        updateMirrorFargo();
+      } else {
+        console.log("setFargo failed: "+this.code);
       }
     });
   });
@@ -183,6 +197,7 @@ function getDate() {
 }
 
 function onInit() {
+  USB.setConsole();
   Clock = require("clock").Clock;
   //initiating hardware...
   //status lights
@@ -233,7 +248,7 @@ function onInit() {
   pinMode(A0,'input_pullup'); //button '1'
   setWatch("switchRF(0);",A0,{edge:'falling',repeat:true, debounce:250});
   pinMode(A8,'input');
-  setWatch("systemStatus.lastMotion=clk.getDate().getTime();",A8,{edge:'rising',repeat:true});
+  setWatch("systemStatus.lastMotion=safeGetTime();",A8,{edge:'rising',repeat:true});
   //easyvr
   Serial1.setup(9600,{tx:B6,rx:B7});
   evr=require("easyvr").connect(Serial1,ocm,otm,otm,function(){stLD.set(1,1,0);});
@@ -262,8 +277,9 @@ function onInit() {
     RFDevs:[0,0,0],
     door_upstairs:0,
     door_downstairs:0,
-    fridge:0
-    lastMotion:0
+    fridge:0,
+    lastMotion:0,
+    fargo:new Uint8Array(8)
   };
   updateSensors(1);
   getDate();
@@ -291,11 +307,7 @@ function updateSensors(nohttp) {
   var tColors=tcs.getValue();
   if (tColors.clear >0) 
   {
-    if(tColors.clear < 10000) {
-      stLD.sMax((tColors.clear<1000?0:(tColors.clear<5000?64:128)));
-    } else {
-      stLD.sMax(256);
-    }
+    stLD.sMax((tColors.clear < 10000)?(tColors.clear<1000?0:(tColors.clear<5000?64:128)):255);
     systemStatus.light=tColors;
     if(!nohttp){
       console.log("CallingMirror");
@@ -305,11 +317,28 @@ function updateSensors(nohttp) {
   bmp.getPressure(function(b){if (systemStatus.pressure==-1){systemStatus.pressure=b.pressure;} else {systemStatus.pressure=systemStatus.pressure*0.8+b.pressure*0.2;}});
 }
 
+
+function updateMirrorFargo() {
+  require("http").get(mirrorurl+getFargoString(),function(){return;});
+}
+
+function getFargoString() {
+  var s=systemStatus.fargo;
+  return "?fargo0="+s[0]+"?fargo1="+s[1]+"?fargo2="+s[2]+"?fargo3="+s[3]+"?fargo4="+s[4]+"?fargo5="+s[5]+"?fargo6="+s[6]+"?fargo7="+s[7];
+}
 function getMirrorString() {
   var s=systemStatus;
   var tstr="?door_up="+s.door_upstairs+"&door_down="+s.door_downstairs+"&fridge="+s.fridge;
   tstr+=(s.light.clear>=0?"&clear="+s.light.clear+"&red="+s.light.red+"&green="+s.light.green+"&blue="+s.light.blue:"");
-  tstr+=(systemStatus.pressure>0?"&pressure="+systemStatus.pressure)
+  tstr+=(s.pressure>0?"&pressure="+s.pressure:"")+"&LastMove="+safeGetTime()-s.lastMotion;
+}
+
+function safeGetTime(){
+  if (clk) {
+    return clk.getDate().getTime();
+  } else {
+    return -1;
+  }
 }
 
 function handleCommand(cmd) {
@@ -340,7 +369,7 @@ RFMessages = {
 };
 
 RFCommands = {
-  "ERROR":"console.log('ERROR received from AzzyRF');",
+  "ERROR":"console.log('ERROR received from AzzyRF');Serial2.print('\r');",
   "RX ACK":"console.log('acknowledgement of last message received');",
   "TX OK":"console.log('transmit OK');"
 };
