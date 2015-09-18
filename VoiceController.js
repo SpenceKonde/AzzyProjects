@@ -311,6 +311,7 @@ function updateSensors(nohttp) {
     systemStatus.light=tColors;
     if(!nohttp){
       console.log("CallingMirror");
+      //console.log(getMirrorString());
       require("http").get(mirrorurl+getMirrorString(),function(){return;});
     }
   }
@@ -330,7 +331,8 @@ function getMirrorString() {
   var s=systemStatus;
   var tstr="?door_up="+s.door_upstairs+"&door_down="+s.door_downstairs+"&fridge="+s.fridge;
   tstr+=(s.light.clear>=0?"&clear="+s.light.clear+"&red="+s.light.red+"&green="+s.light.green+"&blue="+s.light.blue:"");
-  tstr+=(s.pressure>0?"&pressure="+s.pressure:"")+"&LastMove="+safeGetTime()-s.lastMotion;
+  tstr+=(s.pressure>0?"&pressure="+s.pressure:"")+"&LastMove="+(safeGetTime()-s.lastMotion);
+  return tstr;
 }
 
 function safeGetTime(){
