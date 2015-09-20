@@ -80,7 +80,8 @@ The example commands are:
 
 //#define TWO_WIRE_FLOW
 
-
+#define rxPIN
+#define rxBV
 
 #define CommandForgetTime 1000 //short, for testing
 
