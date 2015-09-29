@@ -63,21 +63,31 @@ The example commands are:
 #define ListenST 1
 #define CommandST 2
 #include <EEPROM.h>
+#include <TinyWireM.h>
 
 //Pin definitions:
 
-//pins 0 and 1 for xtal
-#define LED1 2
-#define LED2 3
-#define LED3 4
-//pins 5 and 6 used for serial 1 (command)
-#define txpin 7
-//pin 8 and 9 for serial 0 (program+debug)
-#define rxpin 10
+//pins 0,1: Serial
+//pins 15,16: Serial1 (programming only)
+//pins 16,12: I2C
+
+#define LED1 13
+#define txpin 14
+#define rxpin 7
+
 
 #define LED_ON 0
 #define LED_OFF 1
 
+#define SerialCmd Serial1
+#define SerialDbg Serial1
+#define MAX_SER_LEN 10
+char serBuffer[MAX_SER_LEN];
+
+
+#define HEX_OUT
+//#define HEX_IN
+//#define USE_ACK
 //#define TWO_WIRE_FLOW
 
 #define rxPIN
@@ -86,7 +96,7 @@ The example commands are:
 #define CommandForgetTime 1000 //short, for testing
 
 #define rcvled LED1
-#define RX_MAX_LEN 256 //Used to set the size of txrx buffer (and checked against this to prevent overflows from messing stuff up)
+#define RX_MAX_LEN 256 //Used to set the size of txrx buffer in BITS (and checked against this to prevent overflows from messing stuff up)
 
 //These set the parameters for transmitting.
 
@@ -163,13 +173,7 @@ byte SerCmBuff[16];
 
 char * pEnd; //dummy pointer for sto
 
-#define SerialDbg Serial
-#define SerialCmd Serial1
-#define HEX_OUT
-//#define HEX_IN
-#define MAX_SER_LEN 10
-char serBuffer[MAX_SER_LEN];
-//#define USE_ACK
+
 
 //byte MyState;
 //unsigned char MyCmd;
@@ -200,26 +204,26 @@ void setup() {
   rxing = 0;
   //MyState = ListenST;
   digitalWrite(LED1, LED_OFF);
-  digitalWrite(LED2, LED_OFF);
-  #ifdef TWO_WIRE_FLOW
-  pinMode(LED3, INPUT);
-  #else
-  pinMode(LED3, OUTPUT);
-  digitalWrite(LED3, LED_OFF);
+  //digitalWrite(LED2, LED_OFF);
+  //#ifdef TWO_WIRE_FLOW
+  //pinMode(LED3, INPUT);
+  //#else
+  //pinMode(LED3, OUTPUT);
+  //digitalWrite(LED3, LED_OFF);
   #endif
-  pinMode(LED1, OUTPUT);
-  pinMode(LED2, OUTPUT);
+  //pinMode(LED1, OUTPUT);
+  //pinMode(LED2, OUTPUT);
   pinMode(txpin, OUTPUT);
   pinMode(rxpin, INPUT);
-  Serial.begin(9600);
+  SerialDbg.begin(9600);
   if (EEPROM.read(0) < 255) {
     //initFromEEPROM();
     //SerialDbg.println(F("Load from EEPROM"));
   }
-  Serial1.begin(9600);
-  digitalWrite(LED2, LED_ON);
+  SerialCmd.begin(9600);
+  digitalWrite(LED1, LED_ON);
   delay(1000);
-  digitalWrite(LED2, LED_OFF);
+  digitalWrite(LED1, LED_OFF);
   SerialDbg.println(F("Startup OK"));
 
 }
