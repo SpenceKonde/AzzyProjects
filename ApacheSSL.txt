@@ -1,0 +1,18 @@
+Setup http to https relay server:
+
+Apache with with mod_proxy and mod_ssl modules (at Linux box)
+
+Code: [Select]
+<VirtualHost *:80>
+        ServerName xxx.yyy
+        SSLProxyEngine On
+        ProxyPass  / https://Parse.com/
+</VirtualHost>
+
+
+Workflow:
+
+Arduino->http->'relay server'->https->'Parse.com'
+
+
+http://forum.arduino.cc/index.php?topic=350240
