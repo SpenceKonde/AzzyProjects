@@ -79,8 +79,8 @@ The example commands are:
 #define LED_ON 0
 #define LED_OFF 1
 
-#define SerialCmd Serial1
-#define SerialDbg Serial1
+#define SerialCmd Serial
+#define SerialDbg Serial
 #define MAX_SER_LEN 10
 char serBuffer[MAX_SER_LEN];
 
@@ -203,15 +203,14 @@ void setup() {
   bitsrx = 0;
   rxing = 0;
   //MyState = ListenST;
-  digitalWrite(LED1, LED_OFF);
   //digitalWrite(LED2, LED_OFF);
   //#ifdef TWO_WIRE_FLOW
   //pinMode(LED3, INPUT);
   //#else
   //pinMode(LED3, OUTPUT);
   //digitalWrite(LED3, LED_OFF);
-  #endif
-  //pinMode(LED1, OUTPUT);
+  //#endif
+  pinMode(LED1, OUTPUT);
   //pinMode(LED2, OUTPUT);
   pinMode(txpin, OUTPUT);
   pinMode(rxpin, INPUT);
@@ -222,6 +221,7 @@ void setup() {
   }
   SerialCmd.begin(9600);
   digitalWrite(LED1, LED_ON);
+  TinyWireM.begin();
   delay(1000);
   digitalWrite(LED1, LED_OFF);
   SerialDbg.println(F("Startup OK"));
@@ -230,23 +230,22 @@ void setup() {
 
 
 void loop() {
-  curTime = micros();
   //if (MyState == ListenST) {
-  ClearCMD(); //do the command reset only if we are in listenst but NOT receiving.
   onListenST();
   if (rxing == 1) {
     return; //don't do anything else while actively receiving.
   } else {
+    ClearCMD(); //do the command reset only if we are in listenst but NOT receiving.
     processSerial();
+    if (millis() - lastSer  > 10000) {
+      resetSer();
+   }
   }
   //} else if (MyState == CommandST) {
   //  onCommandST();
   //} else {
   //  MyState = ListenST; //in case we get into a bad state somehow.
   //}
-  if (millis() - lastSer  > 10000) {
-    resetSer();
-  }
 }
 
 void writeConfigToEEPROM() {
@@ -327,6 +326,12 @@ void processSerial() {
           writeConfigToEEPROM();
           } else if (SerRXmax==1) {
             MyAddress=txrxbuffer[0];
+            TinyWireM.beginTransmission(0x50);
+            TinyWireM.send(0x00);
+            TinyWireM.send(txrxbuffer[0]);
+            TinyWireM.endTransmission();
+            TinyWireM.requestFrom(0x50,1);
+            SerialCmd.println(TinyWireM.receive());
           //  EEPROM.write(0,MyAddress)
         } else {
           preparePayloadFromSerial();
@@ -389,6 +394,11 @@ void checkCommand() {
 
   } else if (strcmp (serBuffer, "AT+ADR?") == 0) {
     SerialCmd.println(MyAddress);
+    TinyWireM.beginTransmission(0x50);
+            TinyWireM.send(0x00);
+            TinyWireM.send(MyAddress);
+            TinyWireM.send(69);
+            TinyWireM.endTransmission();
   } else if (strcmp (serBuffer, "AT+ADR") == 0) {
     SerRXmax = 1;
     rxing = 2;
@@ -547,26 +557,30 @@ digitalWrite(LED2,0);
 }
 
 void onListenST() {
+  
+  curTime = micros();
   byte pinState = digitalRead(rxpin);
   if (pinState == lastPinState) {
     return;
   } else {
+    //digitalWrite(LED1,pinState);
     lastPinState = pinState;
   }
   if (pinState == 0) {
     lastPinLowTime = curTime;
     unsigned long bitlength = lastPinLowTime - lastPinHighTime;
     if (rxing == 1) {
+      //digitalWrite(LED1,0);
       if (bitlength > rxZeroMin && bitlength < rxZeroMax) {
         rxdata = rxdata << 1;
       } else if (bitlength > rxOneMin && bitlength < rxOneMax ) {
         rxdata = (rxdata << 1) + 1;
       } else {
         //if (bitsrx > 10) {
-        //  Serial.print(F("Reset wrong high len "));
-        //  Serial.print(bitlength);
-        //  Serial.print(" ");
-        //  Serial.println(bitsrx);
+          //Serial.print(F("Reset wrong high len "));
+          //Serial.print(bitlength);
+          //Serial.print(" ");
+          //Serial.println(bitsrx);
         //}
         resetListen();
         return;
@@ -584,7 +598,7 @@ void onListenST() {
         
       } else if ((bitsrx & 0x07) == 0 && bitsrx) {
         txrxbuffer[(bitsrx >> 3)-1] = rxdata;
-        //showHex(rxdata);
+        showHex(rxdata);
         rxdata = 0;
       }
       //SerialDbg.println(bitsrx);
@@ -604,6 +618,8 @@ void onListenST() {
       return;
     }
     if (lastPinHighTime - lastPinLowTime > rxLowMax && rxing == 1) {
+      //SerialDbg.print("rxlow");
+      //SerialDbg.println(lastPinHighTime - lastPinLowTime);
       resetListen();
       return;
     }
@@ -678,6 +694,7 @@ unsigned long calcBigChecksum(byte len) {
 }
 
 void resetListen() {
+  //SerialDbg.println(F("reset listen"));
   bitsrx = 0;
   rxdata = 0;
   rxing = 0;
