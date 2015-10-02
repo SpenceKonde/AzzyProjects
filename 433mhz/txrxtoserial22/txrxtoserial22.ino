@@ -72,6 +72,11 @@ The example commands are:
 //pins 16,12: I2C
 
 #define LED1 13
+#define LED2 4
+#define LED3 5
+#define LED4 6
+#define LED5 11
+#define LED6 8
 #define txpin 14
 #define rxpin 7
 
@@ -211,7 +216,17 @@ void setup() {
   //digitalWrite(LED3, LED_OFF);
   //#endif
   pinMode(LED1, OUTPUT);
-  //pinMode(LED2, OUTPUT);
+  pinMode(LED2, OUTPUT);
+  pinMode(LED3, OUTPUT);
+  pinMode(LED4, OUTPUT);
+  pinMode(LED5, OUTPUT);
+  pinMode(LED6, OUTPUT);
+  digitalWrite(LED1, LED_OFF);
+  digitalWrite(LED2, LED_OFF);
+  digitalWrite(LED3, LED_OFF);
+  digitalWrite(LED4, LED_OFF);
+  digitalWrite(LED5, LED_OFF);
+  digitalWrite(LED6, LED_OFF);
   pinMode(txpin, OUTPUT);
   pinMode(rxpin, INPUT);
   SerialDbg.begin(9600);
@@ -228,18 +243,61 @@ void setup() {
 
 }
 
+byte readAT24(unsigned int addr) {
+  TinyWireM.beginTransmission(0x50);
+  TinyWireM.send((byte)(addr >> 8));
+  TinyWireM.send((byte)(addr & 255));
+  TinyWireM.endTransmission();
+  TinyWireM.requestFrom(0x50, 1);
+  return TinyWireM.receive();
+}
+
+void readAT24(unsigned int addr, byte len, byte * dat) {
+  TinyWireM.beginTransmission(0x50);
+  TinyWireM.send((byte)(addr >> 8));
+  TinyWireM.send((byte)(addr & 255));
+  TinyWireM.endTransmission();
+  TinyWireM.requestFrom(0x50, len);
+  for (byte i = 0; i < len; i++) {
+    dat[i] = TinyWireM.receive();
+  }
+}
+
+void writeAT24(unsigned int addr, byte len, byte * dat) {
+  TinyWireM.beginTransmission(0x50);
+  TinyWireM.send((byte)(addr >> 8));
+  TinyWireM.send((byte)(addr & 255));
+  TinyWireM.send(dat, len);
+  TinyWireM.endTransmission();
+  delay(10);
+  SerialDbg.println(F("Wrote block"));
+}
+
+void writeAT24(unsigned int addr, byte dat) {
+  TinyWireM.beginTransmission(0x50);
+  TinyWireM.send((byte)(addr >> 8));
+  TinyWireM.send((byte)(addr & 255));
+  TinyWireM.send(dat);
+  TinyWireM.endTransmission();
+  delay(10);
+  SerialDbg.println(F("Wrote byte"));
+
+}
+
 
 void loop() {
   //if (MyState == ListenST) {
   onListenST();
   if (rxing == 1) {
+    PORTA &= ~1;
     return; //don't do anything else while actively receiving.
   } else {
+    PORTA |= 1;
     ClearCMD(); //do the command reset only if we are in listenst but NOT receiving.
     processSerial();
     if (millis() - lastSer  > 10000) {
       resetSer();
-   }
+    }
   }
   //} else if (MyState == CommandST) {
   //  onCommandST();
@@ -324,15 +382,17 @@ void processSerial() {
         ndx = 0;
         if (SerRXmax == 26) {
           writeConfigToEEPROM();
-          } else if (SerRXmax==1) {
-            MyAddress=txrxbuffer[0];
-            TinyWireM.beginTransmission(0x50);
-            TinyWireM.send(0x00);
-            TinyWireM.send(txrxbuffer[0]);
-            TinyWireM.endTransmission();
-            TinyWireM.requestFrom(0x50,1);
-            SerialCmd.println(TinyWireM.receive());
+        } else if (SerRXmax == 1) {
+          MyAddress = txrxbuffer[0];
           //  EEPROM.write(0,MyAddress)
+        } else if (SerRXmax == 2) {
+#ifdef HEX_OUT
+          showHex(readAT24(txrxbuffer[0] << 8 + txrxbuffer[1]), 1);
+#else
+          SerialCMD.println(readAT24(txrxbuffer[0] << 8 + txrxbuffer[1]));
+#endif
+        } else if (SerRXmax == 3) {
+          writeAT24(txrxbuffer[0] << 8 + txrxbuffer[1],txrxbuffer[2]);
         } else {
           preparePayloadFromSerial();
           doTransmit(5);
@@ -394,13 +454,20 @@ void checkCommand() {
 
   } else if (strcmp (serBuffer, "AT+ADR?") == 0) {
     SerialCmd.println(MyAddress);
-    TinyWireM.beginTransmission(0x50);
-            TinyWireM.send(0x00);
-            TinyWireM.send(MyAddress);
-            TinyWireM.send(69);
-            TinyWireM.endTransmission();
   } else if (strcmp (serBuffer, "AT+ADR") == 0) {
     SerRXmax = 1;
+    rxing = 2;
+  } else if (strcmp (serBuffer, "AT+24R") == 0) {
+    SerRXmax = 2;
+    rxing = 2;
+  } else if (strcmp (serBuffer, "AT+24W") == 0) {
+    SerRXmax = 3;
+    rxing = 2;
+  } else if (strcmp (serBuffer, "AT+24RL") == 0) {
+    SerRXmax = 2;
+    rxing = 2;
+  } else if (strcmp (serBuffer, "AT+24WL") == 0) {
+    SerRXmax = 18;
     rxing = 2;
   } else {
     SerialCmd.println(F("ERROR"));
@@ -408,7 +475,11 @@ void checkCommand() {
     resetSer();
   }
   if (rxing == 2) {
+#ifdef HEX_IN
     SerialCmd.print(F(">"));
+#else
+    SerialCmd.print(F("#"));
+#endif
   }
 
 
@@ -452,6 +523,9 @@ void prepareAckPayload() {
 
 
 void doTransmit(int rep) { //rep is the number of repetitions
+#ifdef LED5
+  digitalWrite(LED5, LED_ON);
+#endif
   byte txchecksum = 0;
   for (byte i = 0; i < TXLength - 1; i++) {
     txchecksum = txchecksum ^ txrxbuffer[i];
@@ -501,16 +575,19 @@ void doTransmit(int rep) { //rep is the number of repetitions
   }
 #endif
   TXLength = 0;
+#ifdef LED5
+  digitalWrite(LED5, LED_OFF);
+#endif
 }
 
 
 void outputPayload() {
-#ifdef TWO_WIRE_FLOW 
-digitalWrite(LED2,1);
-while (digitalRead(LED3)==0){
-  ; //do nothing until that pin driven high
-}
-digitalWrite(LED2,0);
+#ifdef TWO_WIRE_FLOW
+  digitalWrite(LED2, 1);
+  while (digitalRead(LED3) == 0) {
+    ; //do nothing until that pin driven high
+  }
+  digitalWrite(LED2, 0);
 #endif
 #ifdef USE_ACK
   if (txrxbuffer[1] == 0xE8) {
@@ -527,10 +604,10 @@ digitalWrite(LED2,0);
     SerialCmd.print(F("+"));
 #ifdef HEX_OUT
     for (byte x = 0; x < tem ; x++) {
-      showHex(txrxbuffer[x],1);
+      showHex(txrxbuffer[x], 1);
     }
     if (tem == 3) { //means it was a short
-      showHex((txrxbuffer[3] & 0xF0) >> 4,1);
+      showHex((txrxbuffer[3] & 0xF0) >> 4, 1);
     }
 #else
     SerialCmd.print(tem == 3 ? 4 : tem);
@@ -544,10 +621,10 @@ digitalWrite(LED2,0);
 #endif
     SerialCmd.println();
 #ifdef USE_ACK
-    if ((txrxbuffer[0]&0x3F)==MyAddress) {
-    prepareAckPayload();
-    delay(1000);
-    doTransmit(5);
+    if ((txrxbuffer[0] & 0x3F) == MyAddress) {
+      prepareAckPayload();
+      delay(1000);
+      doTransmit(5);
     }
   }
 #endif
@@ -557,7 +634,7 @@ digitalWrite(LED2,0);
 }
 
 void onListenST() {
-  
+
   curTime = micros();
   byte pinState = digitalRead(rxpin);
   if (pinState == lastPinState) {
@@ -577,10 +654,10 @@ void onListenST() {
         rxdata = (rxdata << 1) + 1;
       } else {
         //if (bitsrx > 10) {
-          //Serial.print(F("Reset wrong high len "));
-          //Serial.print(bitlength);
-          //Serial.print(" ");
-          //Serial.println(bitsrx);
+        //Serial.print(F("Reset wrong high len "));
+        //Serial.print(bitlength);
+        //Serial.print(" ");
+        //Serial.println(bitsrx);
         //}
         resetListen();
         return;
@@ -595,9 +672,9 @@ void onListenST() {
           return;
         }
 #endif
-        
+
       } else if ((bitsrx & 0x07) == 0 && bitsrx) {
-        txrxbuffer[(bitsrx >> 3)-1] = rxdata;
+        txrxbuffer[(bitsrx >> 3) - 1] = rxdata;
         showHex(rxdata);
         rxdata = 0;
       }
