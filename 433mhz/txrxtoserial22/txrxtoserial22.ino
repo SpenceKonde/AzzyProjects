@@ -175,6 +175,7 @@ byte SerRXidx;
 unsigned long lastSer = 0;
 byte SerRXmax;
 byte SerCmBuff[16];
+byte SerCmd;
 
 char * pEnd; //dummy pointer for sto
 
@@ -380,24 +381,39 @@ void processSerial() {
 #endif
       if (SerRXidx == SerRXmax) {
         ndx = 0;
-        if (SerRXmax == 26) {
-          writeConfigToEEPROM();
-        } else if (SerRXmax == 1) {
-          MyAddress = txrxbuffer[0];
-          //  EEPROM.write(0,MyAddress)
-        } else if (SerRXmax == 2) {
+        if (SerCmd == 0) {
+          if (SerRXmax == 26) {
+            writeConfigToEEPROM();
+          } else {
+            preparePayloadFromSerial();
+            doTransmit(5);
+          }
+        } else if (SerCmd == 1) { //AT+ADR
+            MyAddress = txrxbuffer[0];
+            //  EEPROM.write(0,MyAddress)
+          } else if (SerCmd == 2) { //AT+24R
 #ifdef HEX_OUT
-          showHex(readAT24(txrxbuffer[0] << 8 + txrxbuffer[1]), 1);
+            showHex(readAT24(txrxbuffer[0] << 8 + txrxbuffer[1]), 1);
 #else
-          SerialCMD.println(readAT24(txrxbuffer[0] << 8 + txrxbuffer[1]));
+            SerialCMD.println(readAT24(txrxbuffer[0] << 8 + txrxbuffer[1]));
 #endif
-        } else if (SerRXmax == 3) {
-          writeAT24(txrxbuffer[0] << 8 + txrxbuffer[1],txrxbuffer[2]);
-        } else {
-          preparePayloadFromSerial();
-          doTransmit(5);
-        }
-        resetSer();
+          } else if (SerCmd == 3) { //AT+24W
+            writeAT24(txrxbuffer[0] << 8 + txrxbuffer[1],txrxbuffer[2]);
+          } else if (SerCmd == 4) { //AT+24RL
+            readAT24(txrxbuffer[0] << 8 + txrxbuffer[1],txrxbuffer[2],txrxbuffer+3);
+            for (i=0,i<txrxbuffer[2],i++) {
+#ifdef HEX_OUT
+              showHex(txrxbuffer[i+3], 1);
+#else
+              SerialCMD.println(txrxbuffer[i+3]);
+#endif
+            }
+          } else if (SerCmd == 5) { //AT+24WL
+            writeAT24(txrxbuffer[0] << 8 + txrxbuffer[1],txrxbuffer[2],txrxbuffer+3);
+          } 
+          resetSer();
+      } else if (SerRXidx==3 && SerCmd==5) {
+        SerRXMax=txrxbuffer[2];
       }
     } else if (rxing == 0) {
       char rc = SerialCmd.read();
@@ -455,19 +471,24 @@ void checkCommand() {
   } else if (strcmp (serBuffer, "AT+ADR?") == 0) {
     SerialCmd.println(MyAddress);
   } else if (strcmp (serBuffer, "AT+ADR") == 0) {
+    SerCmd = 1;
     SerRXmax = 1;
     rxing = 2;
   } else if (strcmp (serBuffer, "AT+24R") == 0) {
+    SerCmd = 2;
     SerRXmax = 2;
     rxing = 2;
   } else if (strcmp (serBuffer, "AT+24W") == 0) {
+    SerCmd = 3;
     SerRXmax = 3;
     rxing = 2;
   } else if (strcmp (serBuffer, "AT+24RL") == 0) {
-    SerRXmax = 2;
+    SerCmd = 4;
+    SerRXmax = 3;
     rxing = 2;
   } else if (strcmp (serBuffer, "AT+24WL") == 0) {
-    SerRXmax = 18;
+    SerCmd = 5;
+    SerRXmax = 19;
     rxing = 2;
   } else {
     SerialCmd.println(F("ERROR"));
@@ -486,6 +507,7 @@ void checkCommand() {
 }
 
 void resetSer() {
+  SerCmd = 0;
   if (rxing == 2) {
     rxing = 0;
   }
