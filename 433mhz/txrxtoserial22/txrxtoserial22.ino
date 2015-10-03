@@ -294,6 +294,7 @@ void loop() {
     return; //don't do anything else while actively receiving.
   } else {
     PORTA |= 1;
+    digitalWrite(LED2,rxing>>1?LED_ON:LED_OFF);
     ClearCMD(); //do the command reset only if we are in listenst but NOT receiving.
     processSerial();
     if (millis() - lastSer  > 10000) {
@@ -332,28 +333,27 @@ void showHex (const byte b, const byte c = 0)
 }  // end of showHex
 
 void initFromEEPROM() {
-  /*byte tAddr = EEPROM.read(0);
-  if (tAddr < 64) {
-    MyAddress = tAddr;
-    // Version 2.1 EEPROM.read(2)+(EEPROM.read(1)<<8);
-
-    txSyncTime = EEPROM.read(2) + (EEPROM.read(1) << 8); //length of sync
-    txTrainRep = EEPROM.read(3); //number of pulses in training burst
-    txTrainLen = EEPROM.read(5) + (EEPROM.read(4) << 8); //length of each pulse in training burst
-
-    txOneLength = EEPROM.read(7) + (EEPROM.read(6) << 8); //length of a 1
-    txZeroLength = EEPROM.read(9) + (EEPROM.read(8) << 8); //length of a 0
-    txLowTime = EEPROM.read(11) + (EEPROM.read(10) << 8); //length of the gap between bits
-
-    rxSyncMin = EEPROM.read(13) + (EEPROM.read(12) << 8); //minimum valid sync length
-    rxSyncMax = EEPROM.read(15) + (EEPROM.read(14) << 8); //maximum valid sync length
-    rxZeroMin = EEPROM.read(17) + (EEPROM.read(16) << 8); //minimum length for a valid 0
-    rxZeroMax = EEPROM.read(19) + (EEPROM.read(18) << 8); //maximum length for a valid 0
-    rxOneMin = EEPROM.read(21) + (EEPROM.read(20) << 8); //minimum length for a valid 1
-    rxOneMax = EEPROM.read(23) + (EEPROM.read(22) << 8); //maximum length for a valid 1
-    rxLowMax = EEPROM.read(25) + (EEPROM.read(24) << 8); //longest low before packet discarded
+  byte tIsConf = EEPROM.read(32);
+  if (tIsConf < 255) {
+    SerialDbg.println(F("Loading config"));
+    //MyAddress = tAddr;
+    txSyncTime = EEPROM.read(33) + (EEPROM.read(32) << 8); //length of sync
+    txTrainRep = EEPROM.read(34); //number of pulses in training burst
+    txTrainLen = EEPROM.read(36) + (EEPROM.read(35) << 8); //length of each pulse in training burst
+    txOneLength = EEPROM.read(38) + (EEPROM.read(37) << 8); //length of a 1
+    txZeroLength = EEPROM.read(40) + (EEPROM.read(39) << 8); //length of a 0
+    txLowTime = EEPROM.read(42) + (EEPROM.read(41) << 8); //length of the gap between bits
+    rxSyncMin = EEPROM.read(44) + (EEPROM.read(43) << 8); //minimum valid sync length
+    rxSyncMax = EEPROM.read(46) + (EEPROM.read(45) << 8); //maximum valid sync length
+    rxZeroMin = EEPROM.read(48) + (EEPROM.read(47) << 8); //minimum length for a valid 0
+    rxZeroMax = EEPROM.read(50) + (EEPROM.read(49) << 8); //maximum length for a valid 0
+    rxOneMin = EEPROM.read(52) + (EEPROM.read(51) << 8); //minimum length for a valid 1
+    rxOneMax = EEPROM.read(54) + (EEPROM.read(53) << 8); //maximum length for a valid 1
+    rxLowMax = EEPROM.read(56) + (EEPROM.read(55) << 8); //longest low before packet discarded
+  } else {
+    SerialDbg.println(F("No config to load"));
   }
-  */
+  
 
 }
 
@@ -382,7 +382,7 @@ void processSerial() {
       if (SerRXidx == SerRXmax) {
         ndx = 0;
         if (SerCmd == 0) {
-          if (SerRXmax == 26) {
+          if (SerRXmax == 25) {
             writeConfigToEEPROM();
           } else {
             preparePayloadFromSerial();
@@ -449,7 +449,7 @@ void checkCommand() {
     SerRXmax = 31;
     rxing = 2;
   } else if (strcmp (serBuffer, "AT+CONF") == 0) {
-    SerRXmax = 26;
+    SerRXmax = 25;
     rxing = 2;
   } else if (strcmp (serBuffer, "AT+HEX?") == 0) {
 #ifdef HEX_IN
