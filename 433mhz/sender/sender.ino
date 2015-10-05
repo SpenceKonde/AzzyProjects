@@ -2,15 +2,58 @@
 #include <avr/power.h>
 
 #define txpin 4
+#define myid 0
+#define mytarget 10
+#define RX_MAX_LEN 32
+#include <EEPROM.h>
 
+
+
+unsigned char txrxbuffer[RX_MAX_LEN >> 3];
+byte btnst=0;
 
 void setup() {
   
 }
 
 void loop() {
-
+  btnst=(~PINB)&0x0F;
+  
+  if (btnst) {
+    if (btnst & 1 ) {
+      preparePayload(1);
+    } else if (btnst & 2) {
+      preparePayload(2);
+    } else if (btnst & 4) {
+      preparePayload(3);
+    } else if (btnst & 8) {
+      preparePayload(4);
+    } else {
+      prepareErrorPayload(btnst); //error
+    }
+  }
 }
+
+void preparePayload(btn) {
+  byte plen = txrxbuffer[0] >> 6;
+  plen = 4 << plen;
+  txrxbuffer[0] = mytarget;
+  txrxbuffer[1] = 0x55;
+  txrxbuffer[2] = ((myid & 0xF0)<<4)+btn;
+  txrxbuffer[3] = 0x50;
+  TXLength = 4;
+}
+
+void prepareErrorPayload(state) {
+  byte plen = txrxbuffer[0] >> 6;
+  plen = 4 << plen;
+  txrxbuffer[0] = mytarget;
+  txrxbuffer[1] = 0x55;
+  txrxbuffer[2] = ((myid & 0xF0)<<4);
+  txrxbuffer[3] = 0xA0;
+  TXLength = 4;
+}
+
 
 void doTransmit(int rep) { //rep is the number of repetitions
 #ifdef LED5
