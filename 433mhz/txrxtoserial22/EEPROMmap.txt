@@ -1,1 +1,16 @@
 
+0x00 - 0x20: Basic config
+0x00 - 0x04: System-wide settings, version #, etc. 
+
+0x04 - 0x08: 
+0x04: Device Address
+
+
+
+0x20 - 0x40: RF tx/rx time parameters
+
+0x40 - 0xFF: free space?
+
+
+ACK Map - For each of the 256 possible commands, need to mark which ones will generate an ACK response, and which ones won't, since we don't want things going to multiple receivers getting ACK'ed, else we'll just have a storm of ACK's flying around and nobody will be able to hear any of them over all the shouting. 
+
