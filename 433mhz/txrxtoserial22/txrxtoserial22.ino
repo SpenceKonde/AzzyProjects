@@ -92,7 +92,7 @@ char serBuffer[MAX_SER_LEN];
 
 #define HEX_OUT
 //#define HEX_IN
-//#define USE_ACK
+#define USE_ACK
 //#define TWO_WIRE_FLOW
 
 #define rxPIN
@@ -268,6 +268,7 @@ void writeAT24(unsigned int addr, byte len, byte * dat) {
   TinyWireM.beginTransmission(0x50);
   TinyWireM.send((byte)(addr >> 8));
   TinyWireM.send((byte)(addr & 255));
+  SerialDbg.println(dat[0]);
   TinyWireM.send(dat, len);
   TinyWireM.endTransmission();
   delay(10);
@@ -297,9 +298,12 @@ void loop() {
     digitalWrite(LED2,rxing>>1?LED_ON:LED_OFF);
     ClearCMD(); //do the command reset only if we are in listenst but NOT receiving.
     processSerial();
-    if (millis() - lastSer  > 10000) {
+    if (millis() - lastSer  > (rxing==2?20000:10000)) {
       resetSer();
     }
+    //delay(25000);
+    //prepareTestPayload();
+    //doTransmit(5);
   }
   //} else if (MyState == CommandST) {
   //  onCommandST();
@@ -401,11 +405,11 @@ void processSerial() {
             writeAT24(txrxbuffer[0] << 8 + txrxbuffer[1],txrxbuffer[2]);
           } else if (SerCmd == 4) { //AT+24RL
             readAT24(txrxbuffer[0] << 8 + txrxbuffer[1],txrxbuffer[2],txrxbuffer+3);
-            for (i=0,i<txrxbuffer[2],i++) {
+            for (byte i=0;i<txrxbuffer[2];i++) {
 #ifdef HEX_OUT
               showHex(txrxbuffer[i+3], 1);
 #else
-              SerialCMD.println(txrxbuffer[i+3]);
+              SerialCmd.println(txrxbuffer[i+3]);
 #endif
             }
           } else if (SerCmd == 5) { //AT+24WL
@@ -413,7 +417,9 @@ void processSerial() {
           } 
           resetSer();
       } else if (SerRXidx==3 && SerCmd==5) {
-        SerRXMax=txrxbuffer[2];
+        SerialCmd.println(txrxbuffer[2]);
+        SerialCmd.println("Adjusting characther RX");
+        SerRXmax=txrxbuffer[2]+3;
       }
     } else if (rxing == 0) {
       char rc = SerialCmd.read();
@@ -542,7 +548,15 @@ void prepareAckPayload() {
   TXLength = 4;
 }
 
-
+void prepareTestPayload() {
+  byte plen = txrxbuffer[0] >> 6;
+  plen = 4 << plen;
+  txrxbuffer[0] = (20);
+  txrxbuffer[2] = 0x20;
+  txrxbuffer[1] = 0xB8;
+  txrxbuffer[3] = 0x50;
+  TXLength = 4;
+}
 
 void doTransmit(int rep) { //rep is the number of repetitions
 #ifdef LED5
