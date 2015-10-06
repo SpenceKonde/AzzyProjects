@@ -103,6 +103,21 @@ char serBuffer[MAX_SER_LEN];
 #define rcvled LED1
 #define RX_MAX_LEN 256 //Used to set the size of txrx buffer in BITS (and checked against this to prevent overflows from messing stuff up)
 
+
+const char AT24R[] PROGMEM = {"AT+24R"};
+const char ATSEND[] PROGMEM = {"AT+SEND"};
+const char ATSENDM[] PROGMEM = {"AT+SENDM"};
+const char ATSENDL[] PROGMEM = {"AT+SENDL"};
+const char ATSENDE[] PROGMEM = {"AT+SENDE"};
+const char ATCONF[] PROGMEM = {"AT+CONF"};
+const char ATHEX[] PROGMEM = {"AT+HEX?"};
+const char ATADRQ[] PROGMEM = {"AT+ADR?"};
+const char ATADR[] PROGMEM = {"AT+ADR"};
+const char AT24W[] PROGMEM = {"AT+24W"};
+const char AT24WL[] PROGMEM = {"AT+24WL"};
+const char AT24RL[] PROGMEM = {"AT+24RL"};
+
+
 //These set the parameters for transmitting.
 
 /*
@@ -420,7 +435,7 @@ void processSerial() {
           resetSer();
       } else if (SerRXidx==3 && SerCmd==5) {
         SerialCmd.println(txrxbuffer[2]);
-        SerialCmd.println("Adjusting characther RX");
+        SerialDbg.println(F("Adjusting characther RX"));
         SerRXmax=txrxbuffer[2]+3;
       }
     } else if (rxing == 0) {
@@ -444,57 +459,57 @@ void processSerial() {
 }
 
 void checkCommand() {
-  if (strcmp (serBuffer, "AT+SEND") == 0) {
+  if (strcmp_P (serBuffer, ATSEND) == 0) {
     SerRXmax = 4;
     rxing = 2;
-  } else if (strcmp (serBuffer, "AT+SENDM") == 0) {
+  } else if (strcmp_P (serBuffer, ATSENDM) == 0) {
     SerRXmax = 7;
     rxing = 2;
-  } else if (strcmp (serBuffer, "AT+SENDL") == 0) {
+  } else if (strcmp_P (serBuffer, ATSENDL) == 0) {
     SerRXmax = 15;
     rxing = 2;
-  } else if (strcmp (serBuffer, "AT+SENDE") == 0) {
+  } else if (strcmp_P (serBuffer, ATSENDE) == 0) {
     SerRXmax = 31;
     rxing = 2;
-  } else if (strcmp (serBuffer, "AT+CONF") == 0) {
+  } else if (strcmp_P (serBuffer, ATCONF) == 0) {
     SerRXmax = 25;
     rxing = 2;
-  } else if (strcmp (serBuffer, "AT+HEX?") == 0) {
+  } else if (strcmp_P (serBuffer, ATHEX) == 0) {
 #ifdef HEX_IN
 #ifdef HEX_OUT
-    SerialCmd.println("03");
+    SerialCmd.println(F("03"));
 #else
     byte a = 2;
     SerialCmd.println(a);
 #endif
 #else
 #ifdef HEX_OUT
-    SerialCmd.println("01");
+    SerialCmd.println(F("01"));
 #else
     byte a = 0;
     SerialCmd.println(a);
 #endif
 #endif
 
-  } else if (strcmp (serBuffer, "AT+ADR?") == 0) {
+  } else if (strcmp_P (serBuffer, ATADRQ) == 0) { //AT+ADR?
     SerialCmd.println(MyAddress);
-  } else if (strcmp (serBuffer, "AT+ADR") == 0) {
+  } else if (strcmp_P (serBuffer, ATADR) == 0) {
     SerCmd = 1;
     SerRXmax = 1;
     rxing = 2;
-  } else if (strcmp (serBuffer, "AT+24R") == 0) {
+  } else if (strcmp_P (serBuffer, AT24R) == 0) {
     SerCmd = 2;
     SerRXmax = 2;
     rxing = 2;
-  } else if (strcmp (serBuffer, "AT+24W") == 0) {
+  } else if (strcmp_P (serBuffer, AT24W) == 0) {
     SerCmd = 3;
     SerRXmax = 3;
     rxing = 2;
-  } else if (strcmp (serBuffer, "AT+24RL") == 0) {
+  } else if (strcmp_P (serBuffer, AT24RL) == 0) {
     SerCmd = 4;
     SerRXmax = 3;
     rxing = 2;
-  } else if (strcmp (serBuffer, "AT+24WL") == 0) {
+  } else if (strcmp_P (serBuffer, AT24WL) == 0) {
     SerCmd = 5;
     SerRXmax = 19;
     rxing = 2;
