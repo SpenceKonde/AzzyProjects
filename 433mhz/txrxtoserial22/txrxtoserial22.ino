@@ -261,6 +261,7 @@ void readAT24(unsigned int addr, byte len, byte * dat) {
   TinyWireM.requestFrom(0x50, len);
   for (byte i = 0; i < len; i++) {
     dat[i] = TinyWireM.receive();
+    SerialDbg.println(dat[i]);
   }
 }
 
@@ -268,7 +269,8 @@ void writeAT24(unsigned int addr, byte len, byte * dat) {
   TinyWireM.beginTransmission(0x50);
   TinyWireM.send((byte)(addr >> 8));
   TinyWireM.send((byte)(addr & 255));
-  SerialDbg.println(dat[0]);
+  SerialDbg.println(dat[len-1]);
+  SerialDbg.println(len);
   TinyWireM.send(dat, len);
   TinyWireM.endTransmission();
   delay(10);
@@ -404,7 +406,7 @@ void processSerial() {
           } else if (SerCmd == 3) { //AT+24W
             writeAT24(txrxbuffer[0] << 8 + txrxbuffer[1],txrxbuffer[2]);
           } else if (SerCmd == 4) { //AT+24RL
-            readAT24(txrxbuffer[0] << 8 + txrxbuffer[1],txrxbuffer[2],txrxbuffer+3);
+            readAT24((txrxbuffer[0] << 8)+txrxbuffer[1],txrxbuffer[2],txrxbuffer+3);
             for (byte i=0;i<txrxbuffer[2];i++) {
 #ifdef HEX_OUT
               showHex(txrxbuffer[i+3], 1);
@@ -413,7 +415,7 @@ void processSerial() {
 #endif
             }
           } else if (SerCmd == 5) { //AT+24WL
-            writeAT24(txrxbuffer[0] << 8 + txrxbuffer[1],txrxbuffer[2],txrxbuffer+3);
+            writeAT24((txrxbuffer[0] << 8 + txrxbuffer[1]),txrxbuffer[2],txrxbuffer+3);
           } 
           resetSer();
       } else if (SerRXidx==3 && SerCmd==5) {
