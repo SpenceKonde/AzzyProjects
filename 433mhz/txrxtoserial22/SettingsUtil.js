@@ -1,47 +1,78 @@
 
-var AzzyRF={}
+var AzzyRF={};
 
-AzzyRF.Serial=Serial2;
+AzzyRF.Serial=Serial1;
 
-AzzyRF.Serial.on('data',AzzyRF.onData);
+Serial1.setup(9600,{rx:A10,tx:A9});
 
-AzzyRF.onData(data) {
-	if (data=="#") {
+
+
+AzzyRF.onData = function(data) {
+	if (data=="#" && AzzyRF.datastring) {
 		if (AzzyRF.datastring) {
 			AzzyRF.Serial.print(AzzyRF.datastring);
 			AzzyRF.datastring="";
 		}
-	} else if (data==">") {
+	} else if (data==">" && AzzyRF.datastring) {
 		//TODO
 	} else {
-		console.log(data);
+		AzzyRF.inString+=data;
+      if (AzzyRF.timeout > 0) {
+        clearTimeout(AzzyRF.timeout);
 	}
-}
+      AzzyRF.timeout=setTimeout("AzzyRF.outputFormat(AzzyRF.inString);AzzyRF.inString='';AzzyRF.timeout=0;",1000);
+    }
+};
+AzzyRF.timeout=0;
+AzzyRF.inString="";
+AzzyRF.Serial.on('data',AzzyRF.onData);
 
-AzzyRF.writeA24 (addr,data) {
+AzzyRF.writeA24 = function(addr,data) {
 	if (data.length > 16) {
-		throw "Data too long"
+		throw "Data too long";
 	} else {
-		tstr=E.toString([(addr>>8)&255,addr&255,data.length]);
-		tstr+=E.toString(data);
+      var tstr="";
+		//tstr=E.toString([(addr>>8)&255,addr&255,data.length]);
+        tstr+=String.fromCharCode((addr>>8)&255,addr&255,data.length);
+		//tstr+=E.toString(data);
+        tstr+=data;
 		AzzyRF.datastring=tstr;
 		AzzyRF.Serial.print("AT+24WL\r");
 	}
-}
+};
 
-AzzyRF.readA24 (addr,len) {
-	if (data.length > 16) {
-		throw "Data too long"
+AzzyRF.outputFormat = function(text) {
+  console.log(text);
+  var outstr="";
+  var len=text.length;
+  for (var i=0;i<len;i+=2) {
+    //console.log(i);
+    //console.log(text.substr(i,2));
+    var tnum=parseInt(text.substr(i,2),16);
+    if (!isNaN(tnum)) {
+      outstr+=String.fromCharCode(tnum);
+    }
+  }
+  if (outstr!="0") {
+  //console.log(outstr);
+  console.log(E.toUint8Array(outstr));
+  }
+};
+
+
+AzzyRF.readA24 = function(addr,len) {
+	if (len > 16) {
+		throw "Data too long";
 	} else {
-		tstr=E.toString([(addr>>8)&255,addr&255,data.length]);
+		tstr=E.toString([(addr>>8)&255,addr&255,len]);
 		AzzyRF.datastring=tstr;
 		AzzyRF.Serial.print("AT+24RL\r");
 	}
-}
+};
 
 
-AzzyRF.setRFConfig(set) {
-	tarr=new Uint8Array(25);
+AzzyRF.setRFConfig = function(set) {
+	tarr=new Uint8Array(28);
 	tarr[0]=set.txSyncTime;
 	tarr[1]=set.txSyncTime>>8;
 	tarr[2]=set.txTrainRep;
@@ -67,24 +98,10 @@ AzzyRF.setRFConfig(set) {
 	tarr[22]=set.rxOneMax>>8;
 	tarr[23]=set.rxLowMax;
 	tarr[24]=set.rxLowMax>>8;
+	tarr[23]=set.txRepDelay;
+	tarr[24]=set.txRepDelay>>8;
+	tarr[23]=set.txRepCount;
 	this.datastring=E.toString(tarr);
 	console.log("Writing to config EEPROM on AzzyRF");
 	AzzyRF.Serial.print("AT+CONF\r");
-}
-
-
-txSyncTime = EEPROM.read(2) + (EEPROM.read(1) << 8); //length of sync
-    txTrainRep = EEPROM.read(3); //number of pulses in training burst
-    txTrainLen = EEPROM.read(5) + (EEPROM.read(4) << 8); //length of each pulse in training burst
-
-    txOneLength = EEPROM.read(7) + (EEPROM.read(6) << 8); //length of a 1
-    txZeroLength = EEPROM.read(9) + (EEPROM.read(8) << 8); //length of a 0
-    txLowTime = EEPROM.read(11) + (EEPROM.read(10) << 8); //length of the gap between bits
-
-    rxSyncMin = EEPROM.read(13) + (EEPROM.read(12) << 8); //minimum valid sync length
-    rxSyncMax = EEPROM.read(15) + (EEPROM.read(14) << 8); //maximum valid sync length
-    rxZeroMin = EEPROM.read(17) + (EEPROM.read(16) << 8); //minimum length for a valid 0
-    rxZeroMax = EEPROM.read(19) + (EEPROM.read(18) << 8); //maximum length for a valid 0
-    rxOneMin = EEPROM.read(21) + (EEPROM.read(20) << 8); //minimum length for a valid 1
-    rxOneMax = EEPROM.read(23) + (EEPROM.read(22) << 8); //maximum length for a valid 1
-    rxLowMax = EEPROM.read(25) + (EEPROM.read(24) << 8); //longest low before packet discarded
+};

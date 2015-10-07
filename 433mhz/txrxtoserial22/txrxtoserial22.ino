@@ -103,6 +103,8 @@ char serBuffer[MAX_SER_LEN];
 #define rcvled LED1
 #define RX_MAX_LEN 256 //Used to set the size of txrx buffer in BITS (and checked against this to prevent overflows from messing stuff up)
 
+#define EEPROM_OFFSET_CONF 32
+#define EEPROM_LENGTH_CONF 28
 
 const char AT24R[] PROGMEM = {"AT+24R"};
 const char ATSEND[] PROGMEM = {"AT+SEND"};
@@ -152,20 +154,22 @@ int rxLowMax=450; //longest low before packet discarded
 #define rxLowMax 600 //longest low before packet discarded
 */
 // Version 2.1
-int rxSyncMin = 1900; //minimum valid sync length
-int  rxSyncMax = 2100; //maximum valid sync length
-int  rxZeroMin = 120; //minimum length for a valid 0
-int  rxZeroMax = 400; //maximum length for a valid 0
-int  rxOneMin = 450; //minimum length for a valid 1
-int  rxOneMax = 750; //maximum length for a valid 1
-int  rxLowMax = 600; //longest low before packet discarded
+unsigned int  rxSyncMin = 1900; //minimum valid sync length
+unsigned int  rxSyncMax = 2100; //maximum valid sync length
+unsigned int  rxZeroMin = 120; //minimum length for a valid 0
+unsigned int  rxZeroMax = 400; //maximum length for a valid 0
+unsigned int  rxOneMin = 450; //minimum length for a valid 1
+unsigned int  rxOneMax = 750; //maximum length for a valid 1
+unsigned int  rxLowMax = 600; //longest low before packet discarded
 
-int  txOneLength = 550; //length of a 1
-int  txZeroLength = 300; //length of a 0
-int txLowTime = 420; //length of the gap between bits
-int txTrainRep = 30; //number of pulses in training burst
-int txSyncTime = 2000; //length of sync
-int txTrainLen = 200; //length of each pulse in training burst
+unsigned int  txOneLength = 550; //length of a 1
+unsigned int  txZeroLength = 300; //length of a 0
+unsigned int txLowTime = 420; //length of the gap between bits
+byte txTrainRep = 30; //number of pulses in training burst
+unsigned int txSyncTime = 2000; //length of sync
+unsigned int txTrainLen = 200; //length of each pulse in training burst
+unsigned int txRepDelay = 2000; //delay between consecutive transmissions
+byte txRepCount = 5; //number of times to repeat each transmission
 
 
 unsigned long units[] = {1000, 60000, 900000, 14400000, 3600000, 1, 10, 86400000}; //units for the 8/12/16-bit time values.
@@ -247,7 +251,7 @@ void setup() {
   pinMode(rxpin, INPUT);
   SerialDbg.begin(9600);
   if (EEPROM.read(0) < 255) {
-    //initFromEEPROM();
+    initFromEEPROM();
     //SerialDbg.println(F("Load from EEPROM"));
   }
   SerialCmd.begin(9600);
@@ -284,7 +288,7 @@ void writeAT24(unsigned int addr, byte len, byte * dat) {
   TinyWireM.beginTransmission(0x50);
   TinyWireM.send((byte)(addr >> 8));
   TinyWireM.send((byte)(addr & 255));
-  SerialDbg.println(dat[len-1]);
+  SerialDbg.println(dat[len - 1]);
   SerialDbg.println(len);
   TinyWireM.send(dat, len);
   TinyWireM.endTransmission();
@@ -312,10 +316,10 @@ void loop() {
     return; //don't do anything else while actively receiving.
   } else {
     PORTA |= 1;
-    digitalWrite(LED2,rxing>>1?LED_ON:LED_OFF);
+    digitalWrite(LED2, rxing >> 1 ? LED_ON : LED_OFF);
     ClearCMD(); //do the command reset only if we are in listenst but NOT receiving.
     processSerial();
-    if (millis() - lastSer  > (rxing==2?20000:10000)) {
+    if (millis() - lastSer  > (rxing == 2 ? 20000 : 10000)) {
       resetSer();
     }
     //delay(25000);
@@ -330,8 +334,8 @@ void loop() {
 }
 
 void writeConfigToEEPROM() {
-  for (byte i = 0; i < 28; i++) {
-    EEPROM.write(i, txrxbuffer[i]);
+  for (byte i = 0; i < EEPROM_LENGTH_CONF; i++) {
+    EEPROM.write(i + EEPROM_OFFSET_CONF, txrxbuffer[i]);
   }
   initFromEEPROM();
 }
@@ -354,28 +358,42 @@ void showHex (const byte b, const byte c = 0)
 }  // end of showHex
 
 void initFromEEPROM() {
-  byte tIsConf = EEPROM.read(32);
-  if (tIsConf < 255) {
-    SerialDbg.println(F("Loading config"));
-    //MyAddress = tAddr;
-    txSyncTime = EEPROM.read(33) + (EEPROM.read(32) << 8); //length of sync
-    txTrainRep = EEPROM.read(34); //number of pulses in training burst
-    txTrainLen = EEPROM.read(36) + (EEPROM.read(35) << 8); //length of each pulse in training burst
-    txOneLength = EEPROM.read(38) + (EEPROM.read(37) << 8); //length of a 1
-    txZeroLength = EEPROM.read(40) + (EEPROM.read(39) << 8); //length of a 0
-    txLowTime = EEPROM.read(42) + (EEPROM.read(41) << 8); //length of the gap between bits
-    rxSyncMin = EEPROM.read(44) + (EEPROM.read(43) << 8); //minimum valid sync length
-    rxSyncMax = EEPROM.read(46) + (EEPROM.read(45) << 8); //maximum valid sync length
-    rxZeroMin = EEPROM.read(48) + (EEPROM.read(47) << 8); //minimum length for a valid 0
-    rxZeroMax = EEPROM.read(50) + (EEPROM.read(49) << 8); //maximum length for a valid 0
-    rxOneMin = EEPROM.read(52) + (EEPROM.read(51) << 8); //minimum length for a valid 1
-    rxOneMax = EEPROM.read(54) + (EEPROM.read(53) << 8); //maximum length for a valid 1
-    rxLowMax = EEPROM.read(56) + (EEPROM.read(55) << 8); //longest low before packet discarded
-  } else {
-    SerialDbg.println(F("No config to load"));
+  byte tAddr = EEPROM.read(0);
+  if (tAddr > 127) {
+    MyAddress = tAddr & 0x3F;
+    if (tAddr & 0x40) {
+      if (EEPROM.read(3) < 255) {
+#ifdef OSCCAL
+        OSCCAL = EEPROM.read(3);
+#else
+        OSCCAL0 = EEPROM.read(3);
+#endif
+        delay(50); //let's be cautious;
+      }
+    }
+    byte tIsConf = EEPROM.read(32);
+    if (tIsConf < 255) {
+      SerialDbg.println(F("Loading config"));
+      //MyAddress = tAddr;
+      txSyncTime = EEPROM.read(33) + (EEPROM.read(32) << 8); //length of sync
+      txTrainRep = EEPROM.read(34); //number of pulses in training burst
+      txTrainLen = EEPROM.read(36) + (EEPROM.read(35) << 8); //length of each pulse in training burst
+      txOneLength = EEPROM.read(38) + (EEPROM.read(37) << 8); //length of a 1
+      txZeroLength = EEPROM.read(40) + (EEPROM.read(39) << 8); //length of a 0
+      txLowTime = EEPROM.read(42) + (EEPROM.read(41) << 8); //length of the gap between bits
+      rxSyncMin = EEPROM.read(44) + (EEPROM.read(43) << 8); //minimum valid sync length
+      rxSyncMax = EEPROM.read(46) + (EEPROM.read(45) << 8); //maximum valid sync length
+      rxZeroMin = EEPROM.read(48) + (EEPROM.read(47) << 8); //minimum length for a valid 0
+      rxZeroMax = EEPROM.read(50) + (EEPROM.read(49) << 8); //maximum length for a valid 0
+      rxOneMin = EEPROM.read(52) + (EEPROM.read(51) << 8); //minimum length for a valid 1
+      rxOneMax = EEPROM.read(54) + (EEPROM.read(53) << 8); //maximum length for a valid 1
+      rxLowMax = EEPROM.read(56) + (EEPROM.read(55) << 8); //longest low before packet discarded
+      txRepDelay = EEPROM.read(58) + (EEPROM.read(57) << 8);
+      txRepCount = EEPROM.read(59);
+    } else {
+      SerialDbg.println(F("No config to load"));
+    }
   }
-  
-
 }
 
 void processSerial() {
@@ -403,40 +421,40 @@ void processSerial() {
       if (SerRXidx == SerRXmax) {
         ndx = 0;
         if (SerCmd == 0) {
-          if (SerRXmax == 25) {
+          if (SerRXmax == 28) {
             writeConfigToEEPROM();
           } else {
             preparePayloadFromSerial();
-            doTransmit(5);
+            doTransmit();
           }
         } else if (SerCmd == 1) { //AT+ADR
-            MyAddress = txrxbuffer[0];
-            //  EEPROM.write(0,MyAddress)
-          } else if (SerCmd == 2) { //AT+24R
+          MyAddress = txrxbuffer[0];
+          //  EEPROM.write(0,MyAddress)
+        } else if (SerCmd == 2) { //AT+24R
 #ifdef HEX_OUT
-            showHex(readAT24(txrxbuffer[0] << 8 + txrxbuffer[1]), 1);
+          showHex(readAT24(txrxbuffer[0] << 8 + txrxbuffer[1]), 1);
 #else
-            SerialCMD.println(readAT24(txrxbuffer[0] << 8 + txrxbuffer[1]));
+          SerialCMD.println(readAT24(txrxbuffer[0] << 8 + txrxbuffer[1]));
 #endif
-          } else if (SerCmd == 3) { //AT+24W
-            writeAT24(txrxbuffer[0] << 8 + txrxbuffer[1],txrxbuffer[2]);
-          } else if (SerCmd == 4) { //AT+24RL
-            readAT24((txrxbuffer[0] << 8)+txrxbuffer[1],txrxbuffer[2],txrxbuffer+3);
-            for (byte i=0;i<txrxbuffer[2];i++) {
+        } else if (SerCmd == 3) { //AT+24W
+          writeAT24(txrxbuffer[0] << 8 + txrxbuffer[1], txrxbuffer[2]);
+        } else if (SerCmd == 4) { //AT+24RL
+          readAT24((txrxbuffer[0] << 8) + txrxbuffer[1], txrxbuffer[2], txrxbuffer + 3);
+          for (byte i = 0; i < txrxbuffer[2]; i++) {
 #ifdef HEX_OUT
-              showHex(txrxbuffer[i+3], 1);
+            showHex(txrxbuffer[i + 3], 1);
 #else
-              SerialCmd.println(txrxbuffer[i+3]);
+            SerialCmd.println(txrxbuffer[i + 3]);
 #endif
-            }
-          } else if (SerCmd == 5) { //AT+24WL
-            writeAT24((txrxbuffer[0] << 8 + txrxbuffer[1]),txrxbuffer[2],txrxbuffer+3);
-          } 
-          resetSer();
-      } else if (SerRXidx==3 && SerCmd==5) {
+          }
+        } else if (SerCmd == 5) { //AT+24WL
+          writeAT24((txrxbuffer[0] << 8 + txrxbuffer[1]), txrxbuffer[2], txrxbuffer + 3);
+        }
+        resetSer();
+      } else if (SerRXidx == 3 && SerCmd == 5) {
         SerialCmd.println(txrxbuffer[2]);
         SerialDbg.println(F("Adjusting characther RX"));
-        SerRXmax=txrxbuffer[2]+3;
+        SerRXmax = txrxbuffer[2] + 3;
       }
     } else if (rxing == 0) {
       char rc = SerialCmd.read();
@@ -472,7 +490,7 @@ void checkCommand() {
     SerRXmax = 31;
     rxing = 2;
   } else if (strcmp_P (serBuffer, ATCONF) == 0) {
-    SerRXmax = 25;
+    SerRXmax = 28;
     rxing = 2;
   } else if (strcmp_P (serBuffer, ATHEX) == 0) {
 #ifdef HEX_IN
@@ -568,14 +586,17 @@ void prepareAckPayload() {
 void prepareTestPayload() {
   byte plen = txrxbuffer[0] >> 6;
   plen = 4 << plen;
-  txrxbuffer[0] = (20);
   txrxbuffer[2] = 0x20;
   txrxbuffer[1] = 0xB8;
   txrxbuffer[3] = 0x50;
   TXLength = 4;
 }
 
-void doTransmit(int rep) { //rep is the number of repetitions
+void doTransmit() {
+  doTransmit(txRepCount);
+}
+
+void doTransmit(byte rep) { //rep is the number of repetitions
 #ifdef LED5
   digitalWrite(LED5, LED_ON);
 #endif
@@ -616,7 +637,7 @@ void doTransmit(int rep) { //rep is the number of repetitions
     //done with sending this packet;
     digitalWrite(txpin, 0); //make sure it's off;
     //interrupts();
-    delayMicroseconds(2000); //wait 2ms before doing the next round.
+    delayMicroseconds(txRepDelay); //wait 2ms before doing the next round.
   }
 #ifdef USE_ACK
   if (txrxbuffer[1] == 0xE8) {
@@ -651,7 +672,6 @@ void outputPayload() {
     }
   } else {
 #endif
-
     byte tem = txrxbuffer[0] >> 6;
     tem = (4 << tem) - 1;
     SerialCmd.print(F("+"));
@@ -674,15 +694,13 @@ void outputPayload() {
 #endif
     SerialCmd.println();
 #ifdef USE_ACK
-    if ((txrxbuffer[0] & 0x3F) == MyAddress) {
+    if (((txrxbuffer[0] & 0x3F) == MyAddress) && (txrxbuffer[1] != 0xE8) && isAutoAck(txrxbuffer[1]) ) {
       prepareAckPayload();
       delay(1000);
-      doTransmit(5);
+      doTransmit();
     }
   }
 #endif
-
-
   SerialCmd.println();
 }
 

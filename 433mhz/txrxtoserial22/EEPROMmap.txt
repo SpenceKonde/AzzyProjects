@@ -3,15 +3,15 @@
 0x00 - 0x04: System-wide settings, version #, etc. 
 0x00:
 7: 1=ignore eeprom configuration, 0=load config from eeprom
-6: 1=Clocked externally or OSCCAL OK; 0=load OSCCAL
+6: 1=Clocked externally or OSCCAL OK; 0=load OSCCAL 
+5~0: Address
 
-0x01 - Config EEPROM device address
-0x02 - Address enable (1 bit per address 0 = enabled)
+0x01 - Offset of ACK MAP (high)
+0x02 - Offset of ACK MAP (low)
 0x03 - OSCCAL tuning value
+0x04 - Device Address
 
-0x10 - 0x1F: - Alt addresses and external eeprom lookup addresses (if used) 
-0x04: Device Address
-0x05: EEPROM offset
+0x05 - 0x1F - reserved
 
 
 
