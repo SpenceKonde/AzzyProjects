@@ -2,6 +2,7 @@
 
 
 #include <EEPROM.h>
+#define EEEPADDRESS 3
 #define BLINK_IN_PIN_REG PINB
 #define BLINK_IN_BIT 1<<0
 #define LED_DONE 2
@@ -13,8 +14,8 @@ unsigned long mstart;
 void setup() {
   Serial.begin(9600);
   BLINK_IN_PIN_REG=BLINK_IN_BIT;
-  if (EEPROM.read(0) != 255) {
-    OSCCAL=EEPROM.read(0);
+  if (EEPROM.read(EEEPADDRESS) != 255) {
+    OSCCAL=EEPROM.read(EEEPADDRESS);
     while (1) {
       Serial.println("Hello World!");
       Serial.println(OSCCAL);
