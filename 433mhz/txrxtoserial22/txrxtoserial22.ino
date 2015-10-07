@@ -94,8 +94,11 @@ char serBuffer[MAX_SER_LEN];
 //#define HEX_IN
 #define USE_ACK
 
-#define rxPIN
-#define rxBV
+//#define rxPIN
+//#define rxBV
+//#define txPIN
+//#define txBV
+
 
 #define CommandForgetTime 1000 //short, for testing
 
@@ -219,7 +222,7 @@ byte lastCmdSent;
 byte lastCscSent;
 #endif
 
-
+void showHex (const byte b, const byte c =0); //declare this function so it will compile correctly with the optional second argument. 
 
 void setup() {
   lastPinState = 0;
@@ -253,50 +256,8 @@ void setup() {
   delay(1000);
   digitalWrite(LED1, LED_OFF);
   SerialDbg.println(F("Startup OK"));
-
-}
-
-byte readAT24(byte haddr, unsigned int addr) {
-  TinyWireM.beginTransmission(haddr);
-  TinyWireM.send((byte)(addr >> 8));
-  TinyWireM.send((byte)(addr & 255));
-  TinyWireM.endTransmission();
-  TinyWireM.requestFrom(haddr, 1);
-  return TinyWireM.receive();
-}
-
-void readAT24(byte haddr, unsigned int addr, byte len, byte * dat) {
-  TinyWireM.beginTransmission(haddr);
-  TinyWireM.send((byte)(addr >> 8));
-  TinyWireM.send((byte)(addr & 255));
-  TinyWireM.endTransmission();
-  TinyWireM.requestFrom(haddr, len);
-  for (byte i = 0; i < len; i++) {
-    dat[i] = TinyWireM.receive();
-    SerialDbg.println(dat[i]);
-  }
-}
-
-void writeAT24(byte haddr, unsigned int addr, byte len, byte * dat) {
-  TinyWireM.beginTransmission(haddr);
-  TinyWireM.send((byte)(addr >> 8));
-  TinyWireM.send((byte)(addr & 255));
-  SerialDbg.println(dat[len - 1]);
-  SerialDbg.println(len);
-  TinyWireM.send(dat, len);
-  TinyWireM.endTransmission();
-  delay(10);
-  SerialDbg.println(F("Wrote block"));
-}
-
-void writeAT24(byte haddr, unsigned int addr, byte dat) {
-  TinyWireM.beginTransmission(haddr);
-  TinyWireM.send((byte)(addr >> 8));
-  TinyWireM.send((byte)(addr & 255));
-  TinyWireM.send(dat);
-  TinyWireM.endTransmission();
-  delay(10);
-  SerialDbg.println(F("Wrote byte"));
+  //SerialDbg.print(decode8(123));
+  
 
 }
 
@@ -346,7 +307,7 @@ void initFromEEPROM() {
         delay(50); //let's be cautious;
       }
     }
-    
+
     byte tIsConf = EEPROM.read(32);
     if (tIsConf < 255) {
       SerialDbg.println(F("Loading config"));
@@ -365,7 +326,7 @@ void initFromEEPROM() {
       rxOneMax = EEPROM.read(54) + (EEPROM.read(53) << 8); //maximum length for a valid 1
       rxLowMax = EEPROM.read(56) + (EEPROM.read(55) << 8); //longest low before packet discarded
       txRepDelay = EEPROM.read(58) + (EEPROM.read(57) << 8); //delay between repetitions of a packet
-      txRepCount = EEPROM.read(59); //default number of repetitions. 
+      txRepCount = EEPROM.read(59); //default number of repetitions.
     } else {
       SerialDbg.println(F("No config to load"));
     }
@@ -408,14 +369,14 @@ void processSerial() {
           //  EEPROM.write(0,MyAddress)
         } else if (SerCmd == 2) { //AT+24R
 #ifdef HEX_OUT
-          showHex(readAT24(txrxbuffer[0] << 8 + txrxbuffer[1]), 1);
+          showHex(readAT24(defaultAT24i2ca, txrxbuffer[0] << 8 + txrxbuffer[1]), 1);
 #else
-          SerialCMD.println(readAT24(txrxbuffer[0] << 8 + txrxbuffer[1]));
+          SerialCMD.println(readAT24(defaultAT24i2ca, txrxbuffer[0] << 8 + txrxbuffer[1]));
 #endif
         } else if (SerCmd == 3) { //AT+24W
-          writeAT24(txrxbuffer[0] << 8 + txrxbuffer[1], txrxbuffer[2]);
+          writeAT24(defaultAT24i2ca, txrxbuffer[0] << 8 + txrxbuffer[1], txrxbuffer[2]);
         } else if (SerCmd == 4) { //AT+24RL
-          readAT24((txrxbuffer[0] << 8) + txrxbuffer[1], txrxbuffer[2], txrxbuffer + 3);
+          readAT24(defaultAT24i2ca, (txrxbuffer[0] << 8) + txrxbuffer[1], txrxbuffer[2], txrxbuffer + 3);
           for (byte i = 0; i < txrxbuffer[2]; i++) {
 #ifdef HEX_OUT
             showHex(txrxbuffer[i + 3], 1);
@@ -424,7 +385,7 @@ void processSerial() {
 #endif
           }
         } else if (SerCmd == 5) { //AT+24WL
-          writeAT24((txrxbuffer[0] << 8 + txrxbuffer[1]), txrxbuffer[2], txrxbuffer + 3);
+          writeAT24(defaultAT24i2ca, (txrxbuffer[0] << 8 + txrxbuffer[1]), txrxbuffer[2], txrxbuffer + 3);
         }
         resetSer();
       } else if (SerRXidx == 3 && SerCmd == 5) {
@@ -804,6 +765,8 @@ void parseRx() { //uses the globals.
   }
 }
 
+
+
 unsigned long calcBigChecksum(byte len) {
   unsigned long retval = 0;
   for (byte i = 0; i < len; i++) {
@@ -819,25 +782,6 @@ void resetListen() {
   rxing = 0;
   rxaridx = 0;
 }
-//Nick Gammon's showHex() function, slightly modified.
-void showHex (const byte b, const byte c = 0)
-{
-  // try to avoid using sprintf
-  char buf [3] = { ((b >> 4) & 0x0F) | '0', (b & 0x0F) | '0', 0};
-  if (buf [0] > '9')
-    buf [0] += 7;
-  if (buf [1] > '9')
-    buf [1] += 7;
-
-  if (c) {
-    SerialCmd.print(buf);
-  } 
-  #ifdef SerialDbg
-  else {
-    SerialDbg.print(buf);
-  }
-  #endif
-}  // end of showHex
 
 
 //decode times
@@ -861,5 +805,66 @@ void ClearCMD() {  //This handles clearing of the commands, and also clears the 
   } else if (millis() > forgetCmdAt) {
     forgetCmdAt = 0;
     lastChecksum = 0;
+  }
+}
+
+
+byte readAT24(byte haddr, unsigned int addr) {
+  TinyWireM.beginTransmission(haddr);
+  TinyWireM.send((byte)(addr >> 8));
+  TinyWireM.send((byte)(addr & 255));
+  TinyWireM.endTransmission();
+  TinyWireM.requestFrom(haddr, 1);
+  return TinyWireM.receive();
+}
+
+void readAT24(byte haddr, unsigned int addr, byte len, byte * dat) {
+  TinyWireM.beginTransmission(haddr);
+  TinyWireM.send((byte)(addr >> 8));
+  TinyWireM.send((byte)(addr & 255));
+  TinyWireM.endTransmission();
+  TinyWireM.requestFrom(haddr, len);
+  for (byte i = 0; i < len; i++) {
+    dat[i] = TinyWireM.receive();
+    SerialDbg.println(dat[i]);
+  }
+}
+
+void writeAT24(byte haddr, unsigned int addr, byte len, byte * dat) {
+  TinyWireM.beginTransmission(haddr);
+  TinyWireM.send((byte)(addr >> 8));
+  TinyWireM.send((byte)(addr & 255));
+  SerialDbg.println(dat[len - 1]);
+  SerialDbg.println(len);
+  TinyWireM.send(dat, len);
+  TinyWireM.endTransmission();
+  delay(10);
+  SerialDbg.println(F("Wrote block"));
+}
+
+void writeAT24(byte haddr, unsigned int addr, byte dat) {
+  TinyWireM.beginTransmission(haddr);
+  TinyWireM.send((byte)(addr >> 8));
+  TinyWireM.send((byte)(addr & 255));
+  TinyWireM.send(dat);
+  TinyWireM.endTransmission();
+  delay(10);
+  SerialDbg.println(F("Wrote byte"));
+
+}
+
+void showHex (const byte b, const byte c) {
+  // try to avoid using sprintf
+  char buf [3] = { ((b >> 4) & 0x0F) | '0', (b & 0x0F) | '0', 0};
+  if (buf [0] > '9')
+    buf [0] += 7;
+  if (buf [1] > '9')
+    buf [1] += 7;
+
+  if (c) {
+    SerialCmd.print(buf);
+  }
+  else {
+    SerialDbg.print(buf);
   }
 }
