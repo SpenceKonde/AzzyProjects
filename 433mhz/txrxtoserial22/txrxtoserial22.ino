@@ -93,7 +93,6 @@ char serBuffer[MAX_SER_LEN];
 #define HEX_OUT
 //#define HEX_IN
 #define USE_ACK
-//#define TWO_WIRE_FLOW
 
 #define rxPIN
 #define rxBV
@@ -171,6 +170,8 @@ unsigned int txTrainLen = 200; //length of each pulse in training burst
 unsigned int txRepDelay = 2000; //delay between consecutive transmissions
 byte txRepCount = 5; //number of times to repeat each transmission
 
+byte defaultAT24i2ca = 0x50;
+
 
 unsigned long units[] = {1000, 60000, 900000, 14400000, 3600000, 1, 10, 86400000}; //units for the 8/12/16-bit time values.
 
@@ -227,14 +228,6 @@ void setup() {
   rxdata = 0;
   bitsrx = 0;
   rxing = 0;
-  //MyState = ListenST;
-  //digitalWrite(LED2, LED_OFF);
-  //#ifdef TWO_WIRE_FLOW
-  //pinMode(LED3, INPUT);
-  //#else
-  //pinMode(LED3, OUTPUT);
-  //digitalWrite(LED3, LED_OFF);
-  //#endif
   pinMode(LED1, OUTPUT);
   pinMode(LED2, OUTPUT);
   pinMode(LED3, OUTPUT);
@@ -263,29 +256,29 @@ void setup() {
 
 }
 
-byte readAT24(unsigned int addr) {
-  TinyWireM.beginTransmission(0x50);
+byte readAT24(byte haddr, unsigned int addr) {
+  TinyWireM.beginTransmission(haddr);
   TinyWireM.send((byte)(addr >> 8));
   TinyWireM.send((byte)(addr & 255));
   TinyWireM.endTransmission();
-  TinyWireM.requestFrom(0x50, 1);
+  TinyWireM.requestFrom(haddr, 1);
   return TinyWireM.receive();
 }
 
-void readAT24(unsigned int addr, byte len, byte * dat) {
-  TinyWireM.beginTransmission(0x50);
+void readAT24(byte haddr, unsigned int addr, byte len, byte * dat) {
+  TinyWireM.beginTransmission(haddr);
   TinyWireM.send((byte)(addr >> 8));
   TinyWireM.send((byte)(addr & 255));
   TinyWireM.endTransmission();
-  TinyWireM.requestFrom(0x50, len);
+  TinyWireM.requestFrom(haddr, len);
   for (byte i = 0; i < len; i++) {
     dat[i] = TinyWireM.receive();
     SerialDbg.println(dat[i]);
   }
 }
 
-void writeAT24(unsigned int addr, byte len, byte * dat) {
-  TinyWireM.beginTransmission(0x50);
+void writeAT24(byte haddr, unsigned int addr, byte len, byte * dat) {
+  TinyWireM.beginTransmission(haddr);
   TinyWireM.send((byte)(addr >> 8));
   TinyWireM.send((byte)(addr & 255));
   SerialDbg.println(dat[len - 1]);
@@ -296,8 +289,8 @@ void writeAT24(unsigned int addr, byte len, byte * dat) {
   SerialDbg.println(F("Wrote block"));
 }
 
-void writeAT24(unsigned int addr, byte dat) {
-  TinyWireM.beginTransmission(0x50);
+void writeAT24(byte haddr, unsigned int addr, byte dat) {
+  TinyWireM.beginTransmission(haddr);
   TinyWireM.send((byte)(addr >> 8));
   TinyWireM.send((byte)(addr & 255));
   TinyWireM.send(dat);
@@ -322,9 +315,6 @@ void loop() {
     if (millis() - lastSer  > (rxing == 2 ? 20000 : 10000)) {
       resetSer();
     }
-    //delay(25000);
-    //prepareTestPayload();
-    //doTransmit(5);
   }
   //} else if (MyState == CommandST) {
   //  onCommandST();
@@ -340,29 +330,14 @@ void writeConfigToEEPROM() {
   initFromEEPROM();
 }
 
-//Nick Gammon's showHex() function, slightly modified.
-void showHex (const byte b, const byte c = 0)
-{
-  // try to avoid using sprintf
-  char buf [3] = { ((b >> 4) & 0x0F) | '0', (b & 0x0F) | '0', 0};
-  if (buf [0] > '9')
-    buf [0] += 7;
-  if (buf [1] > '9')
-    buf [1] += 7;
 
-  if (c) {
-    SerialCmd.print(buf);
-  } else {
-    SerialDbg.print(buf);
-  }
-}  // end of showHex
 
 void initFromEEPROM() {
   byte tAddr = EEPROM.read(0);
   if (tAddr > 127) {
     MyAddress = tAddr & 0x3F;
     if (tAddr & 0x40) {
-      if (EEPROM.read(3) < 255) {
+      if (EEPROM.read(1) < 255) {
 #ifdef OSCCAL
         OSCCAL = EEPROM.read(3);
 #else
@@ -371,6 +346,7 @@ void initFromEEPROM() {
         delay(50); //let's be cautious;
       }
     }
+    
     byte tIsConf = EEPROM.read(32);
     if (tIsConf < 255) {
       SerialDbg.println(F("Loading config"));
@@ -388,8 +364,8 @@ void initFromEEPROM() {
       rxOneMin = EEPROM.read(52) + (EEPROM.read(51) << 8); //minimum length for a valid 1
       rxOneMax = EEPROM.read(54) + (EEPROM.read(53) << 8); //maximum length for a valid 1
       rxLowMax = EEPROM.read(56) + (EEPROM.read(55) << 8); //longest low before packet discarded
-      txRepDelay = EEPROM.read(58) + (EEPROM.read(57) << 8);
-      txRepCount = EEPROM.read(59);
+      txRepDelay = EEPROM.read(58) + (EEPROM.read(57) << 8); //delay between repetitions of a packet
+      txRepCount = EEPROM.read(59); //default number of repetitions. 
     } else {
       SerialDbg.println(F("No config to load"));
     }
@@ -656,13 +632,6 @@ void doTransmit(byte rep) { //rep is the number of repetitions
 
 
 void outputPayload() {
-#ifdef TWO_WIRE_FLOW
-  digitalWrite(LED2, 1);
-  while (digitalRead(LED3) == 0) {
-    ; //do nothing until that pin driven high
-  }
-  digitalWrite(LED2, 0);
-#endif
 #ifdef USE_ACK
   if (txrxbuffer[1] == 0xE8) {
     if ( txrxbuffer[2] == lastCmdSent && (txrxbuffer[3] >> 4) == (lastCscSent & 0x0F)) {
@@ -694,7 +663,7 @@ void outputPayload() {
 #endif
     SerialCmd.println();
 #ifdef USE_ACK
-    if (((txrxbuffer[0] & 0x3F) == MyAddress) && (txrxbuffer[1] != 0xE8) && isAutoAck(txrxbuffer[1]) ) {
+    if (((txrxbuffer[0] & 0x3F) == MyAddress) && (txrxbuffer[1] != 0xE8)) {
       prepareAckPayload();
       delay(1000);
       doTransmit();
@@ -814,11 +783,13 @@ void parseRx() { //uses the globals.
           //MyCmd = txrxbuffer[1];
           //MyParam = txrxbuffer[2];
           //MyExtParam = txrxbuffer[3];
+          /*
           for (byte i = 0; i < (pksize / 8); i++) {
             showHex(txrxbuffer[i]);
             SerialDbg.print(":");
           }
           SerialDbg.println();
+          */
           SerialDbg.println(F("Valid long RX"));
           outputPayload();
         } else {
@@ -848,8 +819,27 @@ void resetListen() {
   rxing = 0;
   rxaridx = 0;
 }
+//Nick Gammon's showHex() function, slightly modified.
+void showHex (const byte b, const byte c = 0)
+{
+  // try to avoid using sprintf
+  char buf [3] = { ((b >> 4) & 0x0F) | '0', (b & 0x0F) | '0', 0};
+  if (buf [0] > '9')
+    buf [0] += 7;
+  if (buf [1] > '9')
+    buf [1] += 7;
 
-/*
+  if (c) {
+    SerialCmd.print(buf);
+  } 
+  #ifdef SerialDbg
+  else {
+    SerialDbg.print(buf);
+  }
+  #endif
+}  // end of showHex
+
+
 //decode times
 unsigned long decode8(byte inp) {
   return (inp & 0x3F) * units[inp >> 6];
@@ -860,7 +850,7 @@ unsigned long decode12(unsigned int inp) {
 unsigned long decode16(unsigned int inp) {
   return (inp & 0x1FFF) * units[inp >> 13];
 }
-*/
+
 
 void ClearCMD() {  //This handles clearing of the commands, and also clears the lastChecksum value, which is used to prevent multiple identical packets received in succession from being processed.
   if (lastChecksum) {
