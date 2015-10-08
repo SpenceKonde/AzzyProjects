@@ -77,6 +77,7 @@ The example commands are:
 #define LED4 6
 #define LED5 11
 #define LED6 8
+#define BTN1 3
 #define txpin 14
 #define rxpin 7
 
@@ -94,8 +95,8 @@ char serBuffer[MAX_SER_LEN];
 //#define HEX_IN
 #define USE_ACK
 
-//#define rxPIN
-//#define rxBV
+#define rxPIN PINA
+#define rxBV 2
 //#define txPIN
 //#define txBV
 
@@ -200,6 +201,9 @@ byte SerRXmax;
 byte SerCmBuff[16];
 byte SerCmd;
 
+unsigned long led3OffAt;
+unsigned long led4OffAt;
+
 char * pEnd; //dummy pointer for sto
 
 
@@ -237,6 +241,7 @@ void setup() {
   pinMode(LED4, OUTPUT);
   pinMode(LED5, OUTPUT);
   pinMode(LED6, OUTPUT);
+  pinMode(BTN1, INPUT_PULLUP);
   digitalWrite(LED1, LED_OFF);
   digitalWrite(LED2, LED_OFF);
   digitalWrite(LED3, LED_OFF);
@@ -273,8 +278,24 @@ void loop() {
     digitalWrite(LED2, rxing >> 1 ? LED_ON : LED_OFF);
     ClearCMD(); //do the command reset only if we are in listenst but NOT receiving.
     processSerial();
-    if (millis() - lastSer  > (rxing == 2 ? 20000 : 10000)) {
+    if (lastSer & (millis() - lastSer  > (rxing == 2 ? 20000 : 10000))) {
       resetSer();
+    }
+    if (led3OffAt && (led3OffAt < millis())) {
+      digitalWrite(LED3,LED_OFF);
+      led3OffAt=0;
+    }
+    if (led4OffAt && (led4OffAt < millis())) {
+      digitalWrite(LED4,LED_OFF);
+      led4OffAt=0;
+    }
+    if (digitalRead(BTN1)==0 && led4OffAt==0) {
+      digitalWrite(LED4,LED_ON);
+      led4OffAt=millis()+1000;
+      SerialCmd.println(F("BTN1"));
+      prepareTestPayload();
+      doTransmit();
+      
     }
   }
   //} else if (MyState == CommandST) {
@@ -393,18 +414,20 @@ void processSerial() {
         SerialDbg.println(F("Adjusting characther RX"));
         SerRXmax = txrxbuffer[2] + 3;
       }
-    } else if (rxing == 0) {
+    } else {
       char rc = SerialCmd.read();
       if (rc != endMarker && rc != endMarker2) {
-        serBuffer[ndx] = rc;
-        ndx++;
-        if (ndx >= MAX_SER_LEN) {
-          ndx = 0;
+        serBuffer[SerRXidx] = rc;
+        SerRXidx++;
+        if (SerRXidx >= MAX_SER_LEN) {
+          SerRXidx = 0;
+          SerialCmd.println(F("ERROR"));
+          resetSer();
         }
       } else {
-        if (ndx) { //index 0? means it's a \r\n pattern.
-          serBuffer[ndx] = '\0'; // terminate the string
-          ndx = 0;
+        if (SerRXidx) { //index 0? means it's a \r\n pattern.
+          serBuffer[SerRXidx] = '\0'; // terminate the string
+          SerRXidx = 0;
           checkCommand();
         }
       }
@@ -485,13 +508,15 @@ void checkCommand() {
 }
 
 void resetSer() {
+  //SerialDbg.println(lastSer);
+  //SerialDbg.println(millis());
   SerCmd = 0;
-  if (rxing == 2) {
-    rxing = 0;
-  }
-  if (lastSer) {
+  if (lastSer) { //if we've gotten any characters since last reset, print newline to signify completion. 
     lastSer = 0;
     SerialCmd.println();
+  }
+  if (rxing == 2) {
+    rxing = 0;
   }
   for (int i = 0; i < 16; i++) {
     SerCmBuff[i] = 0;
@@ -499,6 +524,7 @@ void resetSer() {
   SerRXmax = 0;
   SerRXidx = 0;
 }
+
 void preparePayloadFromSerial() {
   txrxbuffer[0] = (txrxbuffer[0] & 0x3F);
   if (SerRXmax > 4) {
@@ -521,10 +547,9 @@ void prepareAckPayload() {
 }
 
 void prepareTestPayload() {
-  byte plen = txrxbuffer[0] >> 6;
-  plen = 4 << plen;
-  txrxbuffer[2] = 0x20;
-  txrxbuffer[1] = 0xB8;
+  txrxbuffer[0] = 0x00; //address zero
+  txrxbuffer[2] = millis()&255;
+  txrxbuffer[1] = 0xF8;
   txrxbuffer[3] = 0x50;
   TXLength = 4;
 }
@@ -597,6 +622,10 @@ void outputPayload() {
   if (txrxbuffer[1] == 0xE8) {
     if ( txrxbuffer[2] == lastCmdSent && (txrxbuffer[3] >> 4) == (lastCscSent & 0x0F)) {
       SerialCmd.println(F("ACK"));
+      #ifdef LED3 
+      digitalWrite(LED3,LED_ON);
+      led3OffAt=millis()+1000;
+      #endif
     } else {
       SerialDbg.println(F("Other ACK"));
     }
@@ -637,7 +666,11 @@ void outputPayload() {
 void onListenST() {
 
   curTime = micros();
+  //#ifdef rxPIN
+  //byte pinState = (rxPIN&rxBV)?1:0;
+  //#else
   byte pinState = digitalRead(rxpin);
+  //#endif
   if (pinState == lastPinState) {
     return;
   } else {
