@@ -76,7 +76,7 @@ The example commands are:
 #define LED3 5
 #define LED4 6
 #define LED5 11
-#define LED6 8
+//#define LED6 8
 #define BTN1 3
 #define txpin 14
 #define rxpin 7
@@ -240,14 +240,15 @@ void setup() {
   pinMode(LED3, OUTPUT);
   pinMode(LED4, OUTPUT);
   pinMode(LED5, OUTPUT);
-  pinMode(LED6, OUTPUT);
+  #ifdef RX_SHUT
+  pinMode(RX_SHUT, OUTPUT);
+  #endif
   pinMode(BTN1, INPUT_PULLUP);
   digitalWrite(LED1, LED_OFF);
   digitalWrite(LED2, LED_OFF);
   digitalWrite(LED3, LED_OFF);
   digitalWrite(LED4, LED_OFF);
   digitalWrite(LED5, LED_OFF);
-  digitalWrite(LED6, LED_OFF);
   pinMode(txpin, OUTPUT);
   pinMode(rxpin, INPUT);
   SerialDbg.begin(9600);
@@ -562,6 +563,9 @@ void doTransmit(byte rep) { //rep is the number of repetitions
 #ifdef LED5
   digitalWrite(LED5, LED_ON);
 #endif
+#ifdef RX_SHUT
+  digitalWrite(RX_SHUT, 1);
+#endif
   byte txchecksum = 0;
   for (byte i = 0; i < TXLength - 1; i++) {
     txchecksum = txchecksum ^ txrxbuffer[i];
@@ -613,6 +617,9 @@ void doTransmit(byte rep) { //rep is the number of repetitions
   TXLength = 0;
 #ifdef LED5
   digitalWrite(LED5, LED_OFF);
+#endif
+#ifdef RX_SHUT
+  digitalWrite(RX_SHUT, 0);
 #endif
 }
 
