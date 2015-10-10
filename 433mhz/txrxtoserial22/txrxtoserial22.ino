@@ -673,11 +673,11 @@ void outputPayload() {
 void onListenST() {
 
   curTime = micros();
-  //#ifdef rxPIN
-  //byte pinState = (rxPIN&rxBV)?1:0;
-  //#else
+  #ifdef rxPIN
+  byte pinState = (rxPIN&rxBV)?1:0;
+  #else
   byte pinState = digitalRead(rxpin);
-  //#endif
+  #endif
   if (pinState == lastPinState) {
     return;
   } else {
@@ -694,12 +694,12 @@ void onListenST() {
       } else if (bitlength > rxOneMin && bitlength < rxOneMax ) {
         rxdata = (rxdata << 1) + 1;
       } else {
-        //if (bitsrx > 10) {
-        //Serial.print(F("Reset wrong high len "));
-        //Serial.print(bitlength);
-        //Serial.print(" ");
-        //Serial.println(bitsrx);
-        //}
+        if (bitsrx > 10) {
+        SerialDbg.print(F("Reset wrong high len "));
+        SerialDbg.print(bitlength);
+        SerialDbg.print(" ");
+        SerialDbg.println(bitsrx);
+        }
         resetListen();
         return;
       }
@@ -736,8 +736,8 @@ void onListenST() {
       return;
     }
     if (lastPinHighTime - lastPinLowTime > rxLowMax && rxing == 1) {
-      //SerialDbg.print("rxlow");
-      //SerialDbg.println(lastPinHighTime - lastPinLowTime);
+      SerialDbg.print("rxlow");
+      SerialDbg.println(lastPinHighTime - lastPinLowTime);
       resetListen();
       return;
     }

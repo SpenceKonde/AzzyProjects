@@ -19,7 +19,7 @@ void setup() {
   // initialize digital pin 13 as an output.
   pinMode(13, OUTPUT);
   Serial1.begin(9600);
-  unsigned long temp=20000;
+  //unsigned long temp=20000;
   //Serial1.println(((temp<<8)*64/11));
   //Serial1.println(((temp*64/11)<<8));
 }
@@ -30,13 +30,10 @@ void loop() {
   delay(1000);              // wait for a second
   digitalWrite(13, LOW);    // turn the LED off by making the voltage LOW
   delay(1000);              // wait for a second
-  //unsigned long t=micros();
+  unsigned long t=micros();
   //int v=digitalRead(2);
-  //t=micros()-t;
-  //unsigned long a ;
-  //a=micros();
-  //unsigned long b = (100L *64+v)/(11+v);
-  //a=micros()-a;
+  t=micros()-t;
+  Serial1.println(t);
   Serial1.println(micros());
   Serial1.println(millis());
   //Serial1.println(b);
