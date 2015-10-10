@@ -76,10 +76,12 @@ The example commands are:
 #define LED3 5
 #define LED4 6
 #define LED5 11
-//#define LED6 8
+#define LED6 8
 #define BTN1 3
 #define txpin 14
 #define rxpin 7
+
+//#define SHUT_PIN 8
 
 
 #define LED_ON 0
@@ -226,7 +228,7 @@ byte lastCmdSent;
 byte lastCscSent;
 #endif
 
-void showHex (const byte b, const byte c =0); //declare this function so it will compile correctly with the optional second argument. 
+void showHex (const byte b, const byte c = 0); //declare this function so it will compile correctly with the optional second argument.
 
 void setup() {
   lastPinState = 0;
@@ -240,15 +242,18 @@ void setup() {
   pinMode(LED3, OUTPUT);
   pinMode(LED4, OUTPUT);
   pinMode(LED5, OUTPUT);
-  #ifdef RX_SHUT
-  pinMode(RX_SHUT, OUTPUT);
-  #endif
+  //pinMode(LED6, OUTPUT);
+#ifdef SHUT_PIN
+  pinMode(SHUT_PIN, OUTPUT);
+  digitalWrite(SHUT_PIN, 0);
+#endif
   pinMode(BTN1, INPUT_PULLUP);
   digitalWrite(LED1, LED_OFF);
   digitalWrite(LED2, LED_OFF);
   digitalWrite(LED3, LED_OFF);
   digitalWrite(LED4, LED_OFF);
   digitalWrite(LED5, LED_OFF);
+  //digitalWrite(LED6, LED_OFF);
   pinMode(txpin, OUTPUT);
   pinMode(rxpin, INPUT);
   SerialDbg.begin(9600);
@@ -263,7 +268,7 @@ void setup() {
   digitalWrite(LED1, LED_OFF);
   SerialDbg.println(F("Startup OK"));
   //SerialDbg.print(decode8(123));
-  
+
 
 }
 
@@ -283,20 +288,20 @@ void loop() {
       resetSer();
     }
     if (led3OffAt && (led3OffAt < millis())) {
-      digitalWrite(LED3,LED_OFF);
-      led3OffAt=0;
+      digitalWrite(LED3, LED_OFF);
+      led3OffAt = 0;
     }
     if (led4OffAt && (led4OffAt < millis())) {
-      digitalWrite(LED4,LED_OFF);
-      led4OffAt=0;
+      digitalWrite(LED4, LED_OFF);
+      led4OffAt = 0;
     }
-    if (digitalRead(BTN1)==0 && led4OffAt==0) {
-      digitalWrite(LED4,LED_ON);
-      led4OffAt=millis()+1000;
+    if (digitalRead(BTN1) == 0 && led4OffAt == 0) {
+      digitalWrite(LED4, LED_ON);
+      led4OffAt = millis() + 1000;
       SerialCmd.println(F("BTN1"));
       prepareTestPayload();
       doTransmit();
-      
+
     }
   }
   //} else if (MyState == CommandST) {
@@ -512,7 +517,7 @@ void resetSer() {
   //SerialDbg.println(lastSer);
   //SerialDbg.println(millis());
   SerCmd = 0;
-  if (lastSer) { //if we've gotten any characters since last reset, print newline to signify completion. 
+  if (lastSer) { //if we've gotten any characters since last reset, print newline to signify completion.
     lastSer = 0;
     SerialCmd.println();
   }
@@ -549,7 +554,7 @@ void prepareAckPayload() {
 
 void prepareTestPayload() {
   txrxbuffer[0] = 0x00; //address zero
-  txrxbuffer[2] = millis()&255;
+  txrxbuffer[2] = millis() & 255;
   txrxbuffer[1] = 0xF8;
   txrxbuffer[3] = 0x50;
   TXLength = 4;
@@ -563,8 +568,8 @@ void doTransmit(byte rep) { //rep is the number of repetitions
 #ifdef LED5
   digitalWrite(LED5, LED_ON);
 #endif
-#ifdef RX_SHUT
-  digitalWrite(RX_SHUT, 1);
+#ifdef SHUT_PIN
+  digitalWrite(SHUT_PIN, 1);
 #endif
   byte txchecksum = 0;
   for (byte i = 0; i < TXLength - 1; i++) {
@@ -618,8 +623,9 @@ void doTransmit(byte rep) { //rep is the number of repetitions
 #ifdef LED5
   digitalWrite(LED5, LED_OFF);
 #endif
-#ifdef RX_SHUT
-  digitalWrite(RX_SHUT, 0);
+
+#ifdef SHUT_PIN
+  digitalWrite(SHUT_PIN, 0);
 #endif
 }
 
@@ -629,10 +635,10 @@ void outputPayload() {
   if (txrxbuffer[1] == 0xE8) {
     if ( txrxbuffer[2] == lastCmdSent && (txrxbuffer[3] >> 4) == (lastCscSent & 0x0F)) {
       SerialCmd.println(F("ACK"));
-      #ifdef LED3 
-      digitalWrite(LED3,LED_ON);
-      led3OffAt=millis()+1000;
-      #endif
+#ifdef LED3
+      digitalWrite(LED3, LED_ON);
+      led3OffAt = millis() + 1000;
+#endif
     } else {
       SerialDbg.println(F("Other ACK"));
     }
@@ -673,11 +679,11 @@ void outputPayload() {
 void onListenST() {
 
   curTime = micros();
-  #ifdef rxPIN
-  byte pinState = (rxPIN&rxBV)?1:0;
-  #else
+#ifdef rxPIN
+  byte pinState = (rxPIN & rxBV) ? 1 : 0;
+#else
   byte pinState = digitalRead(rxpin);
-  #endif
+#endif
   if (pinState == lastPinState) {
     return;
   } else {
@@ -695,10 +701,10 @@ void onListenST() {
         rxdata = (rxdata << 1) + 1;
       } else {
         if (bitsrx > 10) {
-        SerialDbg.print(F("Reset wrong high len "));
-        SerialDbg.print(bitlength);
-        SerialDbg.print(" ");
-        SerialDbg.println(bitsrx);
+          SerialDbg.print(F("Reset wrong high len "));
+          SerialDbg.print(bitlength);
+          SerialDbg.print(" ");
+          SerialDbg.println(bitsrx);
         }
         resetListen();
         return;
