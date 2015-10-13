@@ -72,10 +72,10 @@ The example commands are:
 //pins 16,12: I2C
 
 #define LED1 13
-#define LED2 4
-#define LED3 5
-#define LED4 6
-#define LED5 11
+#define LED2 11
+#define LED3 4
+#define LED4 5
+#define LED5 6
 #define LED6 8
 #define BTN1 3
 #define txpin 14
@@ -88,7 +88,7 @@ The example commands are:
 #define LED_OFF 1
 
 #define SerialCmd Serial
-#define SerialDbg Serial
+#define SerialDbg Serial1
 #define MAX_SER_LEN 10
 char serBuffer[MAX_SER_LEN];
 
@@ -237,23 +237,8 @@ void setup() {
   rxdata = 0;
   bitsrx = 0;
   rxing = 0;
-  pinMode(LED1, OUTPUT);
-  pinMode(LED2, OUTPUT);
-  pinMode(LED3, OUTPUT);
-  pinMode(LED4, OUTPUT);
-  pinMode(LED5, OUTPUT);
-  //pinMode(LED6, OUTPUT);
-#ifdef SHUT_PIN
-  pinMode(SHUT_PIN, OUTPUT);
-  digitalWrite(SHUT_PIN, 0);
-#endif
-  pinMode(BTN1, INPUT_PULLUP);
-  digitalWrite(LED1, LED_OFF);
-  digitalWrite(LED2, LED_OFF);
-  digitalWrite(LED3, LED_OFF);
-  digitalWrite(LED4, LED_OFF);
-  digitalWrite(LED5, LED_OFF);
-  //digitalWrite(LED6, LED_OFF);
+  initializeOutputs();
+
   pinMode(txpin, OUTPUT);
   pinMode(rxpin, INPUT);
   SerialDbg.begin(9600);
@@ -664,7 +649,6 @@ void outputPayload() {
       SerialCmd.print((txrxbuffer[3] & 0xF0) >> 4);
     }
 #endif
-    SerialCmd.println();
 #ifdef USE_ACK
     if (((txrxbuffer[0] & 0x3F) == MyAddress) && (txrxbuffer[1] != 0xE8)) {
       prepareAckPayload();
@@ -896,6 +880,42 @@ void writeAT24(byte haddr, unsigned int addr, byte dat) {
   TinyWireM.endTransmission();
   delay(10);
   SerialDbg.println(F("Wrote byte"));
+
+}
+
+
+void initializeOutputs() {
+#ifdef LED1
+  pinMode(LED1, OUTPUT);
+  digitalWrite(LED1, LED_OFF);
+#endif
+#ifdef LED2
+  pinMode(LED2, OUTPUT);
+  digitalWrite(LED2, LED_OFF);
+#endif
+#ifdef LED3
+  pinMode(LED3, OUTPUT);
+  digitalWrite(LED3, LED_OFF);
+#endif
+#ifdef LED4
+  pinMode(LED4, OUTPUT);
+  digitalWrite(LED4, LED_OFF);
+#endif
+#ifdef LED5
+  pinMode(LED5, OUTPUT);
+  digitalWrite(LED5, LED_OFF);
+#endif
+#ifdef LED6
+  pinMode(LED6, OUTPUT);
+  digitalWrite(LED6, LED_OFF);
+#endif
+#ifdef SHUT_PIN
+  pinMode(SHUT_PIN, OUTPUT);
+  digitalWrite(SHUT_PIN, 0);
+#endif
+#ifdef BTN1
+  pinMode(BTN1, INPUT_PULLUP);
+#endif
 
 }
 
