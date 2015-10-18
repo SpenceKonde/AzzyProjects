@@ -78,7 +78,7 @@ The example commands are:
 #define LED5 6
 #define LED6 8
 #define BTN1 3
-#define txpin 14
+#define txpin 2
 #define rxpin 7
 
 //#define SHUT_PIN 8
