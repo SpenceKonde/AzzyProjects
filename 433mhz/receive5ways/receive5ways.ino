@@ -102,6 +102,11 @@ int rxLowMax=450; //longest low before packet discarded
 #define rxLowMax 600 //longest low before packet discarded
 */
 // Version 2.1
+
+#define PROTOCOLVERSION 21
+
+#if (PROTOCOLVERSION==21) 
+
 unsigned int  rxSyncMin = 1900; //minimum valid sync length
 unsigned int  rxSyncMax = 2100; //maximum valid sync length
 unsigned int  rxZeroMin = 120; //minimum length for a valid 0
@@ -119,6 +124,12 @@ unsigned int txTrainLen = 200; //length of each pulse in training burst
 unsigned int txRepDelay = 2000; //delay between consecutive transmissions
 byte txRepCount = 5; //number of times to repeat each transmission
 
+#elif 
+
+
+#else 
+#error "No protocol defined"
+#endif
 byte recCount=0;
 
 byte defaultAT24i2ca = 0x50;
