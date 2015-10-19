@@ -26,7 +26,7 @@ LEDs light up to show the most recent transmitting pin.
 #define BTN1 3
 //#define txpin 2
 
-unsigned char txpin=12;
+byte txpin=14;
 #define rxpin 7
 
 //#define SHUT_PIN 8
@@ -177,7 +177,7 @@ void setup() {
   pinMode(1,OUTPUT);
   pinMode(2,OUTPUT);
   pinMode(3,OUTPUT);
-  pinMode(12,OUTPUT);
+  pinMode(14,OUTPUT);
   pinMode(rxpin, INPUT);
   SerialDbg.begin(9600);
 //  if (EEPROM.read(0) < 255) {
@@ -199,27 +199,27 @@ void setup() {
 void loop() {
 	digitalWrite(LED1,LED_ON);
 	prepareTestPayload(0x00,0);
-	doTransmit(10);
+	doTransmit(20);
 	delay(2000);
 	digitalWrite(LED1,LED_OFF);
 	digitalWrite(LED2,LED_ON);
 	prepareTestPayload(0x00,1);
-	doTransmit(10);
+	doTransmit(20);
 	delay(2000);
 	digitalWrite(LED2,LED_OFF);
 	digitalWrite(LED3,LED_ON);
 	prepareTestPayload(0x00,2);
-	doTransmit(10);
+	doTransmit(20);
 	delay(2000);
 	digitalWrite(LED3,LED_OFF);
 	digitalWrite(LED4,LED_ON);
 	prepareTestPayload(0x00,3);
-	doTransmit(10);
+	doTransmit(20);
 	delay(2000);
 	digitalWrite(LED4,LED_OFF);
 	digitalWrite(LED5,LED_ON);
-	prepareTestPayload(0x00,12);
-	doTransmit(10);
+	prepareTestPayload(0x00,14);
+	doTransmit(20);
 	delay(2000);
 	digitalWrite(LED5,LED_OFF);
 }
@@ -239,8 +239,8 @@ void doTransmit() {
 }
 
 void doTransmit(byte rep) { //rep is the number of repetitions
-#ifdef LED5
-  digitalWrite(LED5, LED_ON);
+#ifdef LED6
+  digitalWrite(LED6, LED_ON);
 #endif
 #ifdef SHUT_PIN
   digitalWrite(SHUT_PIN, 1);
@@ -294,8 +294,8 @@ void doTransmit(byte rep) { //rep is the number of repetitions
   }
 #endif
   TXLength = 0;
-#ifdef LED5
-  digitalWrite(LED5, LED_OFF);
+#ifdef LED6
+  digitalWrite(LED6, LED_OFF);
 #endif
 
 #ifdef SHUT_PIN

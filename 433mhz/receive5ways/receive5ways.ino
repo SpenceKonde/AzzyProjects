@@ -119,6 +119,8 @@ unsigned int txTrainLen = 200; //length of each pulse in training burst
 unsigned int txRepDelay = 2000; //delay between consecutive transmissions
 byte txRepCount = 5; //number of times to repeat each transmission
 
+byte recCount=0;
+
 byte defaultAT24i2ca = 0x50;
 
 
@@ -167,7 +169,7 @@ int pksize = 32;
 byte TXLength;
 unsigned long lastChecksum; //Not the same as the CSC - this is our hack to determine if packets are identical
 unsigned long forgetCmdAt;
-int reccount;
+int receiveCount;
 
 #ifdef USE_ACK
 byte lastCmdSent;
@@ -495,7 +497,8 @@ void outputPayload() {
     }
 #endif
     if (txrxbuffer[1]==0xF8) {
-      byte temp=txrxbuffer[3];
+      byte temp=txrxbuffer[3]&0xF0;
+      temp=temp>>4;
       if (temp==0) {
         digitalWrite(LED1, LED_ON);
         led1OffAt=millis()+8000;
@@ -508,7 +511,7 @@ void outputPayload() {
       }else if (temp==3) {
         digitalWrite(LED4, LED_ON);
         led4OffAt=millis()+8000;
-      }else if (temp==12) {
+      }else if (temp==14) {
         digitalWrite(LED5, LED_ON);
         led5OffAt=millis()+8000;
       }
@@ -607,6 +610,9 @@ void parseRx() { //uses the globals.
   unsigned char rcvAdd = txrxbuffer[0] & 0x3F;
   if (rcvAdd == MyAddress || MyAddress == 0) {
     if (lastChecksum != calcBigChecksum(byte(pksize / 8))) {
+      SerialCmd.println(F("RX Count: "));
+      SerialCmd.println(receiveCount);
+      receiveCount=0;
       lastChecksum = calcBigChecksum(byte(pksize / 8));
       if (pksize == 32) { //4 byte packet
         calccsc = txrxbuffer[0] ^ txrxbuffer[1] ^ txrxbuffer[2];
@@ -626,6 +632,7 @@ void parseRx() { //uses the globals.
            SerialDbg.println(); */
           SerialDbg.println(F("Valid RX"));
           outputPayload();
+          receiveCount++;
         } else {
           SerialDbg.println(F("Bad CSC RX"));
           outputPayload();
@@ -652,6 +659,7 @@ void parseRx() { //uses the globals.
         }
       }
     } else {
+      receiveCount++;
       SerialDbg.println(F("Already got it"));
     }
   } else {
