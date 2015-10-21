@@ -72,6 +72,7 @@ unsigned int txLowTime  = 750;
 unsigned int txSyncTime  = 2000;
 unsigned int txTrainLen  = 250;
 byte txTrainRep  = 30;
+#define STARTUPTEXT "Startup with X1 timings"
 */
 
 /*
@@ -89,6 +90,7 @@ unsigned int txLowTime  = 400;
 unsigned int txSyncTime  = 2000;
 unsigned int txTrainLen  = 200;
 byte txTrainRep  = 30;
+#define STARTUPTEXT "Startup with X2 timings"
 
 */
 
@@ -110,6 +112,7 @@ byte txTrainRep = 30; //number of pulses in training burst
 unsigned int txSyncTime = 2000; //length of sync
 unsigned int txTrainLen = 200; //length of each pulse in training burst
 
+#define STARTUPTEXT "Startup with v2.1 timings"
 
 
 unsigned int txRepDelay = 2000; //delay between consecutive transmissions
@@ -195,7 +198,7 @@ void setup() {
   //TinyWireM.begin();
   delay(1000);
   digitalWrite(LED6, LED_OFF);
-  SerialDbg.println(F("Startup OK"));
+  SerialCmd.println(F(STARTUPTEXT));
   //SerialDbg.print(decode8(123));
 
 
