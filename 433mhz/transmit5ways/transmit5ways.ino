@@ -56,41 +56,44 @@ char serBuffer[MAX_SER_LEN];
 #define rcvled LED1
 #define RX_MAX_LEN 256 //Used to set the size of txrx buffer in BITS (and checked against this to prevent overflows from messing stuff up)
 
+/*
 
-
-//These set the parameters for transmitting.
+//X1
+unsigned int rxSyncMin  = 1750;
+unsigned int rxSyncMax  = 2250;
+unsigned int rxZeroMin  = 300;
+unsigned int rxZeroMax  = 740;
+unsigned int rxOneMin  = 760;
+unsigned int rxOneMax  = 1200;
+unsigned int rxLowMax  = 1000;
+unsigned int txOneLength  = 950;
+unsigned int txZeroLength  = 550;
+unsigned int txLowTime  = 750;
+unsigned int txSyncTime  = 2000;
+unsigned int txTrainLen  = 250;
+byte txTrainRep  = 30;
+*/
 
 /*
-#define txOneLength 550 //length of a 1
-#define txZeroLength 300 //length of a 0
-#define txLowTime 420 //length of the gap between bits
-#define txTrainRep 30 //number of pulses in training burst
-#define txSyncTime 2000 //length of sync
-#define txTrainLen 200 //length of each pulse in training burst
+//X2
+unsigned int rxSyncMin  = 1750;
+unsigned int rxSyncMax  = 2250;
+unsigned int rxZeroMin  = 100;
+unsigned int rxZeroMax  = 390;
+unsigned int rxOneMin  = 410;
+unsigned int rxOneMax  = 700;
+unsigned int rxLowMax  = 600;
+unsigned int txOneLength  = 500;
+unsigned int txZeroLength  = 300;
+unsigned int txLowTime  = 400;
+unsigned int txSyncTime  = 2000;
+unsigned int txTrainLen  = 200;
+byte txTrainRep  = 30;
 
-
-
-//These set the parameters for receiving; any packet where these criteria are not met is discarded.
-// Version 2.0
-int rxSyncMin=1900; //minimum valid sync length
-int rxSyncMax=2100; //maximum valid sync length
-int rxZeroMin=100; //minimum length for a valid 0
-int rxZeroMax=300; //maximum length for a valid 0
-int rxOneMin=400; //minimum length for a valid 1
-int rxOneMax=600; //maximum length for a valid 1
-int rxLowMax=450; //longest low before packet discarded
-
-
-
-// Version 2.1
-#define rxSyncMin 1900 //minimum valid sync length
-#define rxSyncMax 2100 //maximum valid sync length
-#define rxZeroMin 120 //minimum length for a valid 0
-#define rxZeroMax 400 //maximum length for a valid 0
-#define rxOneMin 450 //minimum length for a valid 1
-#define rxOneMax 750 //maximum length for a valid 1
-#define rxLowMax 600 //longest low before packet discarded
 */
+
+
+
 // Version 2.1
 unsigned int  rxSyncMin = 1900; //minimum valid sync length
 unsigned int  rxSyncMax = 2100; //maximum valid sync length
@@ -106,6 +109,9 @@ unsigned int txLowTime = 420; //length of the gap between bits
 byte txTrainRep = 30; //number of pulses in training burst
 unsigned int txSyncTime = 2000; //length of sync
 unsigned int txTrainLen = 200; //length of each pulse in training burst
+
+
+
 unsigned int txRepDelay = 2000; //delay between consecutive transmissions
 byte txRepCount = 5; //number of times to repeat each transmission
 
