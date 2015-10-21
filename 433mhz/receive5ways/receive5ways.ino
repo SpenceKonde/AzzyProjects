@@ -68,44 +68,43 @@ const char AT24WL[] PROGMEM = {"AT+24WL"};
 const char AT24RL[] PROGMEM = {"AT+24RL"};
 
 
-//These set the parameters for transmitting.
 
 /*
-#define txOneLength 550 //length of a 1
-#define txZeroLength 300 //length of a 0
-#define txLowTime 420 //length of the gap between bits
-#define txTrainRep 30 //number of pulses in training burst
-#define txSyncTime 2000 //length of sync
-#define txTrainLen 200 //length of each pulse in training burst
 
-
-
-//These set the parameters for receiving; any packet where these criteria are not met is discarded.
-// Version 2.0
-int rxSyncMin=1900; //minimum valid sync length
-int rxSyncMax=2100; //maximum valid sync length
-int rxZeroMin=100; //minimum length for a valid 0
-int rxZeroMax=300; //maximum length for a valid 0
-int rxOneMin=400; //minimum length for a valid 1
-int rxOneMax=600; //maximum length for a valid 1
-int rxLowMax=450; //longest low before packet discarded
-
-
-
-// Version 2.1
-#define rxSyncMin 1900 //minimum valid sync length
-#define rxSyncMax 2100 //maximum valid sync length
-#define rxZeroMin 120 //minimum length for a valid 0
-#define rxZeroMax 400 //maximum length for a valid 0
-#define rxOneMin 450 //minimum length for a valid 1
-#define rxOneMax 750 //maximum length for a valid 1
-#define rxLowMax 600 //longest low before packet discarded
+//X1
+unsigned int rxSyncMin  = 1750;
+unsigned int rxSyncMax  = 2250;
+unsigned int rxZeroMin  = 300;
+unsigned int rxZeroMax  = 740;
+unsigned int rxOneMin  = 760;
+unsigned int rxOneMax  = 1200;
+unsigned int rxLowMax  = 1000;
+unsigned int txOneLength  = 950;
+unsigned int txZeroLength  = 550;
+unsigned int txLowTime  = 750;
+unsigned int txSyncTime  = 2000;
+unsigned int txTrainLen  = 250;
+byte txTrainRep  = 30;
 */
-// Version 2.1
 
-#define PROTOCOLVERSION 21
+/*
+//X2
+unsigned int rxSyncMin  = 1750;
+unsigned int rxSyncMax  = 2250;
+unsigned int rxZeroMin  = 100;
+unsigned int rxZeroMax  = 390;
+unsigned int rxOneMin  = 410;
+unsigned int rxOneMax  = 700;
+unsigned int rxLowMax  = 600;
+unsigned int txOneLength  = 500;
+unsigned int txZeroLength  = 300;
+unsigned int txLowTime  = 400;
+unsigned int txSyncTime  = 2000;
+unsigned int txTrainLen  = 200;
+byte txTrainRep  = 30;
 
-#if (PROTOCOLVERSION==21) 
+*/
+
 
 unsigned int  rxSyncMin = 1900; //minimum valid sync length
 unsigned int  rxSyncMax = 2100; //maximum valid sync length
@@ -121,15 +120,14 @@ unsigned int txLowTime = 420; //length of the gap between bits
 byte txTrainRep = 30; //number of pulses in training burst
 unsigned int txSyncTime = 2000; //length of sync
 unsigned int txTrainLen = 200; //length of each pulse in training burst
+
+
+
 unsigned int txRepDelay = 2000; //delay between consecutive transmissions
 byte txRepCount = 5; //number of times to repeat each transmission
 
-#elif 
 
 
-#else 
-#error "No protocol defined"
-#endif
 byte recCount=0;
 
 byte defaultAT24i2ca = 0x50;
@@ -201,10 +199,7 @@ void setup() {
   //pinMode(txpin, OUTPUT);
   pinMode(rxpin, INPUT);
   SerialDbg.begin(9600);
-  if (EEPROM.read(0) < 255) {
-    initFromEEPROM();
-    //SerialDbg.println(F("Load from EEPROM"));
-  }
+
   SerialCmd.begin(9600);
   digitalWrite(LED6, LED_ON);
 //  TinyWireM.begin();
@@ -255,54 +250,7 @@ void loop() {
   //}
 }
 
-void writeConfigToEEPROM() {
-  for (byte i = 0; i < EEPROM_LENGTH_CONF; i++) {
-    EEPROM.write(i + EEPROM_OFFSET_CONF, txrxbuffer[i]);
-  }
-  initFromEEPROM();
-}
 
-
-
-void initFromEEPROM() {
-  byte tAddr = EEPROM.read(0);
-  if (tAddr > 127) {
-    MyAddress = tAddr & 0x3F;
-    if (tAddr & 0x40) {
-      if (EEPROM.read(1) < 255) {
-#ifdef OSCCAL
-        OSCCAL = EEPROM.read(3);
-#else
-        OSCCAL0 = EEPROM.read(3);
-#endif
-        delay(50); //let's be cautious;
-      }
-    }
-
-    byte tIsConf = EEPROM.read(32);
-    if (tIsConf < 255) {
-      SerialDbg.println(F("Loading config"));
-      //MyAddress = tAddr;
-      txSyncTime = EEPROM.read(33) + (EEPROM.read(32) << 8); //length of sync
-      txTrainRep = EEPROM.read(34); //number of pulses in training burst
-      txTrainLen = EEPROM.read(36) + (EEPROM.read(35) << 8); //length of each pulse in training burst
-      txOneLength = EEPROM.read(38) + (EEPROM.read(37) << 8); //length of a 1
-      txZeroLength = EEPROM.read(40) + (EEPROM.read(39) << 8); //length of a 0
-      txLowTime = EEPROM.read(42) + (EEPROM.read(41) << 8); //length of the gap between bits
-      rxSyncMin = EEPROM.read(44) + (EEPROM.read(43) << 8); //minimum valid sync length
-      rxSyncMax = EEPROM.read(46) + (EEPROM.read(45) << 8); //maximum valid sync length
-      rxZeroMin = EEPROM.read(48) + (EEPROM.read(47) << 8); //minimum length for a valid 0
-      rxZeroMax = EEPROM.read(50) + (EEPROM.read(49) << 8); //maximum length for a valid 0
-      rxOneMin = EEPROM.read(52) + (EEPROM.read(51) << 8); //minimum length for a valid 1
-      rxOneMax = EEPROM.read(54) + (EEPROM.read(53) << 8); //maximum length for a valid 1
-      rxLowMax = EEPROM.read(56) + (EEPROM.read(55) << 8); //longest low before packet discarded
-      txRepDelay = EEPROM.read(58) + (EEPROM.read(57) << 8); //delay between repetitions of a packet
-      txRepCount = EEPROM.read(59); //default number of repetitions.
-    } else {
-      SerialDbg.println(F("No config to load"));
-    }
-  }
-}
 
 void processSerial() {
   static char minb[3] = {0, 0, 0};
