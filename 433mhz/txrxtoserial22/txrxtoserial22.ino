@@ -158,24 +158,23 @@ int rxLowMax=450; //longest low before packet discarded
 #define rxOneMax 750 //maximum length for a valid 1
 #define rxLowMax 600 //longest low before packet discarded
 */
-// Version 2.1
-unsigned int  rxSyncMin = 1900; //minimum valid sync length
-unsigned int  rxSyncMax = 2100; //maximum valid sync length
-unsigned int  rxZeroMin = 120; //minimum length for a valid 0
-unsigned int  rxZeroMax = 400; //maximum length for a valid 0
-unsigned int  rxOneMin = 450; //minimum length for a valid 1
-unsigned int  rxOneMax = 750; //maximum length for a valid 1
-unsigned int  rxLowMax = 600; //longest low before packet discarded
+// Version 2.2
+unsigned int rxSyncMin  = 1750;
+unsigned int rxSyncMax  = 2250;
+unsigned int rxZeroMin  = 100;
+unsigned int rxZeroMax  = 390;
+unsigned int rxOneMin  = 410;
+unsigned int rxOneMax  = 700;
+unsigned int rxLowMax  = 600;
+unsigned int txOneLength  = 500;
+unsigned int txZeroLength  = 300;
+unsigned int txLowTime  = 400;
+unsigned int txSyncTime  = 2000;
+unsigned int txTrainLen  = 200;
+byte txTrainRep  = 30;
 
-unsigned int  txOneLength = 550; //length of a 1
-unsigned int  txZeroLength = 300; //length of a 0
-unsigned int txLowTime = 420; //length of the gap between bits
-byte txTrainRep = 30; //number of pulses in training burst
-unsigned int txSyncTime = 2000; //length of sync
-unsigned int txTrainLen = 200; //length of each pulse in training burst
 unsigned int txRepDelay = 2000; //delay between consecutive transmissions
 byte txRepCount = 5; //number of times to repeat each transmission
-
 byte defaultAT24i2ca = 0x50;
 
 
@@ -571,10 +570,12 @@ void doTransmit(byte rep) { //rep is the number of repetitions
   lastCscSent = txchecksum;
 #endif
   for (byte r = 0; r < rep; r++) {
-    for (byte j = 0; j <= 2 * txTrainRep; j++) {
+    for (byte j = 0; j < 2 * txTrainRep; j++) {
       delayMicroseconds(txTrainLen);
       digitalWrite(txpin, j & 1);
     }
+    delayMicroseconds(txSyncTime);
+    digitalWrite(txpin,0);
     delayMicroseconds(txSyncTime);
     for (byte k = 0; k < TXLength; k++) {
       //send a byte
