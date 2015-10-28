@@ -165,7 +165,7 @@ var RFDevs=[
 function sendRF(addr,cmd,parm,ext) {
   //setTimeout(function(a,c,p,e){
   tstr=addr+','+cmd+','+parm+','+ext;
-  RFCommands[">"]='console.log(E.toUint8Array(['+tstr+']));RFCommands[">"]=undefined;cmd="";Serial2.print(E.toString(['+tstr+']));'; //},25,addr,cmd,parm,ext);
+  RFCommands["#"]='console.log(E.toUint8Array(['+tstr+']));RFCommands["#"]=undefined;cmd="";Serial2.print(E.toString(['+tstr+']));'; //},25,addr,cmd,parm,ext);
   Serial2.print("AT+SEND\r");
 }
 
@@ -184,7 +184,9 @@ function sendLRF(addr,data) {
   } else {
     throw "Invalid length";
   }
-  setTimeout(function(a,d){Serial2.print(String.fromCharCode(a)+E.toString(d));},25,addr,data);
+  RFCommands["#"]='console.log(E.toUint8Array(['+tstr+']));RFCommands["#"]=undefined;cmd="";Serial2.print(E.toString(['+addr+data+']));'; //},25,addr,cmd,parm,ext);
+  
+  //setTimeout(function(a,d){Serial2.print(String.fromCharCode(a)+E.toString(d));},25,addr,data);
 }
 function getDate() {
   console.log("getDate called");
