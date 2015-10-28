@@ -801,7 +801,7 @@ void parseRx() { //uses the globals.
 unsigned long calcBigChecksum(byte len) {
   unsigned long retval = 0;
   for (byte i = 0; i < len; i++) {
-    retval += (txrxbuffer[i] << (i >> 1));
+    retval += ((unsigned long)txrxbuffer[i] << ((i&3)*8));
   }
   return retval;
 }
