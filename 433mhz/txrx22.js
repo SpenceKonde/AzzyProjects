@@ -12,17 +12,17 @@ function sendRaw(dat,rep) {
     var p=txpin;
     var h;
   for (var v=0;v<rep;v++) {
-    for (i = 0; i < 25; i++) {
-          d(p,1,0.4); 
-          d(p,0,0.4); 
+    for (i = 0; i < 30; i++) {
+          d(p,1,0.2); 
+          d(p,0,0.2); 
       }
-      d(p,1,0.5); //end training burst
+      d(p,1,2); //end training burst
       d(p,0,2);
       for (var j=0;j<l;j++) {
         h=dat[j];
         for (k=7;k>=0;k--) {
-        d(p,1,((h>>k)&1)?1.1:0.6); 
-        d(p,0,0.65);
+        d(p,1,((h>>k)&1)?0.5:0.3); 
+        d(p,0,0.4);
         }
       }
         d(p,0,0);
@@ -32,7 +32,7 @@ function sendRaw(dat,rep) {
 
 function sigOff(e) {
   var d=e.time-e.lastTime;
-  if (d>0.0005 && d<0.0013) n+=d>0.0008?1:0;
+  if (d>0.0001 && d<0.001) n+=d>0.0004?1:0;
   else{
     n="";
   }
