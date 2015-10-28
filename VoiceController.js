@@ -184,7 +184,7 @@ function sendLRF(addr,data) {
   } else {
     throw "Invalid length";
   }
-  RFCommands["#"]='console.log(E.toUint8Array(['+tstr+']));RFCommands["#"]=undefined;cmd="";Serial2.print(E.toString(['+addr+data+']));'; //},25,addr,cmd,parm,ext);
+  RFCommands["#"]='console.log(E.toUint8Array(['+addr+data+']));RFCommands["#"]=undefined;cmd="";Serial2.print(E.toString(['+addr+data+']));'; //},25,addr,cmd,parm,ext);
   
   //setTimeout(function(a,d){Serial2.print(String.fromCharCode(a)+E.toString(d));},25,addr,data);
 }
