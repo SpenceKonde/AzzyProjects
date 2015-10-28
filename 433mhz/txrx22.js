@@ -82,7 +82,7 @@ function parseRx(rcv) {
 }
 
 function startListen() {
-  wf=setWatch(sigOff,C6,{repeat:true,debounce:0.35,edge:"falling"});
+  wf=setWatch(sigOff,C6,{repeat:true,debounce:0.05,edge:"falling"});
   console.log("Listening started");
 }
 function stopListen() {
