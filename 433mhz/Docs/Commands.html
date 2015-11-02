@@ -17,17 +17,20 @@ Several timing schemes have been utilized, varying in the length of each given b
 <table><tr><th>Version</th><th>Sync</th><th>One</th><th>Zero</th><th>Low</th><th>Train</th><th>Time/rep 4 byte packet*</th></tr>
 <tr><td>v1</td><td>2ms</td><td>1.1ms</td><td>0.6ms</td><td>0.65ms</td><td>0.4ms x 30</td><td>62.5ms</td></tr>
 <tr><td>v2</td><td>2ms</td><td>0.5ms</td><td>0.21ms</td><td>0.35ms</td><td>0.2ms x 30</td><td>30.9ms</td></tr>
-<tr><td>v2.1</td><td>2ms</td><td>0.55ms</td><td>0.3ms</td><td>0.42ms</td><td>0.2ms x 30</td><td>35.54ms</td></tr>
+<tr><td>v2.1</td><td>2ms</td><td>0.55ms</td><td>0.3ms</td><td>0.42ms</td><td>0.2ms x 30</td><td>37.04ms</td></tr>
+<tr><td>v2.2</td><td>2+2ms</td><td>0.5ms</td><td>0.3ms</td><td>0.4ms</td><td>0.2ms x 30</td><td>37.6ms</td></tr>
 </table>
 <ul>
 <li> Version 1 represents the first attempt, and no attention was given to throughput, just ease of implementation. </li>
 <li> Version 2 attempted to improve throughput, however, it was found to perform inadequately with certain bit patterns, particularly repeated zeros.</li>
 <li> Version 2.1 whitens the bit pattern significantly, which improves performance in repeated 1's and 0's. </li>
+<li> Version 2.2 whitens the bit pattern a bit more, and adds a 2ms HIGH pulse prior to the 2ms LOW sync pulse </li>
 
 
 *assuming even distribution of ones and zeros, single repetition, including training burst
 
 <h2> Time formats </h2>
+<h3> Relative time</h3>
 
 <ul>
 <li>16-bit - 3 most significant bits specify units. Rest is value - 0-8192 ms to days</li>
@@ -46,6 +49,9 @@ Several timing schemes have been utilized, varying in the length of each given b
 <tr><td>0b111</td><td>Day</td></tr>
 </table>
 </div>
+
+<h3> Absolute time </h3>
+
 
 <h1>Commands:</h1>
 
