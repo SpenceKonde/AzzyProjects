@@ -1,0 +1,5 @@
+Rev A.
+* Swap RX and TX on programming header to match intended pinout
+* Correct connections to inductor and antenna on TX section
+* Add missing reset diode
+* Swap pins 8 and 7, since we need AIN1 so we can compare it to the bandgap reference 

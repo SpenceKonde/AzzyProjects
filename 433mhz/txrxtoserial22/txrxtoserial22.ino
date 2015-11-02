@@ -78,7 +78,7 @@ The example commands are:
 #define LED5 6
 #define LED6 8
 #define BTN1 3
-#define txpin 2
+#define txpin 14
 #define rxpin 7
 
 //#define SHUT_PIN 8
@@ -95,7 +95,7 @@ char serBuffer[MAX_SER_LEN];
 
 #define HEX_OUT
 //#define HEX_IN
-#define USE_ACK
+//#define USE_ACK
 
 #define rxPIN PINA
 #define rxBV 2
@@ -242,7 +242,7 @@ void setup() {
   pinMode(rxpin, INPUT);
   SerialDbg.begin(9600);
   if (EEPROM.read(0) < 255) {
-    initFromEEPROM();
+    //initFromEEPROM();
     //SerialDbg.println(F("Load from EEPROM"));
   }
   SerialCmd.begin(9600);
