@@ -10,6 +10,14 @@
 
 Packets are either normal (4 byte), or long (8, 16, or 32 byte). First byte is destination address, second byte identifies the command. Checksum is last byte for long packets, last 4 bits for normal packets. All devices have an address specified (either with #define or stored in EEPROM); If this is specified as 0, the device should process all packets (though it may choose not to react to some of them). Likewise, packets with destination address of 0 may be processed by any device. 
 
+
+<table><tr><th>Size</th><th>Raw size</th><th>Payload</th></tr>
+<tr><td>Normal</td><td>4 bytes</td><td>12 bits</td></tr>
+<tr><td>Normal</td><td>8 bytes</td><td>5 bytes</td></tr>
+<tr><td>Normal</td><td>16 bytes</td><td>13 bytes</td></tr>
+<tr><td>Normal</td><td>32 bytes</td><td>29 bytes</td></tr>
+</table>
+
 <h2> Timing </h2>
 
 Several timing schemes have been utilized, varying in the length of each given bit. 
