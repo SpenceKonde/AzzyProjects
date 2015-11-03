@@ -84,9 +84,9 @@ The example commands are:
 #define BTN1 8
 
 #define LED_RX LED1
-#define LED_TX LED3
+//#define LED_TX LED3
 #define LED_START LED1
-#define BTN_ACK BTN1
+//#define BTN_ACK BTN1
 
 //#define SHUT_PIN 8
 
@@ -103,6 +103,7 @@ char serBuffer[MAX_SER_LEN];
 #define HEX_OUT
 //#define HEX_IN
 #define USE_ACK
+//#define AUTO_ACK
 
 
 
@@ -134,6 +135,9 @@ const char ATADR[] PROGMEM = {"AT+ADR"};
 const char AT24W[] PROGMEM = {"AT+24W"};
 const char AT24WL[] PROGMEM = {"AT+24WL"};
 const char AT24RL[] PROGMEM = {"AT+24RL"};
+#ifdef USE_ACK
+const char ATACK[] PROGMEM = {"AT+ACK"};
+#endif
 
 
 //These set the parameters for transmitting.
@@ -487,6 +491,16 @@ void checkCommand() {
     SerCmd = 5;
     SerRXmax = 19;
     rxing = 2;
+    #ifdef USE_ACK
+  } else if (strcmp_P (serBuffer, ATACK) == 0) { //AT+ADR?
+    if (lastChecksum) {
+        prepareAckPayload();
+        doTransmit();
+    } else {
+      SerialCmd.println(F("ERROR"));
+      resetSer();
+    }
+    #endif
   } else {
     SerialCmd.println(F("ERROR"));
     SerialCmd.println(serBuffer);
@@ -656,6 +670,7 @@ void outputPayload() {
     }
 #endif
 #ifdef USE_ACK
+#ifdef AUTO_ACK
 #ifdef BTN_ACK
     if (digitalRead(BTN_ACK) == 0) {
 #endif
@@ -666,6 +681,7 @@ void outputPayload() {
       }
 #ifdef BTN_ACK
     }
+#endif
 #endif
   }
 #endif
