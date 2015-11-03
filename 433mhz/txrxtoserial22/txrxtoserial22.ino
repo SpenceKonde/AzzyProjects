@@ -72,14 +72,21 @@ The example commands are:
 //pins 16,12: I2C
 
 #define LED1 13
-#define LED2 11
+//#define LED2 11
 #define LED3 4
-#define LED4 5
-#define LED5 6
-#define LED6 8
-#define BTN1 3
-#define txpin 14
-#define rxpin 7
+//#define LED4 5
+//#define LED5 6
+//#define LED6 8
+#define BTN0 3
+#define BTN4 5
+#define BTN3 6
+#define BTN2 11
+#define BTN1 8
+
+#define LED_RX LED1
+#define LED_TX LED3
+#define LED_START LED1
+#define BTN_ACK BTN1
 
 //#define SHUT_PIN 8
 
@@ -95,17 +102,21 @@ char serBuffer[MAX_SER_LEN];
 
 #define HEX_OUT
 //#define HEX_IN
-//#define USE_ACK
+#define USE_ACK
 
+
+
+#define rxpin 7
 #define rxPIN PINA
 #define rxBV 2
-//#define txPIN
-//#define txBV
+
+#define txpin 14
+#define txPIN PINB
+#define txBV 8
 
 
 #define CommandForgetTime 1000 //short, for testing
 
-#define rcvled LED1
 #define RX_MAX_LEN 256 //Used to set the size of txrx buffer in BITS (and checked against this to prevent overflows from messing stuff up)
 
 #define EEPROM_OFFSET_CONF 32
@@ -246,10 +257,10 @@ void setup() {
     //SerialDbg.println(F("Load from EEPROM"));
   }
   SerialCmd.begin(9600);
-  digitalWrite(LED1, LED_ON);
+  digitalWrite(LED_START, LED_ON);
   TinyWireM.begin();
   delay(1000);
-  digitalWrite(LED1, LED_OFF);
+  digitalWrite(LED_START, LED_OFF);
   SerialDbg.println(F("Startup OK"));
   //SerialDbg.print(decode8(123));
 
@@ -261,27 +272,22 @@ void loop() {
   //if (MyState == ListenST) {
   onListenST();
   if (rxing == 1) {
-    PORTA &= ~1;
+    PORTC &= ~1;
     return; //don't do anything else while actively receiving.
   } else {
-    PORTA |= 1;
-    digitalWrite(LED2, rxing >> 1 ? LED_ON : LED_OFF);
+    PORTC |= 1;
+#ifdef LED_SER
+    digitalWrite(LED_SER, rxing >> 1 ? LED_ON : LED_OFF);
+#endif
     ClearCMD(); //do the command reset only if we are in listenst but NOT receiving.
     processSerial();
     if (lastSer & (millis() - lastSer  > (rxing == 2 ? 20000 : 10000))) {
       resetSer();
     }
-    if (led3OffAt && (led3OffAt < millis())) {
-      digitalWrite(LED3, LED_OFF);
-      led3OffAt = 0;
-    }
-    if (led4OffAt && (led4OffAt < millis())) {
-      digitalWrite(LED4, LED_OFF);
-      led4OffAt = 0;
-    }
-    if (digitalRead(BTN1) == 0 && led4OffAt == 0) {
-      digitalWrite(LED4, LED_ON);
-      led4OffAt = millis() + 1000;
+
+    if (digitalRead(BTN0) == 0 && led4OffAt == 0) {
+      //digitalWrite(LED4, LED_ON);
+      //led4OffAt = millis() + 1000;
       SerialCmd.println(F("BTN1"));
       prepareTestPayload();
       doTransmit();
@@ -549,12 +555,14 @@ void doTransmit() {
 }
 
 void doTransmit(byte rep) { //rep is the number of repetitions
-#ifdef LED5
-  digitalWrite(LED5, LED_ON);
+SerialDbg.println("dotransmit ok");
+#ifdef LED_TX
+  digitalWrite(LED_TX, LED_ON);
 #endif
 #ifdef SHUT_PIN
   digitalWrite(SHUT_PIN, 1);
 #endif
+digitalWrite(txpin,0); // known state
   byte txchecksum = 0;
   for (byte i = 0; i < TXLength - 1; i++) {
     txchecksum = txchecksum ^ txrxbuffer[i];
@@ -570,23 +578,24 @@ void doTransmit(byte rep) { //rep is the number of repetitions
   lastCscSent = txchecksum;
 #endif
   for (byte r = 0; r < rep; r++) {
-    for (byte j = 0; j < 2 * txTrainRep; j++) {
+    for (byte j = 0; j <= 2 * txTrainRep; j++) {
       delayMicroseconds(txTrainLen);
-      digitalWrite(txpin, j & 1);
+      //digitalWrite(txpin, j & 1);
+      txPIN=txBV;
     }
     delayMicroseconds(txSyncTime);
-    digitalWrite(txpin,0);
+    txPIN=txBV;
     delayMicroseconds(txSyncTime);
     for (byte k = 0; k < TXLength; k++) {
       //send a byte
       for (int m = 7; m >= 0; m--) {
-        digitalWrite(txpin, 1);
+        txPIN=txBV;
         if ((txrxbuffer[k] >> m) & 1) {
           delayMicroseconds(txOneLength);
         } else {
           delayMicroseconds(txZeroLength);
         }
-        digitalWrite(txpin, 0);
+        txPIN=txBV;
         delayMicroseconds(txLowTime);
       }
       //done with that byte
@@ -606,8 +615,8 @@ void doTransmit(byte rep) { //rep is the number of repetitions
   }
 #endif
   TXLength = 0;
-#ifdef LED5
-  digitalWrite(LED5, LED_OFF);
+#ifdef LED_TX
+  digitalWrite(LED_TX, LED_OFF);
 #endif
 
 #ifdef SHUT_PIN
@@ -621,10 +630,6 @@ void outputPayload() {
   if (txrxbuffer[1] == 0xE8) {
     if ( txrxbuffer[2] == lastCmdSent && (txrxbuffer[3] >> 4) == (lastCscSent & 0x0F)) {
       SerialCmd.println(F("ACK"));
-#ifdef LED3
-      digitalWrite(LED3, LED_ON);
-      led3OffAt = millis() + 1000;
-#endif
     } else {
       SerialDbg.println(F("Other ACK"));
     }
@@ -651,11 +656,17 @@ void outputPayload() {
     }
 #endif
 #ifdef USE_ACK
-    if (((txrxbuffer[0] & 0x3F) == MyAddress) && (txrxbuffer[1] != 0xE8)) {
-      prepareAckPayload();
-      delay(1000);
-      doTransmit();
+#ifdef BTN_ACK
+    if (digitalRead(BTN_ACK) == 0) {
+#endif
+      if (((txrxbuffer[0] & 0x3F) == MyAddress) && (txrxbuffer[1] != 0xE8)) {
+        prepareAckPayload();
+        delay(1000);
+        doTransmit();
+      }
+#ifdef BTN_ACK
     }
+#endif
   }
 #endif
   SerialCmd.println();
@@ -801,7 +812,7 @@ void parseRx() { //uses the globals.
 unsigned long calcBigChecksum(byte len) {
   unsigned long retval = 0;
   for (byte i = 0; i < len; i++) {
-    retval += ((unsigned long)txrxbuffer[i] << ((i&3)*8));
+    retval += ((unsigned long)txrxbuffer[i] << ((i & 3) * 8));
   }
   return retval;
 }
@@ -914,8 +925,20 @@ void initializeOutputs() {
   pinMode(SHUT_PIN, OUTPUT);
   digitalWrite(SHUT_PIN, 0);
 #endif
+#ifdef BTN0
+  pinMode(BTN0, INPUT_PULLUP);
+#endif
 #ifdef BTN1
   pinMode(BTN1, INPUT_PULLUP);
+#endif
+#ifdef BTN2
+  pinMode(BTN2, INPUT_PULLUP);
+#endif
+#ifdef BTN3
+  pinMode(BTN3, INPUT_PULLUP);
+#endif
+#ifdef BTN4
+  pinMode(BTN4, INPUT_PULLUP);
 #endif
 
 }

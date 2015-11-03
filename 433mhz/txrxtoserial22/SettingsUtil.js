@@ -70,6 +70,23 @@ AzzyRF.readA24 = function(addr,len) {
 	}
 };
 
+AzzyRF.send(addr,cmd,data) {
+	if data.length==2 {
+		this.datastring=E.toString([addr*0x3F,cmd,data[0],data[1]]);
+		AzzyRF.Serial.print("AT+SEND");
+	} else if data.length==5 {
+		this.datastring=E.toString([addr*0x3F,cmd,data[0],data[1]]);
+		AzzyRF.Serial.print("AT+SENDM");
+	} else if data.length==13 {
+		this.datastring=E.toString([addr*0x3F,cmd,data[0],data[1]]);
+		AzzyRF.Serial.print("AT+SENDL");
+	} else if data.length==29 {
+		this.datastring=E.toString([addr*0x3F,cmd,data[0],data[1]]);
+		AzzyRF.Serial.print("AT+SENDE");
+	} else {
+		throw "Invalid Length";
+	}
+}
 
 AzzyRF.setRFConfig = function(set) {
 	tarr=new Uint8Array(28);
