@@ -116,7 +116,7 @@ char serBuffer[MAX_SER_LEN];
 #define txBV 8
 
 
-#define CommandForgetTime 1000 //short, for testing
+#define CommandForgetTime 2000 //short, for testing
 
 #define RX_MAX_LEN 256 //Used to set the size of txrx buffer in BITS (and checked against this to prevent overflows from messing stuff up)
 
@@ -135,6 +135,7 @@ const char ATADR[] PROGMEM = {"AT+ADR"};
 const char AT24W[] PROGMEM = {"AT+24W"};
 const char AT24WL[] PROGMEM = {"AT+24WL"};
 const char AT24RL[] PROGMEM = {"AT+24RL"};
+const char ATVERS[] PROGMEM = {"AT+VERS?"};
 #ifdef USE_ACK
 const char ATACK[] PROGMEM = {"AT+ACK"};
 #endif
@@ -390,14 +391,18 @@ void processSerial() {
           //  EEPROM.write(0,MyAddress)
         } else if (SerCmd == 2) { //AT+24R
 #ifdef HEX_OUT
+          SerialCmd.print(F("="));
           showHex(readAT24(defaultAT24i2ca, txrxbuffer[0] << 8 + txrxbuffer[1]), 1);
 #else
-          SerialCMD.println(readAT24(defaultAT24i2ca, txrxbuffer[0] << 8 + txrxbuffer[1]));
+          SerialCmd.println(readAT24(defaultAT24i2ca, txrxbuffer[0] << 8 + txrxbuffer[1]));
 #endif
         } else if (SerCmd == 3) { //AT+24W
           writeAT24(defaultAT24i2ca, txrxbuffer[0] << 8 + txrxbuffer[1], txrxbuffer[2]);
         } else if (SerCmd == 4) { //AT+24RL
           readAT24(defaultAT24i2ca, (txrxbuffer[0] << 8) + txrxbuffer[1], txrxbuffer[2], txrxbuffer + 3);
+          #ifdef HEX_OUT
+          SerialCmd.print(F("="));
+          #endif
           for (byte i = 0; i < txrxbuffer[2]; i++) {
 #ifdef HEX_OUT
             showHex(txrxbuffer[i + 3], 1);
@@ -411,7 +416,7 @@ void processSerial() {
         resetSer();
       } else if (SerRXidx == 3 && SerCmd == 5) {
         SerialCmd.println(txrxbuffer[2]);
-        SerialDbg.println(F("Adjusting characther RX"));
+        SerialDbg.println(F("Adjusting char RX"));
         SerRXmax = txrxbuffer[2] + 3;
       }
     } else {
@@ -475,6 +480,8 @@ void checkCommand() {
     SerCmd = 1;
     SerRXmax = 1;
     rxing = 2;
+  } else if (strcmp_P (serBuffer, ATVERS) == 0) {
+    SerialCmd.println("AzzyRF v2.2");
   } else if (strcmp_P (serBuffer, AT24R) == 0) {
     SerCmd = 2;
     SerRXmax = 2;
@@ -651,8 +658,8 @@ void outputPayload() {
 #endif
     byte tem = txrxbuffer[0] >> 6;
     tem = (4 << tem) - 1;
-    SerialCmd.print(F("+"));
 #ifdef HEX_OUT
+    SerialCmd.print(F("+"));
     for (byte x = 0; x < tem ; x++) {
       showHex(txrxbuffer[x], 1);
     }
@@ -792,7 +799,7 @@ void parseRx() { //uses the globals.
           outputPayload();
         } else {
           SerialDbg.println(F("Bad CSC RX"));
-          outputPayload();
+          //outputPayload();
         }
       } else {
         for (byte i = 1; i < (pksize / 8); i++) {
@@ -855,7 +862,7 @@ unsigned long decode16(unsigned int inp) {
 
 
 void ClearCMD() {  //This handles clearing of the commands, and also clears the lastChecksum value, which is used to prevent multiple identical packets received in succession from being processed.
-  if (lastChecksum) {
+  if (lastChecksum && forgetCmdAt==0) {
     forgetCmdAt = millis() + CommandForgetTime;
     //MyParam = 0;
     //MyExtParam = 0;

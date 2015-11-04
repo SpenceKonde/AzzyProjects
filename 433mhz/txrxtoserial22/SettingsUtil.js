@@ -1,31 +1,37 @@
 
 var AzzyRF={};
 
-AzzyRF.Serial=Serial1;
+AzzyRF.Serial=Serial2;
 
-Serial1.setup(9600,{rx:A10,tx:A9});
+
+Serial2.setup(9600, { rx: A3, tx : A2 });
 
 
 
 AzzyRF.onData = function(data) {
-	if (data=="#" && AzzyRF.datastring) {
-		if (AzzyRF.datastring) {
-			AzzyRF.Serial.print(AzzyRF.datastring);
-			AzzyRF.datastring="";
+	if (data=="#" && this.datastring) {
+		if (this.datastring) {
+			this.Serial.print(this.datastring);
+			this.datastring="";
 		}
-	} else if (data==">" && AzzyRF.datastring) {
+	} else if (data==">" && this.datastring) {
 		//TODO
+	} else if (data=="\n" || data=="\r"){
+		if (this.inString!="") {
+			this.outputFormat(this.inString);
+			this.inString="";
+		}
 	} else {
-		AzzyRF.inString+=data;
-      if (AzzyRF.timeout > 0) {
-        clearTimeout(AzzyRF.timeout);
+		this.inString+=data;
+      if (this.timeout > 0) {
+        clearTimeout(this.timeout);
 	}
-      AzzyRF.timeout=setTimeout("AzzyRF.outputFormat(AzzyRF.inString);AzzyRF.inString='';AzzyRF.timeout=0;",1000);
+      this.timeout=setTimeout(function() {this.outputFormat(this.inString);this.inString='';this.timeout=0;}.bind(this),1000);
     }
 };
 AzzyRF.timeout=0;
 AzzyRF.inString="";
-AzzyRF.Serial.on('data',AzzyRF.onData);
+AzzyRF.Serial.on('data',AzzyRF.onData.bind(AzzyRF));
 
 AzzyRF.writeA24 = function(addr,data) {
 	if (data.length > 16) {
@@ -36,27 +42,47 @@ AzzyRF.writeA24 = function(addr,data) {
         tstr+=String.fromCharCode((addr>>8)&255,addr&255,data.length);
 		//tstr+=E.toString(data);
         tstr+=data;
-		AzzyRF.datastring=tstr;
-		AzzyRF.Serial.print("AT+24WL\r");
+		this.datastring=tstr;
+		this.Serial.print("AT+24WL\r");
 	}
 };
 
 AzzyRF.outputFormat = function(text) {
-  console.log(text);
+  if (text=="") return;
   var outstr="";
-  var len=text.length;
-  for (var i=0;i<len;i+=2) {
-    //console.log(i);
-    //console.log(text.substr(i,2));
-    var tnum=parseInt(text.substr(i,2),16);
-    if (!isNaN(tnum)) {
-      outstr+=String.fromCharCode(tnum);
-    }
-  }
-  if (outstr!="0") {
-  //console.log(outstr);
-  console.log(E.toUint8Array(outstr));
-  }
+  if (text.charAt(0)=='+' || text.charAt(0)=='=') {
+	  var len=text.length;
+	  for (var i=1;i<len;i+=2) {
+	    //console.log(i);
+	    //console.log(text.substr(i,2));
+	    var tnum=parseInt(text.substr(i,2),16);
+	    if (!isNaN(tnum)) {
+	      outstr+=String.fromCharCode(tnum);
+	    }
+	  }
+	  if (outstr!="") {
+	  	//console.log(outstr);
+	  	if ((text.charAt(0)=='+')) {
+	  		if (typeof this.onRcvOut == 'function') this.onRcvOut(E.toUint8Array(outstr));
+	  	} else {
+	  		if (typeof this.onDataOut == 'function') this.onDataOut(E.toUint8Array(outstr));
+	  	}
+		}
+	} else {
+	  if (text!="") {
+	  //console.log(outstr);
+	  	if (typeof this.onTextOut == 'function'){
+	  	  this.onTextOut(text);
+	  	} else {
+	  		console.log("other message: "+text);
+	  	}
+	  }
+	}
+	if (typeof this.onMsgOut == 'function') {
+		this.onMsgOut(text);
+	} else {
+		console.log(text);
+	}
 };
 
 
@@ -65,28 +91,28 @@ AzzyRF.readA24 = function(addr,len) {
 		throw "Data too long";
 	} else {
 		tstr=E.toString([(addr>>8)&255,addr&255,len]);
-		AzzyRF.datastring=tstr;
-		AzzyRF.Serial.print("AT+24RL\r");
+		this.datastring=tstr;
+		this.Serial.print("AT+24RL\r");
 	}
 };
 
-AzzyRF.send(addr,cmd,data) {
-	if data.length==2 {
+AzzyRF.send = function (addr,cmd,data) {
+	if (data.length==2) {
 		this.datastring=E.toString([addr*0x3F,cmd,data[0],data[1]]);
-		AzzyRF.Serial.print("AT+SEND");
-	} else if data.length==5 {
-		this.datastring=E.toString([addr*0x3F,cmd,data[0],data[1]]);
-		AzzyRF.Serial.print("AT+SENDM");
-	} else if data.length==13 {
-		this.datastring=E.toString([addr*0x3F,cmd,data[0],data[1]]);
-		AzzyRF.Serial.print("AT+SENDL");
-	} else if data.length==29 {
-		this.datastring=E.toString([addr*0x3F,cmd,data[0],data[1]]);
-		AzzyRF.Serial.print("AT+SENDE");
+		this.Serial.print("AT+SEND\r");
+	} else if (data.length==5) {
+		this.datastring=E.toString([addr*0x3F,cmd])+E.toString(data);
+		this.Serial.print("AT+SENDM\r");
+	} else if (data.length==13) {
+		this.datastring=E.toString([addr*0x3F,cmd])+E.toString(data);
+		this.Serial.print("AT+SENDL\r");
+	} else if (data.length==29) {
+		this.datastring=E.toString([addr*0x3F,cmd])+E.toString(data);
+		this.Serial.print("AT+SENDE\r");
 	} else {
 		throw "Invalid Length";
 	}
-}
+};
 
 AzzyRF.setRFConfig = function(set) {
 	tarr=new Uint8Array(28);
@@ -120,5 +146,5 @@ AzzyRF.setRFConfig = function(set) {
 	tarr[23]=set.txRepCount;
 	this.datastring=E.toString(tarr);
 	console.log("Writing to config EEPROM on AzzyRF");
-	AzzyRF.Serial.print("AT+CONF\r");
+	this.Serial.print("AT+CONF\r");
 };
