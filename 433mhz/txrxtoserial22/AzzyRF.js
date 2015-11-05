@@ -1,16 +1,17 @@
 
 exports.connect = function(serial) {
-    return new AzzyRF(serial));
+    return new AzzyRF(serial);
 };
 
 function AzzyRF(serial) {
   this.Serial=serial;
   this.timeout=0;
   this.inString="";
-  this.Serial.on('data',AzzyRF.onData.bind(AzzyRF));
+  this.datastring="";
+  this.Serial.on('data',this.onData.bind(this));
 }
 
-AzzyRF.onData = function(data) {
+AzzyRF.prototype.onData = function(data) {
 	if (data=="#" && this.datastring) {
 		if (this.datastring) {
 			this.Serial.print(this.datastring);
@@ -32,7 +33,7 @@ AzzyRF.onData = function(data) {
     }
 };
 
-AzzyRF.writeA24 = function(addr,data) {
+AzzyRF.prototype.writeA24 = function(addr,data) {
 	if (data.length > 16) {
 		throw "Data too long";
 	} else {
@@ -46,7 +47,7 @@ AzzyRF.writeA24 = function(addr,data) {
 	}
 };
 
-AzzyRF.outputFormat = function(text) {
+AzzyRF.prototype.outputFormat = function(text) {
   if (text=="") return;
   var outstr="";
   if (text.charAt(0)=='+' || text.charAt(0)=='=') {
@@ -85,7 +86,7 @@ AzzyRF.outputFormat = function(text) {
 };
 
 
-AzzyRF.readA24 = function(addr,len) {
+AzzyRF.prototype.readA24 = function(addr,len) {
 	if (len > 16) {
 		throw "Data too long";
 	} else {
@@ -95,7 +96,7 @@ AzzyRF.readA24 = function(addr,len) {
 	}
 };
 
-AzzyRF.send = function (addr,cmd,data) {
+AzzyRF.prototype.send = function (addr,cmd,data) {
 	if (data.length==2) {
 		this.datastring=E.toString([addr*0x3F,cmd,data[0],data[1]]);
 		this.Serial.print("AT+SEND\r");
@@ -113,7 +114,7 @@ AzzyRF.send = function (addr,cmd,data) {
 	}
 };
 
-AzzyRF.setRFConfig = function(set) {
+AzzyRF.prototype.setRFConfig = function(set) {
 	tarr=new Uint8Array(28);
 	tarr[0]=set.txSyncTime;
 	tarr[1]=set.txSyncTime>>8;
