@@ -10,6 +10,8 @@ This accepts commands 0x40 and 0x41 (Digital Set and Advanced Digital Set) over 
 #include <EEPROM.h>
 
 #define rxpin 3
+#define rxPIN PINB
+#define rxBV 8
 #define CommandForgetTime 10000 
 
 #define btn1 15
@@ -23,13 +25,13 @@ This accepts commands 0x40 and 0x41 (Digital Set and Advanced Digital Set) over 
 
 //These set the parameters for receiving; any packet where these criteria are not met is discarded. 
 // Version 2.1
-#define rxSyncMin 1900 //minimum valid sync length
-#define rxSyncMax 2100 //maximum valid sync length
-#define rxZeroMin 120 //minimum length for a valid 0
-#define rxZeroMax 400 //maximum length for a valid 0
-#define rxOneMin 450 //minimum length for a valid 1
-#define rxOneMax 750 //maximum length for a valid 1
-#define rxLowMax 600 //longest low before packet discarded
+unsigned int rxSyncMin  = 1750;
+unsigned int rxSyncMax  = 2250;
+unsigned int rxZeroMin  = 100;
+unsigned int rxZeroMax  = 390;
+unsigned int rxOneMin  = 410;
+unsigned int rxOneMax  = 700;
+unsigned int rxLowMax  = 600;
 
 unsigned long units[]={1000,60000,900000,14400000,3600000,1,10,86400000}; //units for the 8/12/16-bit time values. 
 
@@ -78,6 +80,7 @@ byte digOutFade[4]={0,0,0,0};
 byte digOutMode[4]={0,0,0,0};
 //byte last1;
 //byte last2;
+unsigned long test=0;
 
 
 
@@ -122,6 +125,7 @@ void loop() {
 		}
 	} else if (MyState==CommandST){ 
 		onCommandST();
+
 	} else {
 		MyState=ListenST; //in case we get into a bad state somehow.
 	}
@@ -342,7 +346,11 @@ void onCommandST() {
 }
 
 void onListenST() {
-	byte pinState=digitalRead(rxpin);
+	#ifdef rxPIN
+  byte pinState = (rxPIN & rxBV) ? 1 : 0;
+#else
+  byte pinState = digitalRead(rxpin);
+#endif
 	if (pinState==lastPinState) {
 		return;
 	} else {
