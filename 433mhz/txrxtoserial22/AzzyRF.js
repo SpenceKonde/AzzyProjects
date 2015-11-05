@@ -1,11 +1,14 @@
-var AzzyRF={};
 
-AzzyRF.Serial=Serial2;
+exports.connect = function(serial) {
+    return new AzzyRF(serial));
+};
 
-
-Serial2.setup(9600, { rx: A3, tx : A2 });
-
-
+function AzzyRF(serial) {
+  this.Serial=serial;
+  this.timeout=0;
+  this.inString="";
+  this.Serial.on('data',AzzyRF.onData.bind(AzzyRF));
+}
 
 AzzyRF.onData = function(data) {
 	if (data=="#" && this.datastring) {
@@ -28,9 +31,6 @@ AzzyRF.onData = function(data) {
       this.timeout=setTimeout(function() {this.outputFormat(this.inString);this.inString='';this.timeout=0;}.bind(this),1000);
     }
 };
-AzzyRF.timeout=0;
-AzzyRF.inString="";
-AzzyRF.Serial.on('data',AzzyRF.onData.bind(AzzyRF));
 
 AzzyRF.writeA24 = function(addr,data) {
 	if (data.length > 16) {
@@ -140,9 +140,9 @@ AzzyRF.setRFConfig = function(set) {
 	tarr[22]=set.rxOneMax>>8;
 	tarr[23]=set.rxLowMax;
 	tarr[24]=set.rxLowMax>>8;
-	tarr[23]=set.txRepDelay;
-	tarr[24]=set.txRepDelay>>8;
-	tarr[23]=set.txRepCount;
+	tarr[25]=set.txRepDelay;
+	tarr[26]=set.txRepDelay>>8;
+	tarr[27]=set.txRepCount;
 	this.datastring=E.toString(tarr);
 	console.log("Writing to config EEPROM on AzzyRF");
 	this.Serial.print("AT+CONF\r");
