@@ -141,19 +141,12 @@ function setFargo(relay,state) {
 function switchRF(dev) {
   console.log("switchrf called"+dev);
   dinf=RFDevs[dev];
-  //if (dev==0 && RFDevState[0]==0) {
-    //sendLRF(dinf.addr,[0x41,1+(dinf.devnum<<4),2,170,85,170]);
-    //setTimeout("RFDevState[0]=0;updateRFStatus(0,0);",682000);
-  //} //else {
-    sendRF(dinf.addr,0x40,170>>systemStatus.RFDevs[dev],dinf.devnum);
-  //}
-  systemStatus.RFDevs[dev]=!systemStatus.RFDevs[dev];
-  stLD.set(1,dev,255*systemStatus.RFDevs[dev]);
-  updateRFStatus(dev,systemStatus.RFDevs[dev]);
+  RFCommands["TX OK"]="RFMessages['TX OK']=''; systemStatus.RFDevs["+dev+"]=!systemStatus.RFDevs["+dev+"];stLD.set(1,"+dev+",255*systemStatus.RFDevs["+dev+"]);updateRFStatus("+dev+",systemStatus.RFDevs["+dev+"]);";
+  AzzyRF.send(dinf.addr,0x40,[170>>systemStatus.RFDevs[dev],dinf.devnum]);
 }
 
 function updateRFStatus(dev,val) {
-  require("http").get(mirrorurl+"?RFDev"+dev.toString()+"="+(vals?1:0),function(){return;});
+  require("http").get(mirrorurl+"?RFDev"+dev.toString()+"="+(val?1:0),function(){return;});
 }
 
 var RFDevs=[ 
@@ -162,32 +155,7 @@ var RFDevs=[
   {name:"Plasma Tower",addr:20,devnum:2,pwm:0}
   ];
 
-function sendRF(addr,cmd,parm,ext) {
-  //setTimeout(function(a,c,p,e){
-  tstr=addr+','+cmd+','+parm+','+ext;
-  RFCommands["#"]='console.log(E.toUint8Array(['+tstr+']));RFCommands["#"]=undefined;cmd="";Serial2.print(E.toString(['+tstr+']));'; //},25,addr,cmd,parm,ext);
-  Serial2.print("AT+SEND\r");
-}
 
-
-function sendLRF(addr,data) {
-  if (addr>63) throw "bad address";
-  if (data.length==6) { //subtract 1 for address, 1 for checksum
-    Serial2.println("AT+SENDM");
-    addr+=64;
-  } else if (data.length==14) {
-    Serial2.println("AT+SENDL");
-    addr+=128;
-  } else if (data.length==30) {
-    Serial2.println("AT+SENDE");
-    addr+=192;
-  } else {
-    throw "Invalid length";
-  }
-  RFCommands["#"]='console.log(E.toUint8Array(['+addr+data+']));RFCommands["#"]=undefined;cmd="";Serial2.print(E.toString(['+addr+data+']));'; //},25,addr,cmd,parm,ext);
-  
-  //setTimeout(function(a,d){Serial2.print(String.fromCharCode(a)+E.toString(d));},25,addr,data);
-}
 function getDate() {
   console.log("getDate called");
   var date="";
@@ -256,6 +224,27 @@ function onInit() {
   evr=require("easyvr").connect(Serial1,ocm,otm,otm,function(){stLD.set(1,1,0);});
   //azzyrf
   Serial2.setup(9600, { rx: A3, tx : A2 });
+  AzzyRF=require("AzzyRF").connect(Serial2);
+  //AzzyRF.onMsgOut=function(a){return;};
+  AzzyRF.onDataOut=function(a){return;};
+  AzzyRF.onTextOut=function(a) {
+    console.log(E.toUint8Array(a));
+    if (RFCommands[a]===undefined) {
+      console.log("bad command received: "+a);
+    } else {
+      console.log("parsing command"+a);
+      eval(RFCommands[a]);
+    }
+  };
+  AzzyRF.onRcvOut=function(a) {
+    msg=E.toString(a);
+    if (RFMessages[msg]!==undefined) {
+      console.log("processing known message "+msg);
+      eval(RFMessages[msg]);
+    } else {
+      console.log("received unknown message "+msg);
+    }
+  };
   //ethernet
   SPI2.setup({ mosi:B15, miso:B14, sck:B13 });
   eth = require("WIZnet").connect(SPI2, B10);
@@ -287,21 +276,6 @@ function onInit() {
   getDate();
   setInterval(updateSensors,30000);
   cmd="";
-  Serial2.on('data', function (data) { 
-    cmd+=data;
-    if (cmd.charCodeAt(0)==10){cmd=cmd.substr(1);}
-    if (cmd==">"){eval(RFCommands[">"]);}
-    //console.log(E.toUint8Array(cmd));
-    var idx = cmd.indexOf("\r");
-    while (idx>=0) { 
-      var line = cmd.substr(0,idx);
-      cmd = cmd.substr(idx+1);
-      if (line!="") {
-        handleCommand(line);
-      }
-      idx = cmd.indexOf("\r");
-    }
-  });
 }
 
 
@@ -318,16 +292,18 @@ function updateSensors(nohttp) {
     }
   }
   bmp.getPressure(function(b){if (systemStatus.pressure==-1){systemStatus.pressure=b.pressure;} else {systemStatus.pressure=systemStatus.pressure*0.8+b.pressure*0.2;}});
+  getFargoStatus();
 }
 
 
 function updateMirrorFargo() {
+  console.log(mirrorurl+getFargoString())
   require("http").get(mirrorurl+getFargoString(),function(){return;});
 }
 
 function getFargoString() {
-  var s=systemStatus.fargo;
-  return "?fargo0="+s[0]+"?fargo1="+s[1]+"?fargo2="+s[2]+"?fargo3="+s[3]+"?fargo4="+s[4]+"?fargo5="+s[5]+"?fargo6="+s[6]+"?fargo7="+s[7];
+  s=systemStatus.fargo;
+  return "?fargo0="+s[0]+"&fargo1="+s[1]+"&fargo2="+s[2]+"&fargo3="+s[3]+"&fargo4="+s[4]+"&fargo5="+s[5]+"&fargo6="+s[6]+"&fargo7="+s[7];
 }
 function getMirrorString() {
   var s=systemStatus;
@@ -345,25 +321,6 @@ function safeGetTime(){
   }
 }
 
-function handleCommand(cmd) {
-  if (cmd.charAt(0)=='+') {
-    processRF(cmd.substr(1));
-  } else if (RFCommands[cmd]===undefined) {
-    console.log("bad command received: "+cmd);
-  } else {
-    console.log("parsing command"+cmd);
-    eval(RFCommands[cmd]);
-  }
-}
-
-function processRF(msg) {
-  if (RFMessages[msg]!==undefined) {
-    console.log("processing known message "+msg);
-    eval(RFMessages[msg]);
-  } else {
-    console.log("received unknown message "+msg);
-  }
-}
 
 RFMessages = {
   "1FE10001":"systemStatus.door_upstairs=0;",

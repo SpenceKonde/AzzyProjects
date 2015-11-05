@@ -26,11 +26,11 @@ AzzyRF.prototype.onData = function(data) {
 		}
 	} else {
 		this.inString+=data;
-      if (this.timeout > 0) {
-        clearTimeout(this.timeout);
-	}
-      this.timeout=setTimeout(function() {this.outputFormat(this.inString);this.inString='';this.timeout=0;}.bind(this),1000);
-    }
+    if (this.timeout > 0) {
+      clearTimeout(this.timeout);
+		}
+  }
+    this.timeout=setTimeout(function() {this.outputFormat(this.inString);this.inString='';this.timeout=0;}.bind(this),1000);
 };
 
 AzzyRF.prototype.writeA24 = function(addr,data) {
@@ -69,6 +69,7 @@ AzzyRF.prototype.outputFormat = function(text) {
 	  	}
 		}
 	} else {
+		text=text.trim();
 	  if (text!="") {
 	  //console.log(outstr);
 	  	if (typeof this.onTextOut == 'function'){
@@ -98,16 +99,16 @@ AzzyRF.prototype.readA24 = function(addr,len) {
 
 AzzyRF.prototype.send = function (addr,cmd,data) {
 	if (data.length==2) {
-		this.datastring=E.toString([addr*0x3F,cmd,data[0],data[1]]);
+		this.datastring=E.toString([addr&0x3F,cmd,data[0],data[1]]);
 		this.Serial.print("AT+SEND\r");
 	} else if (data.length==5) {
-		this.datastring=E.toString([addr*0x3F,cmd])+E.toString(data);
+		this.datastring=E.toString([addr&0x3F,cmd])+E.toString(data);
 		this.Serial.print("AT+SENDM\r");
 	} else if (data.length==13) {
-		this.datastring=E.toString([addr*0x3F,cmd])+E.toString(data);
+		this.datastring=E.toString([addr&0x3F,cmd])+E.toString(data);
 		this.Serial.print("AT+SENDL\r");
 	} else if (data.length==29) {
-		this.datastring=E.toString([addr*0x3F,cmd])+E.toString(data);
+		this.datastring=E.toString([addr&0x3F,cmd])+E.toString(data);
 		this.Serial.print("AT+SENDE\r");
 	} else {
 		throw "Invalid Length";
