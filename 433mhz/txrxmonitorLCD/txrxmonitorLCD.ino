@@ -64,6 +64,9 @@ The example commands are:
 #define CommandST 2
 #include <EEPROM.h>
 #include <TinyWireM.h>
+#include <LiquidCrystal_I2C_Tiny.h>
+
+LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 //Pin definitions:
 
@@ -95,7 +98,7 @@ The example commands are:
 #define LED_OFF 1
 
 #define SerialCmd Serial
-#define SerialDbg Serial1
+//#define //xSerialDbg Serial1
 #define MAX_SER_LEN 10
 char serBuffer[MAX_SER_LEN];
 
@@ -253,21 +256,27 @@ void setup() {
   bitsrx = 0;
   rxing = 0;
   initializeOutputs();
+  TinyWireM.begin();
+  lcd.begin();
 
+  // Turn on the blacklight and print a message.
+  lcd.backlight();
   pinMode(txpin, OUTPUT);
   pinMode(rxpin, INPUT);
-  SerialDbg.begin(9600);
+  pinMode(12,OUTPUT);
+  pinMode(16,OUTPUT);
+  //xSerialDbg.begin(9600);
   if (EEPROM.read(0) < 255) {
     //initFromEEPROM();
-    //SerialDbg.println(F("Load from EEPROM"));
+    ////xSerialDbg.println(F("Load from EEPROM"));
   }
+  pinMode(1,INPUT_PULLUP);
   SerialCmd.begin(9600);
   digitalWrite(LED_START, LED_ON);
-  TinyWireM.begin();
   delay(1000);
   digitalWrite(LED_START, LED_OFF);
-  SerialDbg.println(F("Startup OK"));
-  //SerialDbg.print(decode8(123));
+  lcd.print(F("Startup OK"));
+  ////xSerialDbg.print(decode8(123));
 
 
 }
@@ -288,15 +297,6 @@ void loop() {
     processSerial();
     if (lastSer & (millis() - lastSer  > (rxing == 2 ? 20000 : 10000))) {
       resetSer();
-    }
-
-    if (digitalRead(BTN0) == 0 && led4OffAt == 0) {
-      //digitalWrite(LED4, LED_ON);
-      //led4OffAt = millis() + 1000;
-      SerialCmd.println(F("BTN1"));
-      prepareTestPayload();
-      doTransmit();
-
     }
   }
   //} else if (MyState == CommandST) {
@@ -332,7 +332,7 @@ void initFromEEPROM() {
 
     byte tIsConf = EEPROM.read(32);
     if (tIsConf < 255) {
-      SerialDbg.println(F("Loading config"));
+      //xSerialDbg.println(F("Loading config"));
       //MyAddress = tAddr;
       txSyncTime = EEPROM.read(33) + (EEPROM.read(32) << 8); //length of sync
       txTrainRep = EEPROM.read(34); //number of pulses in training burst
@@ -350,7 +350,7 @@ void initFromEEPROM() {
       txRepDelay = EEPROM.read(58) + (EEPROM.read(57) << 8); //delay between repetitions of a packet
       txRepCount = EEPROM.read(59); //default number of repetitions.
     } else {
-      SerialDbg.println(F("No config to load"));
+      //xSerialDbg.println(F("No config to load"));
     }
   }
 }
@@ -405,6 +405,7 @@ void processSerial() {
           #endif
           for (byte i = 0; i < txrxbuffer[2]; i++) {
 #ifdef HEX_OUT
+
             showHex(txrxbuffer[i + 3], 1);
 #else
             SerialCmd.println(txrxbuffer[i + 3]);
@@ -416,7 +417,7 @@ void processSerial() {
         resetSer();
       } else if (SerRXidx == 3 && SerCmd == 5) {
         SerialCmd.println(txrxbuffer[2]);
-        SerialDbg.println(F("Adjusting char RX"));
+        //xSerialDbg.println(F("Adjusting char RX"));
         SerRXmax = txrxbuffer[2] + 3;
       }
     } else {
@@ -525,8 +526,8 @@ void checkCommand() {
 }
 
 void resetSer() {
-  //SerialDbg.println(lastSer);
-  //SerialDbg.println(millis());
+  ////xSerialDbg.println(lastSer);
+  ////xSerialDbg.println(millis());
   SerCmd = 0;
   if (lastSer) { //if we've gotten any characters since last reset, print newline to signify completion.
     lastSer = 0;
@@ -576,7 +577,7 @@ void doTransmit() {
 }
 
 void doTransmit(byte rep) { //rep is the number of repetitions
-SerialDbg.println("dotransmit ok");
+//xSerialDbg.println("dotransmit ok");
 #ifdef LED_TX
   digitalWrite(LED_TX, LED_ON);
 #endif
@@ -652,12 +653,21 @@ void outputPayload() {
     if ( txrxbuffer[2] == lastCmdSent && (txrxbuffer[3] >> 4) == (lastCscSent & 0x0F)) {
       SerialCmd.println(F("ACK"));
     } else {
-      SerialDbg.println(F("Other ACK"));
+      //xSerialDbg.println(F("Other ACK"));
     }
   } else {
 #endif
     byte tem = txrxbuffer[0] >> 6;
     tem = (4 << tem) - 1;
+    delay(10);
+    lcd.clear();
+    lcd.print(F("+"));
+    for (byte x = 0; x < tem ; x++) {
+      showHex(txrxbuffer[x], 2);
+    }
+    if (tem == 3) { //means it was a short
+      showHex((txrxbuffer[3] & 0xF0) >> 4, 2);
+    }
 #ifdef HEX_OUT
     SerialCmd.print(F("+"));
     for (byte x = 0; x < tem ; x++) {
@@ -720,10 +730,10 @@ void onListenST() {
         rxdata = (rxdata << 1) + 1;
       } else {
         if (bitsrx > 10) {
-          SerialDbg.print(F("Reset wrong high len "));
-          SerialDbg.print(bitlength);
-          SerialDbg.print(" ");
-          SerialDbg.println(bitsrx);
+          //xSerialDbg.print(F("Reset wrong high len "));
+          //xSerialDbg.print(bitlength);
+          //xSerialDbg.print(" ");
+          //xSerialDbg.println(bitsrx);
         }
         resetListen();
         return;
@@ -733,7 +743,7 @@ void onListenST() {
         pksize = 32 << rxdata;
 #if (RX_MAX_LEN < 256)
         if (pksize > RX_MAX_LEN) {
-          SerialDbg.println(F("Packet this size not supported"));
+          //xSerialDbg.println(F("Packet this size not supported"));
           resetListen();
           return;
         }
@@ -744,9 +754,9 @@ void onListenST() {
         showHex(rxdata);
         rxdata = 0;
       }
-      //SerialDbg.println(bitsrx);
+      ////xSerialDbg.println(bitsrx);
       if (bitsrx == pksize) {
-        SerialDbg.println(F("RX done"));
+        //xSerialDbg.println(F("RX done"));
         parseRx();
         //parseRx2(txrxbuffer,pksize/8);
         resetListen();
@@ -761,8 +771,8 @@ void onListenST() {
       return;
     }
     if (lastPinHighTime - lastPinLowTime > rxLowMax && rxing == 1) {
-      SerialDbg.print("rxlow");
-      SerialDbg.println(lastPinHighTime - lastPinLowTime);
+      //xSerialDbg.print("rxlow");
+      //xSerialDbg.println(lastPinHighTime - lastPinLowTime);
       resetListen();
       return;
     }
@@ -773,7 +783,7 @@ void onListenST() {
 
 
 void parseRx() { //uses the globals.
-  SerialDbg.println(F("Parsing"));
+  //xSerialDbg.println(F("Parsing"));
   unsigned char calccsc = 0;
   unsigned char rcvAdd = txrxbuffer[0] & 0x3F;
   if (rcvAdd == MyAddress || MyAddress == 0) {
@@ -788,17 +798,17 @@ void parseRx() { //uses the globals.
           //MyExtParam = txrxbuffer[3] >> 4;
 
           /* showHex(txrxbuffer[0], 0);
-           SerialDbg.print(F(":"));
+           //xSerialDbg.print(F(":"));
            showHex(MyCmd);
-           SerialDbg.print(F(":"));
+           //xSerialDbg.print(F(":"));
            showHex(MyParam);
-           SerialDbg.print(F(":"));
+           //xSerialDbg.print(F(":"));
            showHex(MyExtParam);
-           SerialDbg.println(); */
-          SerialDbg.println(F("Valid RX"));
+           //xSerialDbg.println(); */
+          //xSerialDbg.println(F("Valid RX"));
           outputPayload();
         } else {
-          SerialDbg.println(F("Bad CSC RX"));
+          //xSerialDbg.println(F("Bad CSC RX"));
           //outputPayload();
         }
       } else {
@@ -812,22 +822,23 @@ void parseRx() { //uses the globals.
           /*
           for (byte i = 0; i < (pksize / 8); i++) {
             showHex(txrxbuffer[i]);
-            SerialDbg.print(":");
+            //xSerialDbg.print(":");
           }
-          SerialDbg.println();
+          //xSerialDbg.println();
           */
-          SerialDbg.println(F("Valid long RX"));
+          //xSerialDbg.println(F("Valid long RX"));
           outputPayload();
         } else {
-          SerialDbg.println(F("Bad CSC long RX"));
+          //xSerialDbg.println(F("Bad CSC long RX"));
         }
       }
     } else {
-      SerialDbg.println(F("Already got it"));
+      //xSerialDbg.println(F("Already got it"));
     }
   } else {
-    SerialDbg.println(F("Not for me"));
+    //xSerialDbg.println(F("Not for me"));
   }
+  
 }
 
 
@@ -841,7 +852,7 @@ unsigned long calcBigChecksum(byte len) {
 }
 
 void resetListen() {
-  //SerialDbg.println(F("reset listen"));
+  ////xSerialDbg.println(F("reset listen"));
   bitsrx = 0;
   rxdata = 0;
   rxing = 0;
@@ -891,7 +902,7 @@ void readAT24(byte haddr, unsigned int addr, byte len, byte * dat) {
   TinyWireM.requestFrom(haddr, len);
   for (byte i = 0; i < len; i++) {
     dat[i] = TinyWireM.receive();
-    SerialDbg.println(dat[i]);
+    //xSerialDbg.println(dat[i]);
   }
 }
 
@@ -899,12 +910,12 @@ void writeAT24(byte haddr, unsigned int addr, byte len, byte * dat) {
   TinyWireM.beginTransmission(haddr);
   TinyWireM.send((byte)(addr >> 8));
   TinyWireM.send((byte)(addr & 255));
-  SerialDbg.println(dat[len - 1]);
-  SerialDbg.println(len);
+  //xSerialDbg.println(dat[len - 1]);
+  //xSerialDbg.println(len);
   TinyWireM.send(dat, len);
   TinyWireM.endTransmission();
   delay(10);
-  SerialDbg.println(F("Wrote block"));
+  //xSerialDbg.println(F("Wrote block"));
 }
 
 void writeAT24(byte haddr, unsigned int addr, byte dat) {
@@ -914,7 +925,7 @@ void writeAT24(byte haddr, unsigned int addr, byte dat) {
   TinyWireM.send(dat);
   TinyWireM.endTransmission();
   delay(10);
-  SerialDbg.println(F("Wrote byte"));
+  //xSerialDbg.println(F("Wrote byte"));
 
 }
 
@@ -974,10 +985,13 @@ void showHex (const byte b, const byte c) {
   if (buf [1] > '9')
     buf [1] += 7;
 
-  if (c) {
+  if (c==2) {
+    delay(10);
+    lcd.print(buf);
+}  else if (c==1){
     SerialCmd.print(buf);
   }
   else {
-    SerialDbg.print(buf);
+    //xSerialDbg.print(buf);
   }
 }

@@ -72,16 +72,16 @@ The example commands are:
 //pins 16,12: I2C
 
 #define LED1 13
-//#define LED2 11
+#define LED2 11
 #define LED3 4
-//#define LED4 5
-//#define LED5 6
-//#define LED6 8
-#define BTN0 3
-#define BTN4 5
-#define BTN3 6
-#define BTN2 11
-#define BTN1 8
+#define LED4 5
+#define LED5 6
+#define LED6 8
+//#define BTN0 3
+//#define BTN4 5
+//#define BTN3 6
+//#define BTN2 11
+//#define BTN1 8
 
 #define LED_RX LED1
 //#define LED_TX LED3
@@ -262,6 +262,7 @@ void setup() {
     //SerialDbg.println(F("Load from EEPROM"));
   }
   SerialCmd.begin(9600);
+  pinMode(1,INPUT_PULLUP);
   digitalWrite(LED_START, LED_ON);
   TinyWireM.begin();
   delay(1000);
@@ -290,14 +291,14 @@ void loop() {
       resetSer();
     }
 
-    if (digitalRead(BTN0) == 0 && led4OffAt == 0) {
+    //if (digitalRead(BTN0) == 0 && led4OffAt == 0) {
       //digitalWrite(LED4, LED_ON);
       //led4OffAt = millis() + 1000;
-      SerialCmd.println(F("BTN1"));
-      prepareTestPayload();
-      doTransmit();
+      //SerialCmd.println(F("BTN1"));
+      //prepareTestPayload();
+      //doTransmit();
 
-    }
+//    }
   }
   //} else if (MyState == CommandST) {
   //  onCommandST();
@@ -361,7 +362,8 @@ void processSerial() {
   char endMarker = '\r';
   char endMarker2 = '\n';
   while (SerialCmd.available() > 0) {
-
+  PINA=4;
+  
     if (SerRXidx < SerRXmax && rxing == 2) {
 #ifdef HEX_IN
       if (ndx == 1) {
@@ -377,6 +379,7 @@ void processSerial() {
       txrxbuffer[SerRXidx] = SerialCmd.read();
       SerRXidx++;
 #endif
+
       if (SerRXidx == SerRXmax) {
         ndx = 0;
         if (SerCmd == 0) {
@@ -439,6 +442,7 @@ void processSerial() {
     }
     lastSer = millis();
   }
+  PORTA|=1;
 }
 
 void checkCommand() {
