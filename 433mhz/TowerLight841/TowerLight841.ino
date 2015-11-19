@@ -9,13 +9,15 @@ This is an adaptation of TXrxbasev21 for use with tiny841 tower light
 
 #define rxpin 10
 #define txpin 7
+#define txPIN PINA
+#define txBV 8
 #define CommandForgetTime 1000 //short, for testing
 
 #define ledO 2
 #define ledB 3
-#define ledG 4
+#define ledG 6//4
 #define ledR 5
-#define ledW 6
+#define ledW 4//6
 #define fridge 8
 #define doorup 1
 #define doordn 0
@@ -26,12 +28,6 @@ This is an adaptation of TXrxbasev21 for use with tiny841 tower light
 //These set the parameters for transmitting. 
 
 
-#define txOneLength 550  //length of a 1
-#define txZeroLength 300 //length of a 0
-#define txLowTime 420 //length of the gap between bits
-#define txTrainRep 30 //number of pulses in training burst
-#define txSyncTime 2000 //length of sync
-#define txTrainLen 200 //length of each pulse in training burst
 
 
 /*
@@ -47,14 +43,23 @@ int rxLowMax=450; //longest low before packet discarded
 
 */
 
-// Version 2.1
-#define rxSyncMin 1900 //minimum valid sync length
-#define rxSyncMax 2100 //maximum valid sync length
-#define rxZeroMin 120 //minimum length for a valid 0
-#define rxZeroMax 400 //maximum length for a valid 0
-#define rxOneMin 450 //minimum length for a valid 1
-#define rxOneMax 750 //maximum length for a valid 1
-#define rxLowMax 600 //longest low before packet discarded
+// Version 2.2
+// Version 2.2
+const unsigned int rxSyncMin  = 1750;
+const unsigned int rxSyncMax  = 2250;
+const unsigned int rxZeroMin  = 100;
+const unsigned int rxZeroMax  = 390;
+const unsigned int rxOneMin  = 410;
+const unsigned int rxOneMax  = 700;
+const unsigned int rxLowMax  = 600;
+const unsigned int txOneLength  = 500;
+const unsigned int txZeroLength  = 300;
+const unsigned int txLowTime  = 400;
+const unsigned int txSyncTime  = 2000;
+const unsigned int txTrainLen  = 200;
+
+const unsigned int txRepDelay = 2000; //delay between consecutive transmissions
+const byte txTrainRep  = 30;
 #define TXLength 4
 unsigned long units[]={1000,60000,900000,14400000,3600000,1,10,86400000}; //units for the 8/12/16-bit time values. 
 
@@ -102,6 +107,7 @@ byte fridgeSentWarn;
 
 
 void setup() {
+  OSCCAL0-=8;
 	lastPinState=0;
 	lastPinLowTime=0;
 	lastPinHighTime=0;
@@ -110,10 +116,25 @@ void setup() {
 	rxing=0;
 	MyState=ListenST;
 	pinMode(ledO,OUTPUT);
+ digitalWrite(ledO,1);
+ delay(500); 
+ digitalWrite(ledO,0);
 	pinMode(ledB,OUTPUT);
+ digitalWrite(ledB,1);
+ delay(500); 
+ digitalWrite(ledB,0);
 	pinMode(ledG,OUTPUT);
+ digitalWrite(ledG,1);
+ delay(500); 
+ digitalWrite(ledG,0);
 	pinMode(ledR,OUTPUT);
+ digitalWrite(ledR,1);
+ delay(500); 
+ digitalWrite(ledR,0);
 	pinMode(ledW,OUTPUT);
+ digitalWrite(ledW,1);
+ delay(500); 
+ digitalWrite(ledW,0);
 	pinMode(txpin,OUTPUT);
         pinMode(rxpin,INPUT);
 	pinMode(doorup,INPUT_PULLUP); 
@@ -180,8 +201,8 @@ void checkInputs() {
 		upst=digitalRead(doorup);
 		doUpstairs();
 	}
-	byte curdownst=analogRead(doordnanalog)>>2;
-	curdownst=(curdownst>225?1:(curdownst>128?0:2));
+	byte curdownst=analogRead(doordnanalog)>>2; //~255 = door open, ~0 thing triggered, ~128 = door closed
+	curdownst=(curdownst>200?1:(curdownst>80?0:2));
 	if (curdownst != downst) {
 		downst=curdownst;
 		lastdown=millis();
@@ -208,6 +229,7 @@ if (fridgest==0) {
 			digitalWrite(ledG,(fridgetmp%800<400));
 			if (!fridgeSentWarn) {
 				prepareNoticePacket(max(255,15+fridgetmp/1000),2);
+        doTransmit(20);
 				fridgeSentWarn=1;
 			}
 		}
@@ -232,12 +254,12 @@ void doDownstairs() {
 		fadeAt[4]=millis()+10000;
 	}
 	prepareNoticePacket(downst,0);
-	doTransmit(5);
+	doTransmit(20);
 }
 void doUpstairs() {
 	digitalWrite(ledR,upst);
 	prepareNoticePacket(upst,1);
-		doTransmit(5);
+		doTransmit(20);
 }
 
 void onCommandST() {
@@ -289,43 +311,48 @@ void prepareNoticePacket(byte evalue, byte etype){
 }
 
 
-void doTransmit(int rep) { //rep is the number of repetitions
-	byte txchecksum=0;
-	for (byte i=0;i<TXLength-1;i++) {
-		txchecksum=txchecksum^txrxbuffer[i];
-	}
-	//if (TXLength==4) { //commented out to save code space.
-		txchecksum=(txchecksum&0x0F)^(txchecksum>>4)^((txrxbuffer[3]&0xF0)>>4);
-		txrxbuffer[3]=(txrxbuffer[3]&0xF0)+(txchecksum&0x0F);
-	//} else {
-	//	txrxbuffer[TXLength-1]=txchecksum;
-	//} 
-	for (byte r=0;r<rep;r++) {;
-		for (byte j=0; j < txTrainRep; j++) {
-			delayMicroseconds(txTrainLen);
-			digitalWrite(txpin, 1);
-			delayMicroseconds(txTrainLen);
-			digitalWrite(txpin, 0);
-		}
-		delayMicroseconds(txSyncTime);
-		for (byte k=0;k<TXLength;k++) {
-			//send a byte
-			for (int m=7;m>=0;m--) {
-				digitalWrite(txpin, 1);
-				if ((txrxbuffer[k]>>m)&1) {
-					delayMicroseconds(txOneLength);
-				} else {
-					delayMicroseconds(txZeroLength);
-				}
-				digitalWrite(txpin, 0);
-				delayMicroseconds(txLowTime);
-			}
-			//done with that byte
-		}
-		//done with sending this packet;
-		digitalWrite(txpin, 0); //make sure it's off;
-		delayMicroseconds(2000); //wait 2ms before doing the next round. 
-	}
+void doTransmit(byte rep) { //rep is the number of repetitions
+
+digitalWrite(txpin,0); // known state
+  byte txchecksum = 0;
+  for (byte i = 0; i < TXLength - 1; i++) {
+    txchecksum = txchecksum ^ txrxbuffer[i];
+  }
+  //if (TXLength == 4) {
+    txchecksum = (txchecksum & 0x0F) ^ (txchecksum >> 4) ^ ((txrxbuffer[3] & 0xF0) >> 4);
+    txrxbuffer[3] = (txrxbuffer[3] & 0xF0) + (txchecksum & 0x0F);
+  //} else {
+  //  txrxbuffer[TXLength - 1] = txchecksum;
+  //}
+  for (byte r = 0; r < rep; r++) {
+    for (byte j = 0; j <= 2 * txTrainRep; j++) {
+      delayMicroseconds(txTrainLen);
+      //digitalWrite(txpin, j & 1);
+      txPIN=txBV;
+    }
+    delayMicroseconds(txSyncTime);
+    txPIN=txBV;
+    delayMicroseconds(txSyncTime);
+    for (byte k = 0; k < TXLength; k++) {
+      //send a byte
+      for (int m = 7; m >= 0; m--) {
+        txPIN=txBV;
+        if ((txrxbuffer[k] >> m) & 1) {
+          delayMicroseconds(txOneLength);
+        } else {
+          delayMicroseconds(txZeroLength);
+        }
+        txPIN=txBV;
+        delayMicroseconds(txLowTime);
+      }
+      //done with that byte
+    }
+    //done with sending this packet;
+    digitalWrite(txpin, 0); //make sure it's off;
+    //interrupts();
+    delayMicroseconds(txRepDelay); //wait 2ms before doing the next round.
+  }
+
 Serial.print(txrxbuffer[0]);
 Serial.print(txrxbuffer[1]);
 Serial.print(txrxbuffer[2]);

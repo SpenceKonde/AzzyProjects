@@ -76,7 +76,7 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 #define LED1 13
 //#define LED2 11
-#define LED3 4
+//#define LED3 4
 //#define LED4 5
 //#define LED5 6
 //#define LED6 8
@@ -94,8 +94,8 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 //#define SHUT_PIN 8
 
 
-#define LED_ON 0
-#define LED_OFF 1
+#define LED_ON 1
+#define LED_OFF 0
 
 #define SerialCmd Serial
 //#define //xSerialDbg Serial1
@@ -119,7 +119,7 @@ char serBuffer[MAX_SER_LEN];
 #define txBV 8
 
 
-#define CommandForgetTime 2000 //short, for testing
+#define CommandForgetTime 10000 //short, for testing
 
 #define RX_MAX_LEN 256 //Used to set the size of txrx buffer in BITS (and checked against this to prevent overflows from messing stuff up)
 
@@ -277,6 +277,8 @@ void setup() {
   digitalWrite(LED_START, LED_OFF);
   lcd.print(F("Startup OK"));
   ////xSerialDbg.print(decode8(123));
+  delay(1000);
+  lcd.noBacklight();
 
 
 }
@@ -289,7 +291,10 @@ void loop() {
     PORTC &= ~1;
     return; //don't do anything else while actively receiving.
   } else {
-    PORTC |= 1;
+
+    if (readLDR()>800) {
+      PORTC |= 1;
+    }
 #ifdef LED_SER
     digitalWrite(LED_SER, rxing >> 1 ? LED_ON : LED_OFF);
 #endif
@@ -298,6 +303,7 @@ void loop() {
     if (lastSer & (millis() - lastSer  > (rxing == 2 ? 20000 : 10000))) {
       resetSer();
     }
+    
   }
   //} else if (MyState == CommandST) {
   //  onCommandST();
@@ -646,6 +652,15 @@ digitalWrite(txpin,0); // known state
 #endif
 }
 
+int readLDR() {
+  int retval=0;
+  analogRead(1);
+  for (byte i=0;i<4;i++) {
+    retval+=analogRead(1);
+  }
+  //lcd.print(retval);
+  return retval;
+}
 
 void outputPayload() {
 #ifdef USE_ACK
@@ -659,7 +674,6 @@ void outputPayload() {
 #endif
     byte tem = txrxbuffer[0] >> 6;
     tem = (4 << tem) - 1;
-    delay(10);
     lcd.clear();
     lcd.print(F("+"));
     for (byte x = 0; x < tem ; x++) {
@@ -667,6 +681,9 @@ void outputPayload() {
     }
     if (tem == 3) { //means it was a short
       showHex((txrxbuffer[3] & 0xF0) >> 4, 2);
+    }
+    if (readLDR() > 1000) {
+      lcd.backlight();
     }
 #ifdef HEX_OUT
     SerialCmd.print(F("+"));
@@ -881,6 +898,7 @@ void ClearCMD() {  //This handles clearing of the commands, and also clears the 
   } else if (millis() > forgetCmdAt) {
     forgetCmdAt = 0;
     lastChecksum = 0;
+    lcd.noBacklight();
   }
 }
 
