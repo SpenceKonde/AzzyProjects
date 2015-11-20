@@ -653,6 +653,16 @@ digitalWrite(txpin,0); // known state
 
 
 void outputPayload() {
+    for (byte i=0;i<32;i++) {
+    if (highLengths[i]!=-1) {
+      SerialDbg.print(F("H:"));
+      SerialDbg.print(highLengths[i]);
+    }
+    if (lowLengths[i]!=-1) {
+      SerialDbg.print(F("L:"));
+      SerialDbg.println(lowLengths[i]);
+    }
+  }
 #ifdef USE_ACK
   if (txrxbuffer[1] == 0xE8) {
     if ( txrxbuffer[2] == lastCmdSent && (txrxbuffer[3] >> 4) == (lastCscSent & 0x0F)) {
@@ -734,6 +744,7 @@ void onListenST() {
         resetListen();
         return;
       }
+      highLengths[i]=bitlength;
       bitsrx++;
       if (bitsrx == 2) {
         pksize = 32 << rxdata;
@@ -762,15 +773,19 @@ void onListenST() {
     }
   } else {
     lastPinHighTime = curTime;
-    if (lastPinHighTime - lastPinLowTime > rxSyncMin && lastPinHighTime - lastPinLowTime < rxSyncMax && rxing == 0) {
+    unsigned long bitlength =lastPinHighTime - lastPinLowTime;
+    if (bitlength > rxSyncMin && bitlength < rxSyncMax && rxing == 0) {
       rxing = 1;
       return;
     }
-    if (lastPinHighTime - lastPinLowTime > rxLowMax && rxing == 1) {
-      SerialDbg.print("rxlow");
-      SerialDbg.println(lastPinHighTime - lastPinLowTime);
-      resetListen();
-      return;
+    if (rxing==1) {
+      lowLengths[bitsrx-1]=bitlength;
+      if (bitlength > rxLowMax && rxing == 1) {
+        SerialDbg.print("rxlow");
+        SerialDbg.println(lastPinHighTime - lastPinLowTime);
+        resetListen();
+        return;
+      }
     }
   }
 }
@@ -853,8 +868,16 @@ void resetListen() {
   rxing = 0;
   rxaridx = 0;
   for (byte i=0;i<32;i++) {
-    lowLengths[i]=-1;
-    highLengths[i]=-1;
+    if (highLengths[i]!=-1) {
+      //SerialDbg.print(F("H:"));
+      //SerialDbg.print(highLengths[i]);
+      highLengths[i]=-1;
+    }
+    if (lowLengths[i]!=-1) {
+      //SerialDbg.print(F("L:"));
+      //SerialDbg.println(lowLengths[i]);
+      lowLengths[i]=-1;
+    }
   }
 }
 
