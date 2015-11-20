@@ -806,6 +806,7 @@ void parseRx() { //uses the globals.
   if (rcvAdd == MyAddress || MyAddress == 0) {
     if (lastChecksum != calcBigChecksum(byte(pksize / 8))) {
       lastChecksum = calcBigChecksum(byte(pksize / 8));
+      forgetCmdAt = millis() + CommandForgetTime; 
       if (pksize == 32) { //4 byte packet
         calccsc = txrxbuffer[0] ^ txrxbuffer[1] ^ txrxbuffer[2];
         calccsc = (calccsc & 15) ^ (calccsc >> 4) ^ (txrxbuffer[3] >> 4);
@@ -890,12 +891,13 @@ unsigned long decode16(unsigned int inp) {
 
 
 void ClearCMD() {  //This handles clearing of the commands, and also clears the lastChecksum value, which is used to prevent multiple identical packets received in succession from being processed.
-  if (lastChecksum && forgetCmdAt==0) {
-    forgetCmdAt = millis() + CommandForgetTime;
+  //if (lastChecksum && forgetCmdAt==0) {
+    //forgetCmdAt = millis() + CommandForgetTime;
     //MyParam = 0;
     //MyExtParam = 0;
     //MyCmd = 0;
-  } else if (millis() > forgetCmdAt) {
+  //} else 
+  if (millis() > forgetCmdAt) {
     forgetCmdAt = 0;
     lastChecksum = 0;
     lcd.noBacklight();
