@@ -175,13 +175,14 @@ int rxLowMax=450; //longest low before packet discarded
 #define rxLowMax 600 //longest low before packet discarded
 */
 // Version 2.2
+
 unsigned int rxSyncMin  = 1750;
 unsigned int rxSyncMax  = 2250;
 unsigned int rxZeroMin  = 100;
 unsigned int rxZeroMax  = 390;
 unsigned int rxOneMin  = 410;
 unsigned int rxOneMax  = 700;
-unsigned int rxLowMax  = 600;
+unsigned int rxLowMax  = 700;
 unsigned int txOneLength  = 500;
 unsigned int txZeroLength  = 300;
 unsigned int txLowTime  = 400;
@@ -189,6 +190,21 @@ unsigned int txSyncTime  = 2000;
 unsigned int txTrainLen  = 200;
 byte txTrainRep  = 30;
 
+/*
+unsigned int rxSyncMin  = 1750;
+unsigned int rxSyncMax  = 2250;
+unsigned int rxZeroMin  = 100;
+unsigned int rxZeroMax  = 490;
+unsigned int rxOneMin  = 510;
+unsigned int rxOneMax  = 900;
+unsigned int rxLowMax  = 900;
+unsigned int txOneLength  = 700;
+unsigned int txZeroLength  = 300;
+unsigned int txLowTime  = 500;
+unsigned int txSyncTime  = 2000;
+unsigned int txTrainLen  = 200;
+byte txTrainRep  = 30;
+*/
 unsigned int txRepDelay = 2000; //delay between consecutive transmissions
 byte txRepCount = 5; //number of times to repeat each transmission
 byte defaultAT24i2ca = 0x50;
@@ -196,8 +212,8 @@ byte defaultAT24i2ca = 0x50;
 
 const unsigned long units[] = {1000, 60000, 900000, 14400000, 3600000, 1, 10, 86400000}; //units for the 8/12/16-bit time values.
 
-int highLengths[32];
-int lowLengths[32];
+int highLengths[64];
+int lowLengths[64];
 
 byte MyAddress = 0;
 
@@ -654,14 +670,21 @@ digitalWrite(txpin,0); // known state
 
 void outputPayload() {
     for (byte i=0;i<32;i++) {
+      if (highLengths[i]!=-1 || lowLengths[i]!=-1) {
+        SerialDbg.print(i);
+        SerialDbg.print(F(":"));
+      }
     if (highLengths[i]!=-1) {
       SerialDbg.print(F("H:"));
       SerialDbg.print(highLengths[i]);
     }
     if (lowLengths[i]!=-1) {
       SerialDbg.print(F("L:"));
-      SerialDbg.println(lowLengths[i]);
+      SerialDbg.print(lowLengths[i]);
     }
+    if (highLengths[i]!=-1 || lowLengths[i]!=-1) {
+        SerialDbg.println();
+      }
   }
 #ifdef USE_ACK
   if (txrxbuffer[1] == 0xE8) {
@@ -740,11 +763,12 @@ void onListenST() {
           SerialDbg.print(bitlength);
           SerialDbg.print(" ");
           SerialDbg.println(bitsrx);
+          //delay(2000);
         }
         resetListen();
         return;
       }
-      highLengths[i]=bitlength;
+      highLengths[bitsrx]=bitlength;
       bitsrx++;
       if (bitsrx == 2) {
         pksize = 32 << rxdata;
@@ -781,8 +805,14 @@ void onListenST() {
     if (rxing==1) {
       lowLengths[bitsrx-1]=bitlength;
       if (bitlength > rxLowMax && rxing == 1) {
+        
+        if (bitsrx > 10) {
         SerialDbg.print("rxlow");
-        SerialDbg.println(lastPinHighTime - lastPinLowTime);
+        SerialDbg.print(lastPinHighTime - lastPinLowTime);
+        SerialDbg.print(" ");
+        SerialDbg.println(bitsrx);
+      //delay(2000);
+        }
         resetListen();
         return;
       }

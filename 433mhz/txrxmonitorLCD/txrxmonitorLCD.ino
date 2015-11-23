@@ -746,11 +746,14 @@ void onListenST() {
       } else if (bitlength > rxOneMin && bitlength < rxOneMax ) {
         rxdata = (rxdata << 1) + 1;
       } else {
-        if (bitsrx > 10) {
-          //xSerialDbg.print(F("Reset wrong high len "));
-          //xSerialDbg.print(bitlength);
-          //xSerialDbg.print(" ");
-          //xSerialDbg.println(bitsrx);
+        if (bitsrx > 100) {
+          lcd.backlight();
+          lcd.clear();
+          lcd.print(F("rxhigh"));
+          lcd.print(bitlength);
+          lcd.print(F(" "));
+          lcd.print(bitsrx);
+          delay(2000);
         }
         resetListen();
         return;
@@ -788,8 +791,16 @@ void onListenST() {
       return;
     }
     if (lastPinHighTime - lastPinLowTime > rxLowMax && rxing == 1) {
-      //xSerialDbg.print("rxlow");
-      //xSerialDbg.println(lastPinHighTime - lastPinLowTime);
+      
+        if (bitsrx > 100) {
+          lcd.clear();
+          lcd.backlight();
+      lcd.print("rxlow");
+      lcd.print(lastPinHighTime - lastPinLowTime);
+          lcd.print(F(" "));
+          lcd.print(bitsrx);
+      delay(2000);
+        }
       resetListen();
       return;
     }
