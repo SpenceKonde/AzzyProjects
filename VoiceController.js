@@ -146,7 +146,7 @@ function switchRF(dev) {
 }
 
 function updateRFStatus(dev,val) {
-  require("http").get(mirrorurl+"?RFDev"+dev.toString()+"="+(val?1:0),function(){return;});
+  require("http").get(mirrorurl+"?RFDev"+dev.toString()+"="+(val?1:0),function(){});
 }
 
 var RFDevs=[ 
@@ -225,8 +225,8 @@ function onInit() {
   //azzyrf
   Serial2.setup(9600, { rx: A3, tx : A2 });
   AzzyRF=require("AzzyRF").connect(Serial2);
-  //AzzyRF.onMsgOut=function(a){return;};
-  AzzyRF.onDataOut=function(a){return;};
+  //AzzyRF.onMsgOut=function(a){};
+  AzzyRF.onDataOut=function(a){};
   AzzyRF.onTextOut=function(a) {
     console.log(E.toUint8Array(a));
     if (RFCommands[a]===undefined) {
@@ -237,6 +237,7 @@ function onInit() {
     }
   };
   AzzyRF.onRcvOut=function(a) {
+    console.log(a);
     msg=E.toString(a);
     if (RFMessages[msg]!==undefined) {
       console.log("processing known message "+msg);
@@ -288,22 +289,20 @@ function updateSensors(nohttp) {
     if(!nohttp){
       console.log("CallingMirror");
       //console.log(getMirrorString());
-      require("http").get(mirrorurl+getMirrorString(),function(){return;});
+      require("http").get(mirrorurl+getMirrorString(),function(){;});
     }
   }
   bmp.getPressure(function(b){if (systemStatus.pressure==-1){systemStatus.pressure=b.pressure;} else {systemStatus.pressure=systemStatus.pressure*0.8+b.pressure*0.2;}});
-  getFargoStatus();
 }
 
 
 function updateMirrorFargo() {
-  console.log(mirrorurl+getFargoString())
-  require("http").get(mirrorurl+getFargoString(),function(){return;});
+  require("http").get(mirrorurl+getFargoString(),function(){});
 }
 
 function getFargoString() {
-  s=systemStatus.fargo;
-  return "?fargo0="+s[0]+"&fargo1="+s[1]+"&fargo2="+s[2]+"&fargo3="+s[3]+"&fargo4="+s[4]+"&fargo5="+s[5]+"&fargo6="+s[6]+"&fargo7="+s[7];
+  var s=systemStatus.fargo;
+  return "?fargo0="+s[0]+"?fargo1="+s[1]+"?fargo2="+s[2]+"?fargo3="+s[3]+"?fargo4="+s[4]+"?fargo5="+s[5]+"?fargo6="+s[6]+"?fargo7="+s[7];
 }
 function getMirrorString() {
   var s=systemStatus;
@@ -314,7 +313,7 @@ function getMirrorString() {
 }
 
 function safeGetTime(){
-  if (clk) {
+  if (typeof clk !== 'undefined') {
     return clk.getDate().getTime();
   } else {
     return -1;
