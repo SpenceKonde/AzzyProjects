@@ -99,6 +99,7 @@ void checkCommand() {
     delay(500); 
     asm volatile ("  jmp 0");
   } 
+  resetSer();
 
 
 }
