@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>title</title>
+    <script type="text/javascript">
+    function updateCode(){
+    	var framemax=2;
+    	var ledcount=5;
+    	var tb=document.getElementById("textbox")
+    	tb.value="anibuff=[];\r\n";
+    	for (i=0;i<framemax;i++){
+    		var tline="anibuff["+i+"]=new Uint8Array([";
+    		for (j=0;j<ledcount;j++){
+    			var cp=document.getElementById("LED"+j+"Frame"+i);
+    			var cpv=cp.value;
+    			tline+="0xff,0x"+(cpv.substring(1,3))+",0x"+(cpv.substring(3,5))+",0x"+(cpv.substring(5,7))+(j+1==ledcount?"":",");
+    		}
+    		tline+="]);\r\n";
+tb.value+=tline;
+    	}
+
+    }
+    function doIt() {
+    	var table=document.getElementById("colTable");
+    	var row=table.insertRow(-1);
+    	for (k=0;k<5;k++) {
+    		var cell=row.insertCell(k);
+    		cell.innerHTML='<input type="color" id="LED'+2+'Frame'+k+'" onchange="updateCode()" value="#ff0000" style="width:20px;">'
+    	}
+    }
+    </script>
+  </head>
+  <body width="100%;">
+  <button onclick="doIt()">Test</button>
+<table id="colTable">
+	<tr>
+	<td>
+<input type="color" id="LED0Frame0" onchange="updateCode()" value="#ff0000" style="width:20px;">
+	</td>
+	<td>
+<input type="color" id="LED1Frame0" onchange="updateCode()" value="#ff0000" style="width:20px;">
+	</td>
+	<td>
+<input type="color" id="LED2Frame0" onchange="updateCode()" value="#ff0000" style="width:20px;">
+	</td>
+	<td>
+<input type="color" id="LED3Frame0" onchange="updateCode()" value="#ff0000" style="width:20px;">
+	</td>
+	<td>
+<input type="color" id="LED4Frame0" onchange="updateCode()" value="#ff0000" style="width:20px;">
+	</td>
+</tr>
+	<tr>
+	<td>
+<input type="color" id="LED0Frame1" onchange="updateCode()" value="#ff0000" style="width:20px;">
+	</td>
+	<td>
+<input type="color" id="LED1Frame1" onchange="updateCode()" value="#ff0000" style="width:20px;">
+	</td>
+	<td>
+<input type="color" id="LED2Frame1" onchange="updateCode()" value="#ff0000" style="width:20px;">
+	</td>
+	<td>
+<input type="color" id="LED3Frame1" onchange="updateCode()" value="#ff0000" style="width:20px;">
+	</td>
+	<td>
+<input type="color" id="LED4Frame1" onchange="updateCode()" value="#ff0000" style="width:20px;">
+	</td>
+</tr>
+</table>
+
+  <textarea id = "textbox" rows="20" cols="80">
+  	
+  </textarea>
+  </body>
+</html>
+
