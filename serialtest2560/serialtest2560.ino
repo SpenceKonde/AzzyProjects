@@ -4,7 +4,7 @@
 #define ListenST 1
 #define CommandST 2
 
-#define SerialCmd Serial
+#define SerialCmd Serial1
 //#define SerialDbg Serial
 #define MAX_SER_LEN 10
 char serBuffer[MAX_SER_LEN];
@@ -69,7 +69,8 @@ void processSerial() {
         SerRXidx++;
         if (SerRXidx >= MAX_SER_LEN) {
           SerRXidx = 0;
-          SerialCmd.println(F("ERROR"));
+          //SerialCmd.println(F("ERROR"));
+          SerialCmd.println(serBuffer);
           resetSer();
         }
       } else {
@@ -88,7 +89,7 @@ void checkCommand() {
   if (strcmp_P (serBuffer, ROAR) == 0) {
     SerialCmd.println("ROsdfAR");
   } else if (strcmp_P (serBuffer, BOOT) == 0) {
-    SerialCmd.println("ENTERING BOOTLsdafOADER");
+    //SerialCmd.println("EBL");
     delay(500); 
     //UDR0=0;
     //boot();
@@ -98,7 +99,8 @@ void checkCommand() {
     //CCP = 0xD8;            // UNLOCK SIGNATURE CHAGE IN PROTECTED I/O
     //WDTCSR = 8;
     //while(1);
-    asm volatile ("  jmp 0x3a00");
+    asm volatile ("  jmp 0x3F800");
+    //((void (*)())0x1FC00)();
     //asm volatile ("  jmp 0");
   } else if (strcmp_P (serBuffer, RESTART) == 0) {
     SerialCmd.println("REBOOTING");
