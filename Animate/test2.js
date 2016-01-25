@@ -1,10 +1,12 @@
 
 
 
-SPI1.setup({sck:14,mosi:13,mode:1,order:"msb",baud:8000000});
-
+SPI1.setup({sck:14,mosi:13,mode:1,order:"msb",baud:4000000});
+I2C1.setup({sck:5,scl:4});
 
 numleds=5;
+
+var eeprom=require("AT24").connect(I2C1, 128, 512);
 
 var leds = {};
 leds.spi=SPI1;
@@ -30,11 +32,13 @@ leds.ison=1;
 
 leds.dotwinkle = function () {
 	for (var i=0;i<numleds*3;i++){
-		var n=Math.random();
-      this.twinkle[i]=E.clip(this.twinkle[i]+(n<0.75?(n>0.25?0:-1):1),this.twinklemin[i],this.twinklemax[i]);
 		if (this.buff[i] != this.tbuf[i]){ //fade
-          this.buff[i]=this.buff[i]+(this.tbuf[i]>this.buff[i]?1:-1);
+          		this.buff[i]=this.buff[i]+(this.tbuf[i]>this.buff[i]?1:-1);
 		}
+		var mode=this.twimode[i];
+		//if (mode==1) 
+		var n=Math.random();
+      		this.twinkle[i]=E.clip(this.twinkle[i]+(n<0.75?(n>0.25?0:-1):1),this.twinklemin[i],this.twinklemax[i]);
 
 	}
 };
