@@ -46,7 +46,7 @@ void setup() {
 void loop() {
   static unsigned long blinkAt = 0;
   static int ledst=0;
-  if ((millis()-blinkAt) > 200) {
+  if ((millis()-blinkAt) > 1000) {
   digitalWrite(13,ledst);
   ledst=!ledst;
   blinkAt=millis();
@@ -99,7 +99,8 @@ void checkCommand() {
     //CCP = 0xD8;            // UNLOCK SIGNATURE CHAGE IN PROTECTED I/O
     //WDTCSR = 8;
     //while(1);
-    asm volatile ("  jmp 0x3F800");
+    //asm volatile ("  jmp 0x3F800");
+    reboot();
     //((void (*)())0x1FC00)();
     //asm volatile ("  jmp 0");
   } else if (strcmp_P (serBuffer, RESTART) == 0) {
@@ -120,6 +121,13 @@ void checkCommand() {
   resetSer();
 
 
+}
+
+
+void reboot() {
+  WDTCSR = _BV(WDCE) | _BV(WDE);
+  WDTCSR = 10;
+  while (1);
 }
 
 void resetSer() {
