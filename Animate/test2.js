@@ -27,17 +27,30 @@ function animate() {
 
 function onPageRequest(req, res) {
   var a = url.parse(req.url, true);
+  if (a.pathname.split(".")[1]=="cmd"){
+  	if (handleCmd(a.pathname,a.query)) {
+  		res.writeHead(200,{'Access-Control-Allow-Origin':'*'});
+  		res.end("OK");
+  	} else {
+  		res.writeHead(400,{'Access-Control-Allow-Origin':'*'});
+  		res.end("ERROR");
+  	}
+  } else {
+	res.writeHead(404);
+	res.end("ERROR");	
+  }
+}
+require("http").createServer(onPageRequest).listen(80);
+
+function handlePage(pn,q) {
   if (a.pathname=="/setAll.cmd") {
     //lreq=a.query;
     leds.setAll(eval(a.query.color),eval(a.query.mode),eval(a.query.max),eval(a.query.min));
   } else if (a.pathname=="/setPixel.cmd") {
-    //lreq=a.query;
     leds.setPixel2(a.query.led,0,eval(a.query.color),eval(a.query.mode),eval(a.query.max),eval(a.query.min));
-  }
-  res.writeHead(200);
-  res.end("Hello World"); 
+  }	
 }
-require("http").createServer(onPageRequest).listen(80);
+
 
 // LEDS
 var leds = {};
