@@ -22,9 +22,9 @@ leds.flip = function () {
 			} 
 		
 		this.fbuf[j++]=(this.ison?(gdim|224):224);
-		this.fbuf[j++]=(bch?Math.max(bch*mult>>4,1):0);
-		this.fbuf[j++]=(gch?Math.max(gch*mult>>4,1):0);
-		this.fbuf[j++]=(rch?Math.max(rch*mult>>4,1):0);
+		this.fbuf[j++]=(bch?Math.max((bch*mult)>>4,1):0);
+		this.fbuf[j++]=(gch?Math.max((gch*mult)>>4,1):0);
+		this.fbuf[j++]=(rch?Math.max((rch*mult)>>4,1):0);
 
 	}
 
