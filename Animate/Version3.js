@@ -85,13 +85,13 @@ leds.aniframe=0;
 leds.anilast=0;
 
 leds.dotwinkle = function () {
-  var t=this.t;
-  var tm= this.tm;
-  var ta=this.ta;
-  var ti=this.ti;
-  var b=this.buff;
-  var z=this.tbuf;
-  var o=this.overlay;
+	var t=this.t;
+	var tm= this.tm;
+	var ta=this.ta;
+	var ti=this.ti;
+	var b=this.buff;
+	var z=this.tbuf;
+	var o=this.overlay;
 	if (this.animode) {
 		if (this.aniframe > this.anilast) {
 			this.animode=0;
@@ -114,16 +114,16 @@ leds.dotwinkle = function () {
 			var th=(pr+1)/32;
       			t[i]=E.clip(t[i]+(n<(0.5+th)?(n>(0.5-th)?0:-1):1),ti[i],ta[i]);
 		} else if (mo==2) { //fade/pulse. 
-          if (this.afr%((1+pr)&7)==0){
-            t[i]=t[i]+(pr&8?1:-1);
-			if (t[i] == ti[i] || t[i] == ta[i]) {
-				tm[i]=mode^128;
-			}
-          }
+          		if (this.afr%((1+pr)&7)==0){
+            			t[i]=t[i]+(pr&8?1:-1);
+				if (t[i] == ti[i] || t[i] == ta[i]) {
+					tm[i]=mode^128;
+				}
+        		}
 		}
 		leds.tclb[i]=b[i]+(b[i]?t[i]:0)+o[i];
 	}
-  this.afr=this.afr==255?0:this.afr+1;
+	this.afr=this.afr==255?0:this.afr+1;
 };
 
 leds.setAll= function (color,tmode,tmax,tmin) {
@@ -180,27 +180,15 @@ leds.setPixel2 = function (x, y, color,mode,mintwi,maxtwi) {
 
 
 leds.flip = function () {
-	//var tclb=new Uint8ClampedArray(this.num*3);
-	//var x=new Uint16Array(3);
-	//for (var i=0;i<(this.num*3);i++) {
-    //  tclb[i]=leds.buff[i]+(leds.buff[i]?leds.t[i]:0)+leds.overlay[i];
-	//}
-  //console.log(tclb);
 	for (var i=0;i<numleds;i++) {
-		//var x = new Uint16Array([tclb[i*3]<<5,tclb[(i*3)+1]<<5,tclb[(i*3)+2]<<5]);
-		
-        
       var rch=gtab[leds.tclb[i*3]];
 		var gch=gtab[leds.tclb[i*3+1]];
 		var bch=gtab[leds.tclb[i*3+2]];
-		//var x = new Uint16Array([gtab[tclb[i*3]],gtab[tclb[(i*3)+1]],gtab[tclb[(i*3)+2]]]);
 		
 		var ma = Math.max(rch,gch,bch);
-		//var mi = Math.min(x[0],x[1],x[2]);
-		//var mi = Math.min(rch,gch,bch);
 		var mult=1;
-        gdim=31;
-		//if (this.gdim[i] == 31) {
+        	gdim=31;
+		
 			if (ma <390) {
 				gdim=3;
 				mult=10.33;
@@ -211,52 +199,11 @@ leds.flip = function () {
 				gdim=15;
 				mult=2.06;
 			} 
-		/*} else if (this.gdim[i] == 15) {
-			if (ma <390) {
-				this.gdim[i]=3;
-				mult=10.33;
-			} else if (ma <700) {
-				this.gdim[i]=7;
-				mult=4.4;
-			} else if (ma >1980) {
-				this.gdim[i]=31;
-			} else {
-				mult=2.06;
-			} 
-		} else if (this.gdim[i] == 7) {
-			if (ma <390) {
-				this.gdim[i]=3;
-				mult=10.33;
-			} else if (ma > 1980 ) {
-				this.gdim[i]=31;
-			} else if (ma >924) {
-				this.gdim[i]=15;
-				mult=2.06;
-			} else {
-				mult=4.4;
-			}
-		} else if (this.gdim[i] == 3) {
-			if (ma > 1980 ) {
-				this.gdim[i]=31;
-			} else if (ma >924) {
-				this.gdim[i]=15;
-				mult=2.06;
-			} else if (ma>390) {
-				this.gdim[i]=7;
-				mult=4.4;
-			} else {
-				mult=10.33;
-			}
-		} 
-        */
-		rch*=mult;
-		gch*=mult;
-		bch*=mult;
-
+		
 		this.fbuf[i*4]=(this.ison?(gdim|224):224);
-		this.fbuf[1+i*4]=(bch?Math.max(bch>>4,1):0);
-		this.fbuf[2+i*4]=(gch?Math.max(gch>>4,1):0);
-		this.fbuf[3+i*4]=(rch?Math.max(rch>>4,1):0);
+		this.fbuf[1+i*4]=(bch?Math.max(bch*mult>>4,1):0);
+		this.fbuf[2+i*4]=(gch?Math.max(gch*mult>>4,1):0);
+		this.fbuf[3+i*4]=(rch?Math.max(rch*mult>>4,1):0);
 
 	}
 
