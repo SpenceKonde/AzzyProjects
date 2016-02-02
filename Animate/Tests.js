@@ -148,11 +148,13 @@ leds.dotwinkle = function () {
           //var n=0.8;
 			var th=(pr+1)/32;
       			t[i]=E.clip(t[i]+(n<(0.5+th)?(n>(0.5-th)?0:-1):1),ti[i],ta[i]); //11ms
+      			/*
       			if (n<0.5+th){
       				if(n<=(0.5-th) && t[i]>ta[i]){t[i]--;}
       			} else {
       				if (t[i]<ta[i]){t[i]++;}
       			}
+      			*/
 		} else if (mo==2) { //fade/pulse. 
           		if (this.afr%((1+pr)&7)==0){
             			t[i]=t[i]+(pr&8?1:-1);
