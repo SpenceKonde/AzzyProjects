@@ -30,7 +30,7 @@ function animate() {
 function onPageRequest(req, res) {
   var a = url.parse(req.url, true);
   if (a.pathname.split(".")[1]=="cmd"){
-  	if (handleCmd(a.pathname,a.query)) {
+  	if (handleCmd(a.pathname,a.query,res)) {
   		res.writeHead(200,{'Access-Control-Allow-Origin':'*'});
   		res.end("OK");
   	} else {
@@ -44,15 +44,36 @@ function onPageRequest(req, res) {
 }
 require("http").createServer(onPageRequest).listen(80);
 
-function handleCmd(pn,q) {
-  if (pn=="/setAll.cmd") {
+function handleCmd(pn,q,r) {
+	try {
+  if (pn=="/saveBase.cmd") {
+    //lreq=a.query;
+    var temp=eval(q.eeprom)
+    leds.saveBase(temp?temp:0,eval(q.address),eval(q.len);
+    return 1;
+  } if (pn=="/loadBase.cmd") {
+    //lreq=a.query;
+    var temp=eval(q.eeprom)
+    leds.loadBase(temp?temp:0,eval(q.address),eval(q.len);
+    return 1;
+  }if (pn=="/showState.cmd") {
+    //lreq=a.query;
+    r.write(JSON.stringify({"base":leds.tbuf,"twinkle":[leds.tm,leds.ti,leds.ta]}));
+    return 1;
+  }if (pn=="/setAll.cmd") {
     //lreq=a.query;
     leds.setAll(eval(q.color),eval(q.mode),eval(q.max),eval(q.min));
     return 1;
-  } else if (pn=="/setPixel.cmd") {
+  }else if (pn=="/setPixel.cmd") {
     leds.setPixel2(q.led,0,eval(q.color),eval(q.mode),eval(q.max),eval(q.min));
     return 1;
-  }	
+  } else {
+  	return 0;
+  }
+	} 
+	catch (err) {
+		return 0;
+	}
 }
 
 
@@ -73,7 +94,6 @@ leds.ta=new Int8Array(numleds*3);
 leds.overlay=new Uint8Array(numleds*3);
 leds.tclb=new Uint8ClampedArray(numleds*3);
 for (var tem=0;tem<numleds;tem++){
-	//leds.gdim[tem]=31; 
 	for (var j=0;j<3;j++){
 		leds.ti[tem*3+j]=-10;
 		leds.ta[tem*3+j]=10;
@@ -104,37 +124,27 @@ leds.dotwinkle = function () {
 	}
 	for (var i=0;i<this.num*3;i++){
 		var c=b[i]
-		//if (c != z[i]){
-		//if (b[i] != z[i]){ //fade
-          		//b[i]=b[i]+(z[i]>b[i]?1:-1); //11ms
-          		//b[i]=c+(z[i]>c?1:-1); 
-          		//b[i]+=(z[i]>c?1:-1); 
-          		 
-		//}
 		b[i]+=E.clip(z[i]-c,-1,1));
-		//b[i]+=E.clip(z[i]-b[i],-1,1));
 		var mode=tm[i];
 		var mo=mode&0x0F;
 		var pr=mode>>4;
 		if (mo==1) { //0x01 - high nybble is chance to change, from 0 (1/16) to 15 (16/16 chance to change)
 			var n=Math.random(); //3ms
 			var th=(pr+1)/32;
-      			if (n<0.5+th){
+      			if (n<0.5+th){ //8ms
       				if(n<=(0.5-th) && t[i]>ta[i]){t[i]--;}
       			} else {
       				if (t[i]<ta[i]){t[i]++;}
       			}
 		} else if (mo==2) { //fade/pulse. 
           		if (this.afr%((1+pr)&7)==0){
-            			//t[i]=t[i]+(pr&8?1:-1);
             			t[i]+=(pr&8?1:-1);
 				if (t[i] == ti[i] || t[i] == ta[i]) {
 					tm[i]=mode^128;
 				}
         		}
 		}
-		//leds.tclb[i]=b[i]+(b[i]?t[i]:0)+o[i]; //11ms
-		leds.tclb[i]=c+(c?t[i]:0)+o[i];
+		leds.tclb[i]=c+(c?t[i]:0)+o[i]; //10ms
 	}
 	this.afr=this.afr==255?0:this.afr+1;
 };
@@ -152,8 +162,9 @@ leds.setAll= function (color,tmode,tmax,tmin) {
 		}
 	}
 };
+
 leds.loadBase = function (eep,addr,len) {
-  len=len?len:this.num; 
+  	len=len?len:this.num; 
 	this.tbuf=eep.read(addr,this.num*3);
 	this.t=new Int8Array(this.num*3);
 	this.tm=new Uint8Array(eep.read((addr+len*3),this.num*3));
@@ -177,18 +188,13 @@ leds.setPixel = function (x, y, color) {
 };
 
 leds.setPixel2 = function (x, y, color,mode,mintwi,maxtwi) {
-	this.tbuf[x*3]=color[0];
-	this.tbuf[x*3+1]=color[1];
-	this.tbuf[x*3+2]=color[2];
-	this.tm[x*3]=mode[0];
-	this.tm[x*3+1]=mode[1];
-	this.tm[x*3+2]=mode[2];
-	this.ta[x*3]=maxtwi[0];
-	this.ta[x*3+1]=maxtwi[1];
-	this.ta[x*3+2]=maxtwi[2];
-	this.ti[x*3]=mintwi[0];
-	this.ti[x*3+1]=mintwi[1];
-	this.ti[x*3+2]=mintwi[2];
+	x*=3;
+	for (var i=0;i<3;i++){
+		this.tbuf[x+i]=color[i];
+		this.tm[x+i]=mode[i];
+		this.ta[x+i]=maxtwi[i];
+		this.ti[x+i]=mintwi[i];
+	}
 };
 
 
