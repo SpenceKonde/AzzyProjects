@@ -103,25 +103,38 @@ leds.dotwinkle = function () {
 		}
 	}
 	for (var i=0;i<this.num*3;i++){
-		if (b[i] != z[i]){ //fade
-          		b[i]=b[i]+(z[i]>b[i]?1:-1);
-		}
+		var c=b[i]
+		//if (c != z[i]){
+		//if (b[i] != z[i]){ //fade
+          		//b[i]=b[i]+(z[i]>b[i]?1:-1); //11ms
+          		//b[i]=c+(z[i]>c?1:-1); 
+          		//b[i]+=(z[i]>c?1:-1); 
+          		 
+		//}
+		b[i]+=E.clip(z[i]-c,-1,1));
+		//b[i]+=E.clip(z[i]-b[i],-1,1));
 		var mode=tm[i];
 		var mo=mode&0x0F;
 		var pr=mode>>4;
 		if (mo==1) { //0x01 - high nybble is chance to change, from 0 (1/16) to 15 (16/16 chance to change)
-			var n=Math.random();
+			var n=Math.random(); //3ms
 			var th=(pr+1)/32;
-      			t[i]=E.clip(t[i]+(n<(0.5+th)?(n>(0.5-th)?0:-1):1),ti[i],ta[i]);
+      			if (n<0.5+th){
+      				if(n<=(0.5-th) && t[i]>ta[i]){t[i]--;}
+      			} else {
+      				if (t[i]<ta[i]){t[i]++;}
+      			}
 		} else if (mo==2) { //fade/pulse. 
           		if (this.afr%((1+pr)&7)==0){
-            			t[i]=t[i]+(pr&8?1:-1);
+            			//t[i]=t[i]+(pr&8?1:-1);
+            			t[i]+=(pr&8?1:-1);
 				if (t[i] == ti[i] || t[i] == ta[i]) {
 					tm[i]=mode^128;
 				}
         		}
 		}
-		leds.tclb[i]=b[i]+(b[i]?t[i]:0)+o[i];
+		//leds.tclb[i]=b[i]+(b[i]?t[i]:0)+o[i]; //11ms
+		leds.tclb[i]=c+(c?t[i]:0)+o[i];
 	}
 	this.afr=this.afr==255?0:this.afr+1;
 };
