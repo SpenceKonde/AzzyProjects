@@ -197,16 +197,18 @@ leds.setPixel2 = function (x, y, color,mode,mintwi,maxtwi) {
 	}
 };
 
-
 leds.flip = function () {
-	for (var i=0;i<numleds;i++) {
-      var rch=gtab[leds.tclb[i*3]];
-		var gch=gtab[leds.tclb[i*3+1]];
-		var bch=gtab[leds.tclb[i*3+2]];
+	var j=0;
+	var i=0;
+	var z=leds.num*3;
+	while (i<z) {
+      var rch=gtab[leds.tclb[i++]];
+		var gch=gtab[leds.tclb[i++]];
+		var bch=gtab[leds.tclb[i++]];
 		
 		var ma = Math.max(rch,gch,bch);
 		var mult=1;
-        	gdim=31;
+        var gdim=31;
 		
 			if (ma <390) {
 				gdim=3;
@@ -219,16 +221,15 @@ leds.flip = function () {
 				mult=2.06;
 			} 
 		
-		this.fbuf[i*4]=(this.ison?(gdim|224):224);
-		this.fbuf[1+i*4]=(bch?Math.max(bch*mult>>4,1):0);
-		this.fbuf[2+i*4]=(gch?Math.max(gch*mult>>4,1):0);
-		this.fbuf[3+i*4]=(rch?Math.max(rch*mult>>4,1):0);
+		this.fbuf[j++]=(this.ison?(gdim|224):224);
+		this.fbuf[j++]=(bch?Math.max((bch*mult)>>4,1):0);
+		this.fbuf[j++]=(gch?Math.max((gch*mult)>>4,1):0);
+		this.fbuf[j++]=(rch?Math.max((rch*mult)>>4,1):0);
 
 	}
 
 	this.spi.write(0,0,0,0,this.fbuf,0xFF,0xFF,0xFF,0xFF);
 };
-
 
 
 
