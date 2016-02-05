@@ -49,12 +49,12 @@ function handleCmd(pn,q,r) {
   if (pn=="/saveBase.cmd") {
     //lreq=a.query;
     var temp=eval(q.eeprom)
-    leds.saveBase(temp?temp:0,eval(q.address),eval(q.len);
+    leds.saveBase(temp?temp:eeprom,eval(q.address),eval(q.len);
     return 1;
   } if (pn=="/loadBase.cmd") {
     //lreq=a.query;
     var temp=eval(q.eeprom)
-    leds.loadBase(temp?temp:0,eval(q.address),eval(q.len);
+    leds.loadBase(temp?temp:eeprom,eval(q.address),eval(q.len);
     return 1;
   }if (pn=="/showState.cmd") {
     //lreq=a.query;
@@ -231,6 +231,11 @@ leds.flip = function () {
 	this.spi.write(0,0,0,0,this.fbuf,0xFF,0xFF,0xFF,0xFF);
 };
 
+leds.zflip = function () {
+	var ca=startAddr+(frameLength*curFrame++);
+	this.fbuf=eep.read(ca,frameLength);
+	this.spi.write(0,0,0,0,this.fbuf,0xFF,0xFF,0xFF,0xFF);
+};
 
 
 setBusyIndicator(2);
