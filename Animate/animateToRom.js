@@ -16,12 +16,29 @@ numleds=5;
 
 //global functions
 function animate() {
-  setTimeout("animate()",20);
   //var x=getTime();
   leds.flip();
   leds.dotwinkle();
-  //console.log(getTime()-x);
+  currFrame++;
+  if (curFrame>=maxFrame || outBuff.length>(eeprom.pgsz)) {
+  	console.log(E.toUint8Array(outBuff.substring(0,eeprom.pgsz-1)));
+  	console.log(outBuff.substring(0,eeprom.pgsz-1).length);
+  	//eeprom.write(eepCurrAddr,outBuff.substring(0,eeprom.pgsz-1))
+  	eepCurrAddr+=eeprom.pgsz;
+  }
+  if (curFrame>= maxFrame) {
+  	setTimeout("animate()",10);
+  }
 }
+
+eepCurrAddr=0;
+eepStartAddr=0;
+outBuff="";
+curFrame=0;
+maxFrame=32;
+
+
+
 
 
 // Network
@@ -48,12 +65,12 @@ function handleCmd(pn,q,r) {
   if (pn=="/saveBase.cmd") {
     //lreq=a.query;
     var temp=eval(q.eeprom)
-    leds.saveBase(temp?temp:0,eval(q.address),eval(q.len);
+    leds.saveBase(temp?temp:eeprom,eval(q.address),eval(q.len);
     return 1;
   } if (pn=="/loadBase.cmd") {
     //lreq=a.query;
     var temp=eval(q.eeprom)
-    leds.loadBase(temp?temp:0,eval(q.address),eval(q.len);
+    leds.loadBase(temp?temp:eeprom,eval(q.address),eval(q.len);
     return 1;
   }if (pn=="/showState.cmd") {
     //lreq=a.query;
@@ -226,8 +243,8 @@ leds.flip = function () {
 		this.fbuf[j++]=(rch?Math.max((rch*mult)>>4,1):0);
 
 	}
-
-	this.spi.write(0,0,0,0,this.fbuf,0xFF,0xFF,0xFF,0xFF);
+	outBuff+=E.toString(this.fbuff);
+	//this.spi.write(0,0,0,0,this.fbuf,0xFF,0xFF,0xFF,0xFF);
 };
 
 
