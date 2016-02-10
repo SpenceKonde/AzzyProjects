@@ -19,15 +19,16 @@ function animate() {
   //var x=getTime();
   leds.flip();
   leds.dotwinkle();
-  currFrame++;
-  if (curFrame>=maxFrame || outBuff.length>(eeprom.pgsz)) {
-  	console.log(E.toUint8Array(outBuff.substring(0,eeprom.pgsz-1)));
-  	console.log(outBuff.substring(0,eeprom.pgsz-1).length);
-  	//eeprom.write(eepCurrAddr,outBuff.substring(0,eeprom.pgsz-1))
+  curFrame++;
+  while (curFrame>=maxFrame || outBuff.length>(eeprom.pgsz)) {
+  	//console.log(E.toUint8Array(outBuff.substring(0,eeprom.pgsz-1)));
+  	//console.log(outBuff.substring(0,eeprom.pgsz).length);
+  	eeprom.write(eepCurrAddr,outBuff.substring(0,eeprom.pgsz));
   	eepCurrAddr+=eeprom.pgsz;
+    outBuff=outBuff.substring(eeprom.pgsz);
   }
-  if (curFrame>= maxFrame) {
-  	setTimeout("animate()",10);
+  if (curFrame<= maxFrame) {
+  	setTimeout("animate()",100);
   }
 }
 
@@ -35,63 +36,13 @@ eepCurrAddr=0;
 eepStartAddr=0;
 outBuff="";
 curFrame=0;
-maxFrame=32;
+maxFrame=10;
 
 
 
 
 
 // Network
-
-function onPageRequest(req, res) {
-  var a = url.parse(req.url, true);
-  if (a.pathname.split(".")[1]=="cmd"){
-  	if (handleCmd(a.pathname,a.query,res)) {
-  		res.writeHead(200,{'Access-Control-Allow-Origin':'*'});
-  		res.end("OK");
-  	} else {
-  		res.writeHead(400,{'Access-Control-Allow-Origin':'*'});
-  		res.end("ERROR");
-  	}
-  } else {
-	res.writeHead(404);
-	res.end("ERROR");	
-  }
-}
-require("http").createServer(onPageRequest).listen(80);
-
-function handleCmd(pn,q,r) {
-	try {
-  if (pn=="/saveBase.cmd") {
-    //lreq=a.query;
-    var temp=eval(q.eeprom)
-    leds.saveBase(temp?temp:eeprom,eval(q.address),eval(q.len);
-    return 1;
-  } if (pn=="/loadBase.cmd") {
-    //lreq=a.query;
-    var temp=eval(q.eeprom)
-    leds.loadBase(temp?temp:eeprom,eval(q.address),eval(q.len);
-    return 1;
-  }if (pn=="/showState.cmd") {
-    //lreq=a.query;
-    r.write(JSON.stringify({"base":leds.tbuf,"twinkle":[leds.tm,leds.ti,leds.ta]}));
-    return 1;
-  }if (pn=="/setAll.cmd") {
-    //lreq=a.query;
-    leds.setAll(eval(q.color),eval(q.mode),eval(q.max),eval(q.min));
-    return 1;
-  }else if (pn=="/setPixel.cmd") {
-    leds.setPixel2(q.led,0,eval(q.color),eval(q.mode),eval(q.max),eval(q.min));
-    return 1;
-  } else {
-  	return 0;
-  }
-	} 
-	catch (err) {
-		return 0;
-	}
-}
-
 
 // LEDS
 gtab=new Uint16Array(256);
@@ -139,8 +90,8 @@ leds.dotwinkle = function () {
 		}
 	}
 	for (var i=0;i<this.num*3;i++){
-		var c=b[i]
-		b[i]+=E.clip(z[i]-c,-1,1));
+		var c=b[i];
+		b[i]+=E.clip(z[i]-c,-1,1);
 		var mode=tm[i];
 		var mo=mode&0x0F;
 		var pr=mode>>4;
@@ -243,11 +194,11 @@ leds.flip = function () {
 		this.fbuf[j++]=(rch?Math.max((rch*mult)>>4,1):0);
 
 	}
-	outBuff+=E.toString(this.fbuff);
+	outBuff+=E.toString(this.fbuf);
 	//this.spi.write(0,0,0,0,this.fbuf,0xFF,0xFF,0xFF,0xFF);
 };
 
 
 
 setBusyIndicator(2);
-leds.setPixel(0,0,[0,255,255]);
+leds.setAll([0,255,255],[0,0,0],[0,0,0],[0,0,0]);
