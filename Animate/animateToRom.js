@@ -21,14 +21,19 @@ function animate() {
   leds.dotwinkle();
   curFrame++;
   while (curFrame>=maxFrame || outBuff.length>(eeprom.pgsz)) {
-  	//console.log(E.toUint8Array(outBuff.substring(0,eeprom.pgsz-1)));
-  	//console.log(outBuff.substring(0,eeprom.pgsz).length);
-  	eeprom.write(eepCurrAddr,outBuff.substring(0,eeprom.pgsz));
+  	console.log(E.toUint8Array(outBuff.substring(0,eeprom.pgsz)));
+  	console.log(outBuff.substring(0,eeprom.pgsz).length);
+  	//eeprom.write(eepCurrAddr,outBuff.substring(0,eeprom.pgsz));
   	eepCurrAddr+=eeprom.pgsz;
-    outBuff=outBuff.substring(eeprom.pgsz);
+    	if (outBuff.length>eeprom.pgsz) {
+    		outBuff=outBuff.substring(eeprom.pgsz);
+    	} else {
+    		break;
+    	}
+    	
   }
   if (curFrame<= maxFrame) {
-  	setTimeout("animate()",100);
+  	setTimeout("animate()",500);
   }
 }
 
