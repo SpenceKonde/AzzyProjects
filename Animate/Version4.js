@@ -164,20 +164,20 @@ leds.setAll= function (color,tmode,tmax,tmin) {
 };
 
 leds.loadBase = function (eep,addr,len) {
-  	len=len?len:this.num; 
+  	len=len?len:this.num*3; 
 	this.tbuf=eep.read(addr,this.num*3);
-	this.t=new Int8Array(this.num*3);
-	this.tm=new Uint8Array(eep.read((addr+len*3),this.num*3));
-	this.ti=new Int8Array(eep.read((addr+len*6),this.num*3));
-	this.ta=new Int8Array(eep.read((addr+len*9),this.num*3));
+	this.t.fill(0);
+	this.tm=new Uint8Array(eep.read((addr+len),this.num*3));
+	this.ti=new Int8Array(eep.read((addr+len*2),this.num*3));
+	this.ta=new Int8Array(eep.read((addr+len*3),this.num*3));
 };
 
 leds.saveBase = function (eep,addr,len) {
-	
+  	len=len?len:this.num*3; 
 	eep.write(addr,this.tbuf);
-	eep.write(addr+len*3,this.tm);
-	eep.write(addr+len*6,this.ti);
-	eep.write(addr+len*9,this.ta);
+	eep.write(addr+len,this.tm);
+	eep.write(addr+len*2,this.ti);
+	eep.write(addr+len*3,this.ta);
 };
 
 
