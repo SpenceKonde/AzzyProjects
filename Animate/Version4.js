@@ -45,22 +45,26 @@ require("http").createServer(onPageRequest).listen(80);
 
 function handleCmd(pn,q,r) {
 	try {
-  if (pn=="/saveBase.cmd") {
+  if (pn=="/save.cmd") {
     //lreq=a.query;
     if (q.index==undefined || q.index>memmap.statMax || q.index < 0) {
     	r.write("MAX INDEX:");
     	r.write(memmap.statMax);
     	return 0;
     }
-    leds.saveBase(q.index);
+    leds.save(q.index);
     return 1;
-  } if (pn=="/loadBase.cmd") {
+  } if (pn=="/load.cmd") {
     if (q.index==undefined || q.index>memmap.statMax || q.index < 0) {
     	r.write("MAX INDEX:");
     	r.write(memmap.statMax);
     	return 0;
     }
-    leds.loadBase(q.index);
+    if (!leds.load(q.index)){
+    	r.writeHead(400);
+    	r.write("No such pattern")
+    	return 0;
+    }
     return 1;
   }if (pn=="/showState.cmd") {
     //lreq=a.query;
@@ -74,7 +78,7 @@ function handleCmd(pn,q,r) {
     leds.setPixel2(q.led,0,eval(q.color),eval(q.mode),eval(q.max),eval(q.min));
     return 1;
   } else {
-  	r.writeHead(400);
+  	r.writeHead(404);
 	r.write("NO CMD");
   	return 0;
   }
@@ -190,16 +194,26 @@ leds.setAll= function (color,tmode,tmax,tmin) {
 	}
 };
 
-leds.loadBase = function (index) {
+leds.load = function (index) {
 	var s=this.map.slen;
 	var addr=this.map.statOff+(4*index*s);
+	if (this.map.sEep.read(addr+s-1,1)[0]==255) {
+		return 0;
+	}
 	this.tbuf=this.map.sEep.read(addr,this.num*3);
 	this.tm=this.map.sEep.read((addr+s),this.num*3);
 	this.ti=new Int8Array(this.map.sEep.read((addr+s*2),this.num*3));
 	this.ta=new Int8Array(this.map.sEep.read((addr+s*3),this.num*3));
+	return 1;
 };
 
-leds.saveBase = function (index) {
+leds.del = function (index) {
+	var t=new Uint8Array(this.map.slen*4);
+	t.fill("\xFF");
+	this.map.sEep.write(this.map.statOff+(4*index*this.map.slen),t);
+}
+
+leds.save = function (index) {
 	var s=this.map.slen;
 	var addr=this.map.statOff+(4*index*s);
 	this.map.sEep.write(addr,E.toString(this.tbuf)+leds.zz+E.toString(this.tm)+leds.zz+E.toString(this.ti)+leds.zz+E.toString(this.ta)+leds.zz);
