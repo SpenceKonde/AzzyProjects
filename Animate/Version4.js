@@ -98,7 +98,8 @@ var memmap={
 	statMax:14,
 	sEep:eeprom,
 	oEep:eeprom,
-	oOff:0x800
+	oOff:0x800,
+	statMax:64
 };
 
 
@@ -151,29 +152,34 @@ leds.dotwinkle = function () {
 			this.overlay=this.map.oEep.read(this.aniaddr+this.map.slen*this.aniframe++,this.num*3);
 		}
 	}
+	
 	for (var i=0;i<this.num*3;i++){
-		var c=b[i];
-		b[i]+=E.clip(z[i]-c,-1,1);
 		var mode=tm[i];
 		var mo=mode&0x0F;
 		var pr=mode>>4;
-		if (mo==1) { //0x01 - high nybble is chance to change, from 0 (1/16) to 15 (16/16 chance to change)
-			var n=Math.random(); //3ms
-			var th=(pr+1)/32;
-      			if (n<0.5+th){ //8ms
-      				if(n<=(0.5-th) && t[i]>ti[i]){t[i]--;}
-      			} else {
-      				if (t[i]<ta[i]){t[i]++;}
-      			}
-		} else if (mo==2) { //fade/pulse. 
-          		if (this.afr%((1+pr)&7)==0){
-            			t[i]+=(pr&8?1:-1);
-				if (t[i] == ti[i] || t[i] == ta[i]) {
-					tm[i]=mode^128;
-				}
-        		}
-		} else {
-			if (t[i]!==0){if(t[i]>0){t[i]--;} else {t[i]++;}}
+		if !(this.animode&2) {
+			if (mo==1) { //0x01 - high nybble is chance to change, from 0 (1/16) to 15 (16/16 chance to change)
+				var n=Math.random(); //3ms
+				var th=(pr+1)/32;
+      				if (n<0.5+th){ //8ms
+      					if(n<=(0.5-th) && t[i]>ti[i]){t[i]--;}
+	      			} else {
+      					if (t[i]<ta[i]){t[i]++;}
+      				}
+			} else if (mo==2) { //fade/pulse. 
+          			if (this.afr%((1+pr)&7)==0){
+            				t[i]+=(pr&8?1:-1);
+					if (t[i] == ti[i] || t[i] == ta[i]) {
+						tm[i]=mode^128;
+					}
+        			}
+			} else {
+				if (t[i]!==0){if(t[i]>0){t[i]--;} else {t[i]++;}}
+			}
+		}
+		var c=b[i];
+		if (mo || this.afr%((1+pr)&7)==0) {
+			b[i]+=E.clip(z[i]-c,-1,1);
 		}
 		leds.tclb[i]=c+(c?t[i]:0)+o[i]; //10ms
 	}
