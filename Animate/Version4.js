@@ -18,7 +18,8 @@ numleds=10;
 //global functions
 function animate() {
   setTimeout("animate()",20);
-  //var x=getTime();
+  //var x;
+  //x=getTime();
   leds.flip();
   leds.dotwinkle();
   //console.log(getTime()-x);
@@ -62,7 +63,7 @@ function handleCmd(pn,q,r) {
     }
     if (!leds.load(q.index)){
     	r.writeHead(400);
-    	r.write("No such pattern")
+    	r.write("No such pattern");
     	return 0;
     }
     return 1;
@@ -131,7 +132,7 @@ leds.animode=0;
 leds.aniframe=0;
 leds.anilast=0;
 leds.aniaddr=0;
-leds.zz="\x00\x00"
+leds.zz="\x00\x00";
 
 leds.dotwinkle = function () {
 	var t=this.t;
@@ -157,7 +158,7 @@ leds.dotwinkle = function () {
 		var mode=tm[i];
 		var mo=mode&0x0F;
 		var pr=mode>>4;
-		if !(this.animode&2) {
+		if (!(this.animode&2)) {
 			if (mo==1) { //0x01 - high nybble is chance to change, from 0 (1/16) to 15 (16/16 chance to change)
 				var n=Math.random(); //3ms
 				var th=(pr+1)/32;
@@ -217,7 +218,12 @@ leds.del = function (index) {
 	var t=new Uint8Array(this.map.slen*4);
 	t.fill("\xFF");
 	this.map.sEep.write(this.map.statOff+(4*index*this.map.slen),t);
-}
+};
+leds.setAnimate = function (mode,address,frames){
+  leds.anilast=frames;
+  leds.aniaddr=address;
+  leds.animode=mode;
+};
 
 leds.save = function (index) {
 	var s=this.map.slen;
