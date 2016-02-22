@@ -118,9 +118,11 @@ var memmap={
 	oOff:0x8000,
 	oMax:1024,
 	oIEE:eeprom,
-	oIOF:0
+	oIOF:0,
+	scEE:eeprom,
+	scOF:0x1000,
+	scMX:128
 };
-
 
 // LEDS
 gtab=new Uint16Array(256);
@@ -139,6 +141,7 @@ leds.ti=new Int8Array(numleds*3);
 leds.ta=new Int8Array(numleds*3);
 leds.overlay=new Uint8Array(numleds*3);
 leds.tclb=new Uint8ClampedArray(numleds*3);
+leds.scene=new Uint16Array(16);
 for (var tem=0;tem<numleds;tem++){
 	for (var j=0;j<3;j++){
 		leds.ti[tem*3+j]=-10;
@@ -151,6 +154,16 @@ leds.aniframe=0;
 leds.anilast=0;
 leds.aniaddr=0;
 leds.zz="\x00\x00";
+
+leds.setScene(id) {
+	if (id > this.map.scMX || id <0) { return 0;}
+	var adr=this.map.scOF+id*32;
+	if (this.map.scEE.read(adr,1)[0]=255) { return 0; }
+	//now we've passed sanity checks, use the new scene:
+	if (this.scenetimer) {clearTimeout(this.scenetimer);this.scenetimer=0;}
+	this.scene.set(this.map.scEE.read(adr,32));
+	
+}
 
 leds.dotwinkle = function () {
 	var t=this.t;
