@@ -18,11 +18,11 @@ numleds=10;
 //global functions
 function animate() {
   setTimeout("animate()",20);
-  //var x;
-  //x=getTime();
+  var x;
+  if (leds.animode) {x=getTime();}
   leds.flip();
   leds.dotwinkle();
-  //console.log(getTime()-x);
+  if (leds.animode) {console.log(getTime()-x);}
 }
 
 
@@ -33,10 +33,8 @@ function onPageRequest(req, res) {
   if (a.pathname.split(".")[1]=="cmd"){
   	if (handleCmd(a.pathname,a.query,res)) {
   		res.writeHead(200,{'Access-Control-Allow-Origin':'*'});
-  		res.end("OK");
-  	} else {
-  		res.end();
-  	}
+  	} 
+  	res.end();
   } else {
 	res.writeHead(404);
 	res.end("NOT FOUND");	
@@ -62,10 +60,11 @@ function handleCmd(pn,q,r) {
     	return 0;
     }
     if (!leds.load(q.index)){
-    	r.writeHead(400);
+    	r.writeHead(404);
     	r.write("No such pattern");
     	return 0;
     }
+    r.write("OK");
     return 1;
   }if (pn=="/showState.cmd") {
     //lreq=a.query;
@@ -74,9 +73,11 @@ function handleCmd(pn,q,r) {
   }if (pn=="/setAll.cmd") {
     //lreq=a.query;
     leds.setAll(eval(q.color),eval(q.mode),eval(q.max),eval(q.min));
+    r.write("OK");
     return 1;
   }else if (pn=="/setPixel.cmd") {
     leds.setPixel2(q.led,0,eval(q.color),eval(q.mode),eval(q.max),eval(q.min));
+    r.write("OK");
     return 1;
   } else {
   	r.writeHead(404);
@@ -91,7 +92,7 @@ function handleCmd(pn,q,r) {
 	}
 }
 
-
+/*
 var memmap={
 	slen:32,
 	rlen:40,
@@ -100,7 +101,24 @@ var memmap={
 	sEep:eeprom,
 	oEep:eeprom,
 	oOff:0x800,
-	statMax:64
+	oMax:64,
+	oIEE:eeprom,
+	oIOF:0
+};
+
+*/
+ //512kbit
+var memmap={
+	slen:32,
+	rlen:40,
+	statOff:0x2000,
+	statMax:192,
+	sEep:eeprom,
+	oEep:eeprom,
+	oOff:0x8000,
+	oMax:1024,
+	oIEE:eeprom,
+	oIOF:0
 };
 
 
@@ -153,47 +171,56 @@ leds.dotwinkle = function () {
 			this.overlay=this.map.oEep.read(this.aniaddr+this.map.slen*this.aniframe++,this.num*3);
 		}
 	}
-	
-	for (var i=0;i<this.num*3;i++){
-		var mode=tm[i];
-		var mo=mode&0x0F;
-		var pr=mode>>4;
-		if (!(this.animode&2)) {
-			if (mo==1) { //0x01 - high nybble is chance to change, from 0 (1/16) to 15 (16/16 chance to change)
-				var n=Math.random(); //3ms
-				var th=(pr+1)/32;
-      				if (n<0.5+th){ //8ms
-      					if(n<=(0.5-th) && t[i]>ti[i]){t[i]--;}
-	      			} else {
-      					if (t[i]<ta[i]){t[i]++;}
-      				}
-			} else if (mo==2) { //fade/pulse. 
-          			if (this.afr%((1+pr)&7)==0){
-            				t[i]+=(pr&8?1:-1);
-					if (t[i] == ti[i] || t[i] == ta[i]) {
-						tm[i]=mode^128;
-					}
-        			}
-			} else {
-				if (t[i]!==0){if(t[i]>0){t[i]--;} else {t[i]++;}}
+	if (this.animode & 4 ){
+		leds.tclb.set(o);
+    } else if (this.animode & 2){
+        for (var i=0;i<30;i++){
+          leds.tclb[i]=b[i]+t[i]+o[i];
+        }
+	} else {
+		for (var i=0;i<30;i++){
+			var mode=tm[i];
+			var mo=mode&0x0F;
+			var pr=mode>>4;
+			if (!(this.animode&2)) {
+				if (mo==1) { //0x01 - high nybble is chance to change, from 0 (1/16) to 15 (16/16 chance to change)
+					var n=Math.random(); //3ms
+					var th=(pr+1)/32;
+	      				if (n<0.5+th){ //8ms
+	      					if(n<=(0.5-th) && t[i]>ti[i]){t[i]--;}
+		      			} else {
+	      					if (t[i]<ta[i]){t[i]++;}
+	      				}
+				} else if (mo==2) { //fade/pulse. 
+	          			if (this.afr%((1+pr)&7)==0){
+	            				t[i]+=(pr&8?1:-1);
+						if (t[i] == ti[i] || t[i] == ta[i]) {
+							tm[i]=mode^128;
+						}
+	        			}
+				} else {
+					if (t[i]!==0){if(t[i]>0){t[i]--;} else {t[i]++;}}
+				}
 			}
+			var c=b[i];
+			if (mo || this.afr%((1+pr)&7)==0) {
+				b[i]+=E.clip(z[i]-c,-1,1);
+			}
+			leds.tclb[i]=c+(c?t[i]:0)+o[i]; //10ms
 		}
-		var c=b[i];
-		if (mo || this.afr%((1+pr)&7)==0) {
-			b[i]+=E.clip(z[i]-c,-1,1);
-		}
-		leds.tclb[i]=c+(c?t[i]:0)+o[i]; //10ms
 	}
 	this.afr=this.afr==255?0:this.afr+1;
 };
 
-leds.setAll= function (color,tmode,tmax,tmin) {
+leds.setAll= function (color,tmode,tmax,tmin,instant) {
 	for (var i=0;i<this.num;i++) {
 		for (j=0;j<3;j++){
-			//this.t[3*i+j]=0;
+			
 			this.tbuf[3*i+j]=color[j];
+            if (instant) {this.buff[3*i+j]=color[j];}
 			if (tmode) {
 				this.tm[3*i+j]=tmode[j];
+				if (tmode[j]&0x02) {this.t[3*i+j]=0;} //reset it if we're making it pulse, since the pulse animations will assume 
 				this.ti[3*i+j]=tmin[j];
 				this.ta[3*i+j]=tmax[j];
 			}
@@ -219,12 +246,12 @@ leds.del = function (index) {
 	t.fill("\xFF");
 	this.map.sEep.write(this.map.statOff+(4*index*this.map.slen),t);
 };
-leds.setAnimate = function (mode,address,frames){
-  leds.anilast=frames;
-  leds.aniaddr=address;
-  leds.animode=mode;
-};
 
+leds.setAnimate = function (address){
+  leds.anilast=this.map.oEep.read(address+30);
+  leds.aniaddr=this.map.oOff+address*this.map.slen;
+  leds.animode=this.map.oEep.read(address+31);
+};
 leds.save = function (index) {
 	var s=this.map.slen;
 	var addr=this.map.statOff+(4*index*s);
@@ -250,9 +277,11 @@ leds.adjAll=function (color) {
 	}
 };
 
-leds.setPixel2 = function (x, y, color,mode,mintwi,maxtwi) {
+leds.setPixel2 = function (x, y, color,mode,mintwi,maxtwi,instant) {
 	x*=3;
 	for (var i=0;i<3;i++){
+		this.tbuf[x+i]=color[i];
+      if (instant) {this.buff[x+i]=color[i];}
 		this.tbuf[x+i]=color[i];
 		this.tm[x+i]=mode[i];
 		this.ta[x+i]=maxtwi[i];
