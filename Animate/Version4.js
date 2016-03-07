@@ -357,7 +357,7 @@ leds.load = function (index) {
 	return 1;
 };
 
-leds.delBase = function (index) {
+leds.delete = function (index) {
 	var t=new Uint8Array(this.map.slen*4);
 	t.fill("\xFF");
 	this.map.sEep.write(this.map.statOff+(4*index*this.map.slen),t);
