@@ -1,4 +1,31 @@
 
+/*
+
+Scene format:
+
+16-bit fields: 
+
+[Base ID, interval for events, (Random 0) (Random 1) (Random 2) (Random 3) (Random 4) (Random 5) (Random 6) ] //32 bytes
+[Event 0 through 15] // 32 bytes
+
+System supports up to (in theory) 16768 scenes or animation frames.
+
+That corresponds to 512 KB or 256 KB respectively, so more than would realistically be used. 
+
+Scene Event is 16-bit: | S1 |  S0  | A13~A0
+
+S: 
+00: Start animation at this frame
+01: Switch to this other scene
+10: Unused
+11: Special command
+
+
+
+
+
+*/
+
 
 
 SPI1.setup({sck:14,mosi:13,mode:1,order:"msb",baud:4000000});
@@ -25,18 +52,18 @@ function animate() {
   if (leds.animode) {console.log(getTime()-x);}
 }
 
-
+var CORS={'Access-Control-Allow-Origin':'*'}
 // Network
 
 function onPageRequest(req, res) {
   var a = url.parse(req.url, true);
   if (a.pathname.split(".")[1]=="cmd"){
   	if (handleCmd(a.pathname,a.query,res)) {
-  		res.writeHead(200,{'Access-Control-Allow-Origin':'*'});
+  		res.writeHead(200,CORS);
   	} 
   	res.end();
   } else {
-	res.writeHead(404);
+	res.writeHead(404,CORS);
 	res.end("NOT FOUND");	
   }
 }
@@ -52,6 +79,7 @@ function handleCmd(pn,q,r) {
     	return 0;
     }
     leds.save(q.index);
+    r.write("OK");
     return 1;
   } if (pn=="/load.cmd") {
     if (q.index==undefined || q.index>memmap.statMax || q.index < 0) {
@@ -60,7 +88,7 @@ function handleCmd(pn,q,r) {
     	return 0;
     }
     if (!leds.load(q.index)){
-    	r.writeHead(404);
+    	r.writeHead(404,CORS);
     	r.write("No such pattern");
     	return 0;
     }
@@ -70,7 +98,17 @@ function handleCmd(pn,q,r) {
     //lreq=a.query;
     r.write(JSON.stringify({"base":leds.tbuf,"twinkle":[leds.tm,leds.ti,leds.ta]}));
     return 1;
-  }if (pn=="/setAll.cmd") {
+  }if (pn=="/setScene.cmd") {
+    //lreq=a.query;
+    leds.setScene(q.scene);
+    r.write("OK");
+    return 1;
+  }else if (pn=="/event.cmd") {
+    //lreq=a.query;
+    leds.sceneVect(eval(q.vector));
+    r.write("OK");
+    return 1;
+  }else if (pn=="/setAll.cmd") {
     //lreq=a.query;
     leds.setAll(eval(q.color),eval(q.mode),eval(q.max),eval(q.min));
     r.write("OK");
@@ -80,13 +118,13 @@ function handleCmd(pn,q,r) {
     r.write("OK");
     return 1;
   } else {
-  	r.writeHead(404);
+  	r.writeHead(404,CORS);
 	r.write("NO CMD");
   	return 0;
   }
 	} 
 	catch (err) {
-		r.writeHead(500);
+		r.writeHead(500,CORS);
 		r.write("ERROR");
 		return 0;
 	}
@@ -121,7 +159,7 @@ var memmap={
 	oIOF:0,
 	scEE:eeprom,
 	scOF:0x1000,
-	scMX:128
+	scMX:64
 };
 
 // LEDS
@@ -154,15 +192,28 @@ leds.aniframe=0;
 leds.anilast=0;
 leds.aniaddr=0;
 leds.zz="\x00\x00";
+leds.sceneid=0;
+leds.lastscene=0;
 
-leds.setScene(id) {
+leds.setScene = function(id) {
 	if (id > this.map.scMX || id <0) { return 0;}
-	var adr=this.map.scOF+id*32;
-	if (this.map.scEE.read(adr,1)[0]=255) { return 0; }
+	var adr=this.map.scOF+id*64;
+	if (this.map.scEE.read(adr,1)[0]==255) { return 0; }
 	//now we've passed sanity checks, use the new scene:
 	if (this.scenetimer) {clearTimeout(this.scenetimer);this.scenetimer=0;}
 	this.scene.set(this.map.scEE.read(adr,32));
-	
+	this.lastscene=this.sceneid;
+	this.sceneid=id;
+		
+};
+
+leds.sceneEvent = function (event) {
+
+}
+leds.sceneVect = function (id) {
+	var adr=this.map.scOF+this.sceneid*64;
+	var z=this.map.scEE.read(adr+32+id,2);
+	this.sceneEvent(z[1]+(z[0]<<8));
 }
 
 leds.dotwinkle = function () {
