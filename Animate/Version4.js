@@ -20,6 +20,13 @@ S:
 10: Unused
 11: Special command
 
+11cc ccc ffff fff
+c0~5: Command
+1: Resume last scene. 
+
+f0~7: Flags
+Bit 0: Reset twinkle
+
 
 
 
@@ -81,7 +88,7 @@ function handleCmd(pn,q,r) {
     leds.save(q.index);
     r.write("OK");
     return 1;
-  } if (pn=="/load.cmd") {
+  } else if (pn=="/load.cmd") {
     if (q.index==undefined || q.index>memmap.statMax || q.index < 0) {
     	r.write("MAX INDEX:");
     	r.write(memmap.statMax);
@@ -94,11 +101,24 @@ function handleCmd(pn,q,r) {
     }
     r.write("OK");
     return 1;
-  }if (pn=="/showState.cmd") {
+  }else if (pn=="/delete.cmd") {
+    if (q.index==undefined || q.index>memmap.statMax || q.index < 0) {
+    	r.write("MAX INDEX:");
+    	r.write(memmap.statMax);
+    	return 0;
+    }
+    if (!leds.delete(q.index)){
+    	r.writeHead(404,CORS);
+    	r.write("No such pattern");
+    	return 0;
+    }
+    r.write("OK");
+    return 1;
+  } else if (pn=="/showState.cmd") {
     //lreq=a.query;
     r.write(JSON.stringify({"base":leds.tbuf,"twinkle":[leds.tm,leds.ti,leds.ta]}));
     return 1;
-  }if (pn=="/setScene.cmd") {
+  } else if (pn=="/setScene.cmd") {
     //lreq=a.query;
     leds.setScene(q.scene);
     r.write("OK");
@@ -194,6 +214,7 @@ leds.aniaddr=0;
 leds.zz="\x00\x00";
 leds.sceneid=0;
 leds.lastscene=0;
+leds.scenetime=0;
 
 leds.setScene = function(id) {
 	if (id > this.map.scMX || id <0) { return 0;}
@@ -204,11 +225,41 @@ leds.setScene = function(id) {
 	this.scene.set(this.map.scEE.read(adr,32));
 	this.lastscene=this.sceneid;
 	this.sceneid=id;
-		
-};
+	this.scenetime=
+}; 
+
+leds.sceneRand = function () {
+	var adr=this.map.scOF+this.sceneid*64+4;
+	for (var i=0;i<14;i+=2) {
+		var t = 65536*Math.random();
+		var c = this.map.scEE.read(adr+i,2);
+		c=c[0]<<8+c[1];
+		if (t < c) {
+			c=this.map.scEE.read(adr+i+2,2);
+			c=c[0]<<8+c[1];
+			sceneEvent(c)
+			break;
+		}
+	}
+}
 
 leds.sceneEvent = function (event) {
-
+	var t=event&0x3FFF;
+	event=event>>14;
+	if (event == 0) {
+		return this.setScene(t);
+	} else if (event ==1) {
+		return this.setAnimation(t);
+	} else if (event ==3) {
+		var cmd=t>>8;
+		if (t&1) { //blank current twinkle
+			this.t.fill(0);
+		} 
+		if (cmd==1) {
+			return this.setScene(this.lastscene);
+		}
+	}
+	return 0;
 }
 leds.sceneVect = function (id) {
 	var adr=this.map.scOF+this.sceneid*64;
@@ -244,20 +295,21 @@ leds.dotwinkle = function () {
 	} else {
 		for (var i=0;i<30;i++){
 			var mode=tm[i];
-			var mo=mode&0x0F;
+			var mo=mode&0x03;
+			var s=1+(mode&12)>>2;
 			var pr=mode>>4;
 			if (!(this.animode&2)) {
 				if (mo==1) { //0x01 - high nybble is chance to change, from 0 (1/16) to 15 (16/16 chance to change)
 					var n=Math.random(); //3ms
 					var th=(pr+1)/32;
 	      				if (n<0.5+th){ //8ms
-	      					if(n<=(0.5-th) && t[i]>ti[i]){t[i]--;}
+	      					if(n<=(0.5-th) && t[i]>ti[i]){t[i]-=s;}
 		      			} else {
-	      					if (t[i]<ta[i]){t[i]++;}
+	      					if (t[i]<ta[i]){t[i]+=s;}
 	      				}
 				} else if (mo==2) { //fade/pulse. 
 	          			if (this.afr%((1+pr)&7)==0){
-	            				t[i]+=(pr&8?1:-1);
+	            				t[i]=E.clip(t[i]+pr&8?s:-1*s,ti[i],ta[i]);
 						if (t[i] == ti[i] || t[i] == ta[i]) {
 							tm[i]=mode^128;
 						}
@@ -305,7 +357,7 @@ leds.load = function (index) {
 	return 1;
 };
 
-leds.del = function (index) {
+leds.delBase = function (index) {
 	var t=new Uint8Array(this.map.slen*4);
 	t.fill("\xFF");
 	this.map.sEep.write(this.map.statOff+(4*index*this.map.slen),t);
@@ -316,6 +368,7 @@ leds.setAnimate = function (address){
   leds.aniaddr=this.map.oOff+address*this.map.slen;
   leds.animode=this.map.oEep.read(address+31);
 };
+
 leds.save = function (index) {
 	var s=this.map.slen;
 	var addr=this.map.statOff+(4*index*s);
