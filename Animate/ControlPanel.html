@@ -36,7 +36,11 @@
       return val;
     }
     
-    
+    function updateSummary(){
+      for (i=0;i<10;i++) {
+        document.getElementById("
+      } 
+    }
     
     function updateCode(){
       var address=parseInt(startaddress)+parseInt(32*document.getElementById("addr").value);
@@ -96,6 +100,58 @@
       <input type="range" id="greenMax"></input>
       <input type="range" id="blueMax"></input>
     </div>
+    </div>
+    <div> 
+    <table>
+    <tr>
+      <td><button>SET</button><button>LOAD</button></td>
+      <td><button>SET</button><button>LOAD</button></td>
+      <td><button>SET</button><button>LOAD</button></td>
+      <td><button>SET</button><button>LOAD</button></td>
+      <td><button>SET</button><button>LOAD</button></td>
+      <td><button>SET</button><button>LOAD</button></td>
+      <td><button>SET</button><button>LOAD</button></td>
+      <td><button>SET</button><button>LOAD</button></td>
+      <td><button>SET</button><button>LOAD</button></td>
+      <td><button>SET</button><button>LOAD</button></td>
+    </tr> 
+    <tr>
+      <td id="tabr_led0"> </td>
+      <td id="tabr_led1"> </td>
+      <td id="tabr_led2"> </td>
+      <td id="tabr_led3"> </td>
+      <td id="tabr_led4"> </td>
+      <td id="tabr_led5"> </td>
+      <td id="tabr_led6"> </td>
+      <td id="tabr_led7"> </td>
+      <td id="tabr_led8"> </td>
+      <td id="tabr_led9"> </td>
+    </tr>
+    <tr>
+      <td id="tabg_led0"> </td>
+      <td id="tabg_led1"> </td>
+      <td id="tabg_led2"> </td>
+      <td id="tabg_led3"> </td>
+      <td id="tabg_led4"> </td>
+      <td id="tabg_led5"> </td>
+      <td id="tabg_led6"> </td>
+      <td id="tabg_led7"> </td>
+      <td id="tabg_led8"> </td>
+      <td id="tabg_led9"> </td>
+    </tr>
+    <tr>
+      <td id="tabb_led0"> </td>
+      <td id="tabb_led1"> </td>
+      <td id="tabb_led2"> </td>
+      <td id="tabb_led3"> </td>
+      <td id="tabb_led4"> </td>
+      <td id="tabb_led5"> </td>
+      <td id="tabb_led6"> </td>
+      <td id="tabb_led7"> </td>
+      <td id="tabb_led8"> </td>
+      <td id="tabb_led9"> </td>
+    </tr>
+    </table>
     </div>
   </body>
 </html>
