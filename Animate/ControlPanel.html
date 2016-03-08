@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <style type="text/css">
+    textarea {
+  white-space: pre;
+  word-wrap: normal;
+  overflow-x: scroll;
+}
+    </style>
+    <meta charset="utf-8">
+    <title>title</title>
+    <script type="text/javascript">
+    window.onload = onStart;
+    startaddress=0x8000;
+    function onStart() {
+      ledvals=new Uint8Array(30);
+      animode=new Uint8Array(30);
+      animin=new Int8Array(30);
+      animax=new Int8Array(30);
+      
+    }
+    function fixZero(val) {
+      if (val=="0x00"){
+        return "0";
+      } else if (val==",0x00"){
+        return ",0"
+      }
+      return val;
+    }
+    function updateCode(){
+      var address=parseInt(startaddress)+parseInt(32*document.getElementById("addr").value);
+    	var ledcount=10;
+    	var slen=32;
+    	var tb=document.getElementById("textbox")
+    	var tline="";
+    	tb.value="";
+    	for (i=0;i<framemax;i++){
+    	  if (!(i%4)) {
+    		  tline="leds.map.oEep.write("+address+",[";
+    	  }
+    		for (j=0;j<ledcount;j++){
+    			var cp=document.getElementById("LED"+j+"Frame"+i);
+    			var cpv=cp.value;
+    			tline+=fixZero("0x"+(cpv.substring(1,3)))+fixZero(",0x"+(cpv.substring(3,5)))+fixZero(",0x"+(cpv.substring(5,7)))+(j+1==ledcount?"":",");
+    			}
+    		  
+        
+    		address+=32;
+        if (i==0) {
+            tline+=","+framemax+","+document.getElementById("mode").value+",";
+        }
+    		if ((i)%4==3||i+1==framemax){
+      		tline+=",0,0]);\r\n";
+      		tb.value+=tline;
+          tline="";
+      	} else if (i){
+      	  tline+=",0,0 ,"; 
+      	} 
+        console.log(tline);
+        console.log(i);
+        console.log(framemax);
+}
+    	}
+
+    function doIt() {
+    	var table=document.getElementById("colTable");
+    	var row=table.insertRow(-1);
+    	for (k=0;k<10;k++) {
+    		var cell=row.insertCell(k);
+    		cell.innerHTML='<input type="color" id="LED'+k+'Frame'+framemax+'" onchange="updateCode()" value="'+(framemax?document.getElementById("LED"+k+"Frame"+(framemax-1)).value:"#000000")+'" style="width:20px;">'
+    	}
+      framemax+=1;
+    }
+    </script>
+  </head>
+  <body width="100%;">
+  </body>
+</html>
+
