@@ -14,11 +14,18 @@
     window.onload = onStart;
     startaddress=0x8000;
     function onStart() {
-      ledvals=new Uint8Array(30);
-      animode=new Uint8Array(30);
-      animin=new Int8Array(30);
-      animax=new Int8Array(30);
-      
+      var leds= {
+        base=new Uint8Array(30);
+      animate= [
+        new Uint8Array(30),
+        new Int8Array(30),
+        new Int8Array(30)
+      ];
+      currentindex=0;
+      getStatus();
+    }
+    function getStatus() {
+      alert("Not yet implemented");
     }
     function fixZero(val) {
       if (val=="0x00"){
@@ -28,6 +35,9 @@
       }
       return val;
     }
+    
+    
+    
     function updateCode(){
       var address=parseInt(startaddress)+parseInt(32*document.getElementById("addr").value);
     	var ledcount=10;
@@ -63,18 +73,30 @@
 }
     	}
 
-    function doIt() {
-    	var table=document.getElementById("colTable");
-    	var row=table.insertRow(-1);
-    	for (k=0;k<10;k++) {
-    		var cell=row.insertCell(k);
-    		cell.innerHTML='<input type="color" id="LED'+k+'Frame'+framemax+'" onchange="updateCode()" value="'+(framemax?document.getElementById("LED"+k+"Frame"+(framemax-1)).value:"#000000")+'" style="width:20px;">'
-    	}
-      framemax+=1;
-    }
+
     </script>
   </head>
   <body width="100%;">
+    <div> 
+      <input type="radio"></input>
+    </div>
+    <div>
+    <div>
+      <input type="range" id="redBase"></input>
+      <input type="range" id="greenBase"></input>
+      <input type="range" id="blueBase"></input>
+    </div>
+    <div>
+      <input type="range" id="redMin"></input>
+      <input type="range" id="greenMin"></input>
+      <input type="range" id="blueMin"></input>
+    </div>
+    <div>
+      <input type="range" id="redMax"></input>
+      <input type="range" id="greenMax"></input>
+      <input type="range" id="blueMax"></input>
+    </div>
+    </div>
   </body>
 </html>
 
