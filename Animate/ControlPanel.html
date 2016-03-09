@@ -26,6 +26,16 @@
     }
     function getStatus() {
       alert("Not yet implemented");
+      var xmlhttp = new XMLHttpRequest();
+      var url = "showStatus.cmd";
+      xmlhttp.onreadystatechange = function() {
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+          leds = eval(xmlhttp.responseText);
+          updateSummary();
+        }
+      };
+      xmlhttp.open("GET", url, true);
+      xmlhttp.send();
     }
     function fixZero(val) {
       if (val=="0x00"){
@@ -86,22 +96,22 @@
     </div>
     <div>
     <div>
-      <input type="range" id="redBase"></input>
-      <input type="range" id="greenBase"></input>
-      <input type="range" id="blueBase"></input>
+      <input type="range" id="redBase" min=0 max=255 value=0></input>
+      <input type="range" id="greenBase" min=0 max=255 value=0></input>
+      <input type="range" id="blueBase" min=0 max=255 value=0></input>
     </div>
     <div>
       <input type="radio"></input>
     </div>
     <div>
-      <input type="range" id="redMin"></input>
-      <input type="range" id="greenMin"></input>
-      <input type="range" id="blueMin"></input>
+      <input type="range" id="redMin" min=-128 max=0 value=0></input>
+      <input type="range" id="greenMin" min=-128 max=0 value=0></input>
+      <input type="range" id="blueMin" min=-128 max=0 value=0></input>
     </div>
     <div>
-      <input type="range" id="redMax"></input>
-      <input type="range" id="greenMax"></input>
-      <input type="range" id="blueMax"></input>
+      <input type="range" id="redMax" min=0 max=127 value=0></input>
+      <input type="range" id="greenMax" min=0 max=127 value=0></input>
+      <input type="range" id="blueMax" min=0 max=127 value=0></input>
     </div>
     </div>
     <div> 
