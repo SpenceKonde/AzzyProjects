@@ -1,4 +1,38 @@
 
+/*
+
+Scene format:
+
+16-bit fields: 
+
+[Base ID, interval for events, (Random 0) (Random 1) (Random 2) (Random 3) (Random 4) (Random 5) (Random 6) ] //32 bytes
+[Event 0 through 15] // 32 bytes
+
+System supports up to (in theory) 16768 scenes or animation frames.
+
+That corresponds to 512 KB or 256 KB respectively, so more than would realistically be used. 
+
+Scene Event is 16-bit: | S1 |  S0  | A13~A0
+
+S: 
+00: Start animation at this frame
+01: Switch to this other scene
+10: Unused
+11: Special command
+
+11cc ccc ffff fff
+c0~5: Command
+1: Resume last scene. 
+
+f0~7: Flags
+Bit 0: Reset twinkle
+
+
+
+
+
+*/
+
 
 
 SPI1.setup({sck:14,mosi:13,mode:1,order:"msb",baud:4000000});
@@ -25,7 +59,7 @@ function animate() {
   if (leds.animode) {console.log(getTime()-x);}
 }
 
-var CORS={'Access-Control-Allow-Origin':'*'}
+var CORS={'Access-Control-Allow-Origin':'*'};
 // Network
 
 function onPageRequest(req, res) {
@@ -52,8 +86,9 @@ function handleCmd(pn,q,r) {
     	return 0;
     }
     leds.save(q.index);
+    r.write("OK");
     return 1;
-  } if (pn=="/load.cmd") {
+  } else if (pn=="/load.cmd") {
     if (q.index==undefined || q.index>memmap.statMax || q.index < 0) {
     	r.write("MAX INDEX:");
     	r.write(memmap.statMax);
@@ -66,11 +101,34 @@ function handleCmd(pn,q,r) {
     }
     r.write("OK");
     return 1;
-  }if (pn=="/showState.cmd") {
+  }else if (pn=="/delete.cmd") {
+    if (q.index==undefined || q.index>memmap.statMax || q.index < 0) {
+    	r.write("MAX INDEX:");
+    	r.write(memmap.statMax);
+    	return 0;
+    }
+    if (!leds.delete(q.index)){
+    	r.writeHead(404,CORS);
+    	r.write("No such pattern");
+    	return 0;
+    }
+    r.write("OK");
+    return 1;
+  } else if (pn=="/showState.cmd") {
     //lreq=a.query;
     r.write(JSON.stringify({"base":leds.tbuf,"twinkle":[leds.tm,leds.ti,leds.ta]}));
     return 1;
-  }if (pn=="/setAll.cmd") {
+  } else if (pn=="/setScene.cmd") {
+    //lreq=a.query;
+    leds.setScene(q.scene);
+    r.write("OK");
+    return 1;
+  }else if (pn=="/event.cmd") {
+    //lreq=a.query;
+    leds.sceneVect(eval(q.vector));
+    r.write("OK");
+    return 1;
+  }else if (pn=="/setAll.cmd") {
     //lreq=a.query;
     leds.setAll(eval(q.color),eval(q.mode),eval(q.max),eval(q.min));
     r.write("OK");
@@ -121,11 +179,10 @@ var memmap={
 	oIOF:0,
 	scEE:eeprom,
 	scOF:0x1000,
-	scMX:128
+	scMX:64
 };
 
 // LEDS
-gtab=new Uint16Array(256);
 gtab=new Uint16Array([0,1,2,3,4,5,6,7,8,9,11,13,15,17,19,21,23,25,27,30,33,36,39,42,45,48,51,54,58,62,66,70,74,78,82,86,91,96,101,106,111,116,121,126,132,138,144,150,156,162,168,174,181,188,195,202,209,216,223,230,238,246,254,262,270,278,286,294,303,312,321,330,339,348,357,366,376,386,396,406,416,426,436,446,457,468,479,490,501,512,523,534,546,558,570,582,594,606,618,630,643,656,669,682,695,708,721,734,748,762,776,790,804,818,832,846,861,876,891,906,921,936,951,966,982,998,1014,1030,1046,1062,1078,1094,1111,1128,1145,1162,1179,1196,1213,1230,1248,1266,1284,1302,1320,1338,1356,1374,1393,1412,1431,1450,1469,1488,1507,1526,1546,1566,1586,1606,1626,1646,1666,1686,1707,1728,1749,1770,1791,1812,1833,1854,1876,1898,1920,1942,1964,1986,2008,2030,2053,2076,2099,2122,2145,2168,2191,2214,2238,2262,2286,2310,2334,2358,2382,2406,2431,2456,2481,2506,2531,2556,2581,2606,2631,2657,2683,2709,2735,2761,2787,2813,2839,2866,2893,2920,2947,2974,3001,3028,3055,3083,3111,3139,3167,3195,3223,3251,3279,3308,3337,3366,3395,3424,3453,3482,3511,3541,3571,3601,3631,3661,3691,3721,3751,3782,3813,3844,3875,3906,3937,3968,3999,4031,4063,4095]);
 var leds = {};
 leds.map=memmap;
@@ -142,28 +199,17 @@ leds.ta=new Int8Array(numleds*3);
 leds.overlay=new Uint8Array(numleds*3);
 leds.tclb=new Uint8ClampedArray(numleds*3);
 leds.scene=new Uint16Array(16);
-for (var tem=0;tem<numleds;tem++){
-	for (var j=0;j<3;j++){
-		leds.ti[tem*3+j]=-10;
-		leds.ta[tem*3+j]=10;
-	}
-}
 leds.ison=1;
 leds.animode=0;
 leds.aniframe=0;
 leds.anilast=0;
 leds.aniaddr=0;
 leds.zz="\x00\x00";
+leds.sceneid=0;
+leds.lastscene=0;
+leds.scenetime=0;
 
-leds.setScene = function(id) {
-	if (id > this.map.scMX || id <0) { return 0;}
-	var adr=this.map.scOF+id*32;
-	if (this.map.scEE.read(adr,1)[0]==255) { return 0; }
-	//now we've passed sanity checks, use the new scene:
-	if (this.scenetimer) {clearTimeout(this.scenetimer);this.scenetimer=0;}
-	this.scene.set(this.map.scEE.read(adr,32));
-	
-};
+
 
 leds.dotwinkle = function () {
 	var t=this.t;
@@ -193,20 +239,21 @@ leds.dotwinkle = function () {
 	} else {
 		for (var i=0;i<30;i++){
 			var mode=tm[i];
-			var mo=mode&0x0F;
+			var mo=mode&0x03;
+			var s=1+((mode&12)>>2);
 			var pr=mode>>4;
 			if (!(this.animode&2)) {
 				if (mo==1) { //0x01 - high nybble is chance to change, from 0 (1/16) to 15 (16/16 chance to change)
 					var n=Math.random(); //3ms
 					var th=(pr+1)/32;
 	      				if (n<0.5+th){ //8ms
-	      					if(n<=(0.5-th) && t[i]>ti[i]){t[i]--;}
+	      					if(n<=(0.5-th) && t[i]>ti[i]){t[i]-=s;}
 		      			} else {
-	      					if (t[i]<ta[i]){t[i]++;}
+	      					if (t[i]<ta[i]){t[i]+=s;}
 	      				}
 				} else if (mo==2) { //fade/pulse. 
 	          			if (this.afr%((1+pr)&7)==0){
-	            				t[i]+=(pr&8?1:-1);
+	            				t[i]=E.clip(t[i]+pr&8?s:-1*s,ti[i],ta[i]);
 						if (t[i] == ti[i] || t[i] == ta[i]) {
 							tm[i]=mode^128;
 						}
@@ -254,7 +301,7 @@ leds.load = function (index) {
 	return 1;
 };
 
-leds.del = function (index) {
+leds.delete = function (index) {
 	var t=new Uint8Array(this.map.slen*4);
 	t.fill("\xFF");
 	this.map.sEep.write(this.map.statOff+(4*index*this.map.slen),t);
@@ -265,6 +312,7 @@ leds.setAnimate = function (address){
   leds.aniaddr=this.map.oOff+address*this.map.slen;
   leds.animode=this.map.oEep.read(address+31);
 };
+
 leds.save = function (index) {
 	var s=this.map.slen;
 	var addr=this.map.statOff+(4*index*s);
@@ -276,18 +324,6 @@ leds.setPixel = function (x, y, color) {
 	this.tbuf[x*3]=color[0];
 	this.tbuf[x*3+1]=color[1];
 	this.tbuf[x*3+2]=color[2];
-};
-
-leds.adjPixel=function (led,color) {
-	this.tbuf[led*3]+=color[0];
-	this.tbuf[led*3+1]+=color[1];
-	this.tbuf[led*3+2]+=color[2];
-};
-
-leds.adjAll=function (color) {
-	for (var i=0;i<this.num;i++){
-		this.adjPixel(i,color);
-	}
 };
 
 leds.setPixel2 = function (x, y, color,mode,mintwi,maxtwi,instant) {
@@ -336,12 +372,6 @@ leds.flip = function () {
 	this.spi.write(0,0,0,0,this.fbuf,0xFF,0xFF,0xFF,0xFF);
 };
 
-leds.zflip = function () {
-	var ca=startAddr+(frameLength*curFrame++);
-	this.fbuf=eep.read(ca,frameLength);
-	this.spi.write(0,0,0,0,this.fbuf,0xFF,0xFF,0xFF,0xFF);
-};
-
 
 setBusyIndicator(2);
-leds.setPixel(0,0,[0,255,255]);
+leds.setPixel2(0,0,[0,255,255],[0,0,0],[0,0,0],[0,0,0]);
