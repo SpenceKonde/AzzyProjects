@@ -189,16 +189,6 @@ leds.map=memmap;
 leds.spi=SPI1;
 leds.num=numleds;
 leds.afr=0;
-leds.fbuf=new Uint8Array(numleds*4);
-leds.buff=new Uint8Array(numleds*3);
-leds.tbuf=new Uint8ClampedArray(numleds*3);
-leds.t=new Int8Array(numleds*3);
-leds.tm=new Uint8Array(numleds*3);
-leds.ti=new Int8Array(numleds*3);
-leds.ta=new Int8Array(numleds*3);
-leds.overlay=new Uint8Array(numleds*3);
-leds.tclb=new Uint8ClampedArray(numleds*3);
-leds.scene=new Uint16Array(16);
 leds.ison=1;
 leds.animode=0;
 leds.aniframe=0;
@@ -209,6 +199,9 @@ leds.sceneid=0;
 leds.lastscene=0;
 leds.scenetime=0;
 
+/* 
+Animation functions, dotwinkle and flip, are located here. 
+*/
 
 
 leds.dotwinkle = function () {
@@ -272,6 +265,44 @@ leds.dotwinkle = function () {
 	this.afr=this.afr==255?0:this.afr+1;
 };
 
+leds.flip = function () {
+	var j=0;
+	var i=0;
+	var z=leds.num*3;
+	while (i<z) {
+      var rch=gtab[leds.tclb[i++]];
+		var gch=gtab[leds.tclb[i++]];
+		var bch=gtab[leds.tclb[i++]];
+		
+		var ma = Math.max(rch,gch,bch);
+		var mult=1;
+        var gdim=31;
+		
+			if (ma <390) {
+				gdim=3;
+				mult=10.33;
+			} else if (ma <700) {
+				gdim=7;
+				mult=4.4;
+			} else if (ma <1700) {
+				gdim=15;
+				mult=2.06;
+			} 
+		
+		this.fbuf[j++]=(this.ison?(gdim|224):224);
+		this.fbuf[j++]=(bch?Math.max((bch*mult)>>4,1):0);
+		this.fbuf[j++]=(gch?Math.max((gch*mult)>>4,1):0);
+		this.fbuf[j++]=(rch?Math.max((rch*mult)>>4,1):0);
+
+	}
+
+	this.spi.write(0,0,0,0,this.fbuf,0xFF,0xFF,0xFF,0xFF);
+};
+
+/* 
+LED control functions start here. 
+*/
+
 leds.setAll= function (color,tmode,tmax,tmin,instant) {
 	for (var i=0;i<this.num;i++) {
 		for (j=0;j<3;j++){
@@ -319,13 +350,6 @@ leds.save = function (index) {
 	this.map.sEep.write(addr,E.toString(this.tbuf)+leds.zz+E.toString(this.tm)+leds.zz+E.toString(this.ti)+leds.zz+E.toString(this.ta)+leds.zz);
 };
 
-
-leds.setPixel = function (x, y, color) {
-	this.tbuf[x*3]=color[0];
-	this.tbuf[x*3+1]=color[1];
-	this.tbuf[x*3+2]=color[2];
-};
-
 leds.setPixel2 = function (x, y, color,mode,mintwi,maxtwi,instant) {
 	x*=3;
 	for (var i=0;i<3;i++){
@@ -338,39 +362,66 @@ leds.setPixel2 = function (x, y, color,mode,mintwi,maxtwi,instant) {
 	}
 };
 
-leds.flip = function () {
-	var j=0;
-	var i=0;
-	var z=leds.num*3;
-	while (i<z) {
-      var rch=gtab[leds.tclb[i++]];
-		var gch=gtab[leds.tclb[i++]];
-		var bch=gtab[leds.tclb[i++]];
-		
-		var ma = Math.max(rch,gch,bch);
-		var mult=1;
-        var gdim=31;
-		
-			if (ma <390) {
-				gdim=3;
-				mult=10.33;
-			} else if (ma <700) {
-				gdim=7;
-				mult=4.4;
-			} else if (ma <1700) {
-				gdim=15;
-				mult=2.06;
-			} 
-		
-		this.fbuf[j++]=(this.ison?(gdim|224):224);
-		this.fbuf[j++]=(bch?Math.max((bch*mult)>>4,1):0);
-		this.fbuf[j++]=(gch?Math.max((gch*mult)>>4,1):0);
-		this.fbuf[j++]=(rch?Math.max((rch*mult)>>4,1):0);
 
+leds.setScene = function(id) {
+	if (id > this.map.scMX || id <0) { return 0;}
+	var adr=this.map.scOF+id*64;
+	if (this.map.scEE.read(adr,1)[0]==255) { return 0; }
+	//now we've passed sanity checks, use the new scene:
+	if (this.scenetimer) {clearTimeout(this.scenetimer);this.scenetimer=0;}
+	this.scene.set(this.map.scEE.read(adr,32));
+	this.lastscene=this.sceneid;
+	this.sceneid=id;
+	this.scenetimer=setTimeout(this.sceneRand,this.scene[1]);
+	return 1;
+}; 
+
+leds.sceneRand = function () {
+	for (var i=0;i<14;i+=2) {
+		if (65536*Math.random() < this.scene[i+2]) {
+			return sceneEvent(this.scene[i+3])
+		}
+	}// if we're here, we didn't match anything. 
+	this.scenetimer=setTimeout(this.sceneRand,this.scene[1]);
+}
+
+leds.sceneEvent = function (event) {
+	var t=event&0x3FFF;
+	event=event>>14;
+	if (event == 0) {
+		return this.setScene(t);
+	} else if (event ==1) {
+		return this.setAnimation(t);
+	} else if (event ==3) {
+		//var cmd=t>>8;
+		//if (t&1) { //blank current twinkle
+		//	this.t.fill(0);
+		//} 
+		//if (cmd==1) {
+			return this.setScene(this.lastscene);
+		//}
 	}
+	return 0;
+}
+leds.sceneVect = function (id) {
+	var adr=this.map.scOF+this.sceneid*64;
+	var z=this.map.scEE.read(adr+32+id,2);
+	this.sceneEvent(z[1]+(z[0]<<8));
+}
 
-	this.spi.write(0,0,0,0,this.fbuf,0xFF,0xFF,0xFF,0xFF);
-};
+
+// Do this here, so we don't have these eating up memory while processing the other stuff.
+
+leds.fbuf=new Uint8Array(numleds*4);
+leds.buff=new Uint8Array(numleds*3);
+leds.tbuf=new Uint8ClampedArray(numleds*3);
+leds.t=new Int8Array(numleds*3);
+leds.tm=new Uint8Array(numleds*3);
+leds.ti=new Int8Array(numleds*3);
+leds.ta=new Int8Array(numleds*3);
+leds.overlay=new Uint8Array(numleds*3);
+leds.tclb=new Uint8ClampedArray(numleds*3);
+leds.scene=new Uint16Array(16);
 
 
 setBusyIndicator(2);
