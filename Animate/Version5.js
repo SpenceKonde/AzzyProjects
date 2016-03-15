@@ -80,8 +80,8 @@ require("http").createServer(onPageRequest).listen(80);
 function handleCmd(pn,q,r) {
 	try {
 		if ((q.index!=undefined)&&( q.index>memmap.statMax || q.index < 0)) {
-			r.write("MAX INDEX: "+memmap.statMax);
-		    return 400;
+		r.write("MAX INDEX: "+memmap.statMax);
+		return 400;
 		}
 		if (pn=="/save.cmd") {
 		    return (leds.save(q.index))?200:0;
@@ -93,7 +93,7 @@ function handleCmd(pn,q,r) {
     		r.write(JSON.stringify({"base":leds.tbuf,"twinkle":[leds.tm,leds.ti,leds.ta]}));
     		return 200;
   		} else if (pn=="/setScene.cmd") {
-    		return 1leds.setScene(q.scene)?200:0;
+    		return leds.setScene(q.scene)?200:404;
   		}else if (pn=="/event.cmd") {
     		return leds.sceneVect(eval(q.vector))?200:0;
   		}else if (pn=="/setAll.cmd") {
