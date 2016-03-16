@@ -84,18 +84,18 @@ function handleCmd(pn,q,r) {
 		return 400;
 		}
 		if (pn=="/save.cmd") {
-		    return (leds.save(q.index))?200:0;
+		    return (leds.save(q.index))?200:500;
 	  	} else if (pn=="/load.cmd") {
-		    return leds.load(q.index))?200:404;
+		    return leds.load(q.index)?200:404;
   		}else if (pn=="/delete.cmd") {
-		    return leds.delete(q.index)?200:404;
+		    return leds.del(q.index)?200:404;
 		} else if (pn=="/showState.cmd") {
     		r.write(JSON.stringify({"base":leds.tbuf,"twinkle":[leds.tm,leds.ti,leds.ta]}));
     		return 200;
   		} else if (pn=="/setScene.cmd") {
     		return leds.setScene(q.scene)?200:404;
   		}else if (pn=="/event.cmd") {
-    		return leds.sceneVect(eval(q.vector))?200:0;
+    		return leds.sceneVect(eval(q.vector))?200:500;
   		}else if (pn=="/setAll.cmd") {
     		return leds.setAll(eval(q.color),eval(q.mode),eval(q.max),eval(q.min))?200:0;
   		}else if (pn=="/setPixel.cmd") {
@@ -271,8 +271,7 @@ leds.setAll= function (color,tmode,tmax,tmin,instant) {
 				this.tm[3*i+j]=tmode[j];
 				if (tmode[j]&0x02) {this.t[3*i+j]=0;} //reset it if we're making it pulse, since the pulse animations will assume 
 				this.ti[3*i+j]=tmin[j];
-				this.ta[3*i+j]=tmax[j];
-			}
+				this.ta[3*i+j]=tmax[j];		}
 		}
 	}
 };
@@ -290,11 +289,13 @@ leds.load = function (index) {
 	return 1;
 };
 
-leds.delete = function (index) {
+leds.del = function (index) {
 	var t=new Uint8Array(this.map.slen*4);
 	t.fill("\xFF");
 	this.map.sEep.write(this.map.statOff+(4*index*this.map.slen),t);
 };
+
+
 
 leds.setAnimate = function (address){
   leds.anilast=this.map.oEep.read(address+30);
@@ -337,11 +338,11 @@ leds.setScene = function(id) {
 leds.sceneRand = function () {
 	for (var i=0;i<14;i+=2) {
 		if (65536*Math.random() < this.scene[i+2]) {
-			return sceneEvent(this.scene[i+3])
+			return sceneEvent(this.scene[i+3]);
 		}
 	}// if we're here, we didn't match anything. 
 	this.scenetimer=setTimeout(this.sceneRand,this.scene[1]);
-}
+};
 
 leds.sceneEvent = function (event) {
 	var t=event&0x3FFF;
@@ -360,12 +361,12 @@ leds.sceneEvent = function (event) {
 		//}
 	}
 	return 0;
-}
+};
 leds.sceneVect = function (id) {
 	var adr=this.map.scOF+this.sceneid*64;
 	var z=this.map.scEE.read(adr+32+id,2);
 	this.sceneEvent(z[1]+(z[0]<<8));
-}
+};
 
 
 // Do this here, so we don't have these eating up memory while processing the other stuff.
