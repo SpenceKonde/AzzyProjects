@@ -39,7 +39,7 @@ SPI1.setup({sck:14,mosi:13,mode:1,order:"msb",baud:4000000});
 I2C1.setup({scl:5,sda:4});
 
 var http = require("http");
-var eeprom=require("AT24").connect(I2C1, 32, 32);
+var eeprom=require("AT24").connect(I2C1, 128, 512);
 
 setBusyIndicator(2);
 require("ESP8266").logDebug(0);
@@ -65,7 +65,8 @@ var CORS={'Access-Control-Allow-Origin':'*'};
 function onPageRequest(req, res) {
   var a = url.parse(req.url, true);
   var resu = handleCmd(a.pathname,a.query,res);
-  if (resu) {
+  if (resu == -1) {;}
+  	else if (resu) {
   	res.writeHead(resu,CORS);
   	if (resu==200) {res.write("OK");}
   	else if (resu==404) {res.write("Not Found");}
@@ -90,8 +91,9 @@ function handleCmd(pn,q,r) {
   		}else if (pn=="/delete.cmd") {
 		    return leds.del(q.index)?200:404;
 		} else if (pn=="/showState.cmd") {
-    		r.write(JSON.stringify({"base":leds.tbuf,"twinkle":[leds.tm,leds.ti,leds.ta]}));
-    		return 200;
+			r.writeHead(200,CORS);
+    		r.write(JSON.stringify({"base":leds.tbuf,"twinkle":[leds.tm,leds.ta,leds.ti]}));
+    		return -1;
   		} else if (pn=="/setScene.cmd") {
     		return leds.setScene(q.scene)?200:404;
   		}else if (pn=="/event.cmd") {
@@ -104,6 +106,7 @@ function handleCmd(pn,q,r) {
   			return 404;
 		}
 	} catch (err) {
+		//r.write(err);
 		return 0;
 	}
 }
@@ -204,7 +207,7 @@ leds.dotwinkle = function () {
 	      				}
 				} else if (mo==2) { //fade/pulse. 
 	          			if (this.afr%((1+pr)&7)==0){
-	            				t[i]=E.clip(t[i]+pr&8?s:-1*s,ti[i],ta[i]);
+	            				t[i]=E.clip(t[i]+(pr&8?s:-1*s),ti[i],ta[i]);
 						if (t[i] == ti[i] || t[i] == ta[i]) {
 							tm[i]=mode^128;
 						}
@@ -274,6 +277,7 @@ leds.setAll= function (color,tmode,tmax,tmin,instant) {
 				this.ta[3*i+j]=tmax[j];		}
 		}
 	}
+	return 1;
 };
 
 leds.load = function (index) {
@@ -293,6 +297,7 @@ leds.del = function (index) {
 	var t=new Uint8Array(this.map.slen*4);
 	t.fill("\xFF");
 	this.map.sEep.write(this.map.statOff+(4*index*this.map.slen),t);
+	return 1;
 };
 
 
@@ -301,15 +306,17 @@ leds.setAnimate = function (address){
   leds.anilast=this.map.oEep.read(address+30);
   leds.aniaddr=this.map.oOff+address*this.map.slen;
   leds.animode=this.map.oEep.read(address+31);
+  return 1;
 };
 
 leds.save = function (index) {
 	var s=this.map.slen;
 	var addr=this.map.statOff+(4*index*s);
 	this.map.sEep.write(addr,E.toString(this.tbuf)+leds.zz+E.toString(this.tm)+leds.zz+E.toString(this.ti)+leds.zz+E.toString(this.ta)+leds.zz);
+	return 1;
 };
 
-leds.setPixel2 = function (x, y, color,mode,mintwi,maxtwi,instant) {
+leds.setPixel2 = function (x, y, color,mode,maxtwi,mintwi,instant) {
 	x*=3;
 	for (var i=0;i<3;i++){
 		this.tbuf[x+i]=color[i];
@@ -319,6 +326,7 @@ leds.setPixel2 = function (x, y, color,mode,mintwi,maxtwi,instant) {
 		this.ta[x+i]=maxtwi[i];
 		this.ti[x+i]=mintwi[i];
 	}
+	return 1;
 };
 
 
@@ -328,7 +336,8 @@ leds.setScene = function(id) {
 	if (this.map.scEE.read(adr,1)[0]==255) { return 0; }
 	//now we've passed sanity checks, use the new scene:
 	if (this.scenetimer) {clearTimeout(this.scenetimer);this.scenetimer=0;}
-	this.scene.set(this.map.scEE.read(adr,32));
+	var raw=this.map.scEE.read(adr,32);
+	this.scene=new Uint16Array(raw.buffer);
 	this.lastscene=this.sceneid;
 	this.sceneid=id;
 	this.scenetimer=setTimeout(this.sceneRand,this.scene[1]);

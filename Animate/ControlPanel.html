@@ -15,19 +15,20 @@
     startaddress=0x8000;
     function onStart() {
       var leds= {
-        base=new Uint8Array(30);
-      animate= [
+        "base":new Uint8Array(30),
+      "animate":[
         new Uint8Array(30),
         new Int8Array(30),
         new Int8Array(30)
-      ];
+      ]
+    };
       currentindex=0;
       getStatus();
     }
     function getStatus() {
-      alert("Not yet implemented");
+      //alert("Not yet implemented");
       var xmlhttp = new XMLHttpRequest();
-      var url = "showStatus.cmd";
+      var url = "http://192.168.2.135/showState.cmd?";
       xmlhttp.onreadystatechange = function() {
         if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
           leds = eval(xmlhttp.responseText);
