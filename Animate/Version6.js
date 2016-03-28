@@ -53,10 +53,10 @@ numleds=10;
 function animate() {
   setTimeout("animate()",20);
   var x;
-  if (leds.animode) {x=getTime();}
+  //if (leds.animode) {x=getTime();}
   leds.flip();
   leds.dotwinkle();
-  if (leds.animode) {console.log(getTime()-x);}
+  //if (leds.animode) {console.log(getTime()-x);}
 }
 
 var CORS={'Access-Control-Allow-Origin':'*'};
@@ -174,14 +174,15 @@ leds.dotwinkle = function () {
 	var z=this.tbuf;
 	var o=this.overlay;
 	if (this.animode) {
-		if (this.aniframe > this.anilast) {
+		if (this.aniframe >= this.anilast) {
 			this.animode=0;
 			this.anilast=0;
 			this.aniframe=0;
 			leds.aniaddr=0;
 			this.overlay.fill(0);
 		} else {
-			this.overlay=this.map.oEep.read(this.aniaddr+this.map.slen*this.aniframe++,this.num*3);
+            console.log((this.aniaddr+this.map.slen*(this.aniframe)));
+			this.overlay=this.map.oEep.read(this.aniaddr+this.map.slen*(this.aniframe++),this.num*3);
 		}
 	}
 	if (this.animode & 4 ){
@@ -303,9 +304,11 @@ leds.del = function (index) {
 
 
 leds.setAnimate = function (address){
-  leds.anilast=this.map.oEep.read(address+30);
-  leds.aniaddr=this.map.oOff+address*this.map.slen;
-  leds.animode=this.map.oEep.read(address+31);
+  var addressmod=this.map.oOff+address*this.map.slen;
+  leds.anilast=this.map.oEep.read(addressmod+30,1)[0];
+  leds.aniaddr=addressmod;
+  leds.animode=this.map.oEep.read(addressmod+31,1)[0];
+  console.log("adr"+addressmod+" anilast:"+leds.anilast+" animode:"+leds.animode);
   return 1;
 };
 
@@ -340,26 +343,32 @@ leds.setScene = function(id) {
 	this.scene=new Uint16Array(raw.buffer);
 	this.lastscene=this.sceneid;
 	this.sceneid=id;
+    this.load(this.scene[0]);
 	this.scenetimer=setTimeout(this.sceneRand,this.scene[1]);
 	return 1;
 }; 
 
 leds.sceneRand = function () {
+  leds.scenetimer=undefined;
+  console.log("scr");
 	for (var i=0;i<14;i+=2) {
-		if (65535*Math.random() > this.scene[i+2]) {
-			return sceneEvent(this.scene[i+3]);
+		if (65535*Math.random() > leds.scene[i+2]) {
+            console.log(i);
+			leds.sceneEvent(leds.scene[i+3]);
 		}
 	}// if we're here, we didn't match anything. 
-	this.scenetimer=setTimeout(this.sceneRand,this.scene[1]*10);
+  if (!leds.scenetimer) {	
+    leds.scenetimer=setTimeout(leds.sceneRand,leds.scene[1]*100);
+  }
 };
 
 leds.sceneEvent = function (event) {
 	var t=event&0x3FFF;
 	event=event>>14;
 	if (event == 0) {
-		return this.setScene(t);
+		return this.setAnimate(t);
 	} else if (event ==1) {
-		return this.setAnimation(t);
+		return this.setScene(t);
 	} else if (event ==3) {
 		//var cmd=t>>8;
 		//if (t&1) { //blank current twinkle
