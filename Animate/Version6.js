@@ -142,6 +142,9 @@ var memmap={
 	scOF:0x1000,
 	scMX:64
 };
+scEE=eeprom;
+oEE=eeprom;
+sEE=eeprom;
 
 // LEDS
 gtab=new Uint16Array([0,1,2,3,4,5,6,7,8,9,11,13,15,17,19,21,23,25,27,30,33,36,39,42,45,48,51,54,58,62,66,70,74,78,82,86,91,96,101,106,111,116,121,126,132,138,144,150,156,162,168,174,181,188,195,202,209,216,223,230,238,246,254,262,270,278,286,294,303,312,321,330,339,348,357,366,376,386,396,406,416,426,436,446,457,468,479,490,501,512,523,534,546,558,570,582,594,606,618,630,643,656,669,682,695,708,721,734,748,762,776,790,804,818,832,846,861,876,891,906,921,936,951,966,982,998,1014,1030,1046,1062,1078,1094,1111,1128,1145,1162,1179,1196,1213,1230,1248,1266,1284,1302,1320,1338,1356,1374,1393,1412,1431,1450,1469,1488,1507,1526,1546,1566,1586,1606,1626,1646,1666,1686,1707,1728,1749,1770,1791,1812,1833,1854,1876,1898,1920,1942,1964,1986,2008,2030,2053,2076,2099,2122,2145,2168,2191,2214,2238,2262,2286,2310,2334,2358,2382,2406,2431,2456,2481,2506,2531,2556,2581,2606,2631,2657,2683,2709,2735,2761,2787,2813,2839,2866,2893,2920,2947,2974,3001,3028,3055,3083,3111,3139,3167,3195,3223,3251,3279,3308,3337,3366,3395,3424,3453,3482,3511,3541,3571,3601,3631,3661,3691,3721,3751,3782,3813,3844,3875,3906,3937,3968,3999,4031,4063,4095]);
@@ -181,8 +184,7 @@ leds.dotwinkle = function () {
 			leds.aniaddr=0;
 			this.overlay.fill(0);
 		} else {
-            console.log((this.aniaddr+this.map.slen*(this.aniframe)));
-			this.overlay=this.map.oEep.read(this.aniaddr+this.map.slen*(this.aniframe++),this.num*3);
+			this.overlay=oEE.read(this.aniaddr+this.map.slen*(this.aniframe++),this.num*3);
 		}
 	}
 	if (this.animode & 4 ){
@@ -284,20 +286,20 @@ leds.setAll= function (color,tmode,tmax,tmin,instant) {
 leds.load = function (index) {
 	var s=this.map.slen;
 	var addr=this.map.statOff+(4*index*s);
-	if (this.map.sEep.read(addr+s-1,1)[0]==255) {
+	if (sEE.read(addr+s-1,1)[0]==255) {
 		return 0;
 	}
-	this.tbuf=this.map.sEep.read(addr,this.num*3);
-	this.tm=this.map.sEep.read((addr+s),this.num*3);
-	this.ti=new Int8Array(this.map.sEep.read((addr+s*2),this.num*3));
-	this.ta=new Int8Array(this.map.sEep.read((addr+s*3),this.num*3));
+	this.tbuf=sEE.read(addr,this.num*3);
+	this.tm=sEE.read((addr+s),this.num*3);
+	this.ti=new Int8Array(sEE.read((addr+s*2),this.num*3));
+	this.ta=new Int8Array(sEE.read((addr+s*3),this.num*3));
 	return 1;
 };
 
 leds.del = function (index) {
 	var t=new Uint8Array(this.map.slen*4);
 	t.fill("\xFF");
-	this.map.sEep.write(this.map.statOff+(4*index*this.map.slen),t);
+	sEE.write(this.map.statOff+(4*index*this.map.slen),t);
 	return 1;
 };
 
@@ -305,17 +307,17 @@ leds.del = function (index) {
 
 leds.setAnimate = function (address){
   var addressmod=this.map.oOff+address*this.map.slen;
-  leds.anilast=this.map.oEep.read(addressmod+30,1)[0];
+  leds.anilast=oEE.read(addressmod+30,1)[0];
   leds.aniaddr=addressmod;
-  leds.animode=this.map.oEep.read(addressmod+31,1)[0];
-  console.log("adr"+addressmod+" anilast:"+leds.anilast+" animode:"+leds.animode);
+  leds.animode=oEE.read(addressmod+31,1)[0];
+  //console.log("adr"+addressmod+" anilast:"+leds.anilast+" animode:"+leds.animode);
   return 1;
 };
 
 leds.save = function (index) {
 	var s=this.map.slen;
 	var addr=this.map.statOff+(4*index*s);
-	this.map.sEep.write(addr,E.toString(this.tbuf)+leds.zz+E.toString(this.tm)+leds.zz+E.toString(this.ti)+leds.zz+E.toString(this.ta)+leds.zz);
+	sEE.write(addr,E.toString(this.tbuf)+leds.zz+E.toString(this.tm)+leds.zz+E.toString(this.ti)+leds.zz+E.toString(this.ta)+leds.zz);
 	return 1;
 };
 
@@ -336,29 +338,30 @@ leds.setPixel2 = function (x, y, color,mode,maxtwi,mintwi,instant) {
 leds.setScene = function(id) {
 	if (id > this.map.scMX || id <0) { return 0;}
 	var adr=this.map.scOF+id*64;
-	if (this.map.scEE.read(adr,1)[0]==255) { return 0; }
+	if (scEE.read(adr,1)[0]==255) { return 0; }
 	//now we've passed sanity checks, use the new scene:
 	if (this.scenetimer) {clearTimeout(this.scenetimer);this.scenetimer=0;}
-	var raw=this.map.scEE.read(adr,32);
+	var raw=scEE.read(adr,32);
 	this.scene=new Uint16Array(raw.buffer);
 	this.lastscene=this.sceneid;
 	this.sceneid=id;
     this.load(this.scene[0]);
-	this.scenetimer=setTimeout(this.sceneRand,this.scene[1]);
+	leds.scenetimer=setTimeout(this.sceneRand,this.scene[1]*10);
 	return 1;
 }; 
 
 leds.sceneRand = function () {
   leds.scenetimer=undefined;
-  console.log("scr");
+  //console.log("scr");
 	for (var i=0;i<14;i+=2) {
 		if (65535*Math.random() > leds.scene[i+2]) {
             console.log(i);
 			leds.sceneEvent(leds.scene[i+3]);
+            break;
 		}
 	}// if we're here, we didn't match anything. 
   if (!leds.scenetimer) {	
-    leds.scenetimer=setTimeout(leds.sceneRand,leds.scene[1]*100);
+    leds.scenetimer=setTimeout(leds.sceneRand,leds.scene[1]*10);
   }
 };
 
@@ -382,7 +385,7 @@ leds.sceneEvent = function (event) {
 };
 leds.sceneVect = function (id) {
 	var adr=this.map.scOF+this.sceneid*64;
-	var z=this.map.scEE.read(adr+32+id,2);
+	var z=scEE.read(adr+32+id,2);
 	this.sceneEvent(z[1]+(z[0]<<8));
 };
 
