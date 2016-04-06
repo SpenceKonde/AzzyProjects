@@ -184,6 +184,7 @@ leds.dotwinkle = function () {
 			leds.aniaddr=0;
 			this.overlay.fill(0);
 		} else {
+            console.log(this.aniaddr+this.map.slen*(this.aniframe));
 			this.overlay=oEE.read(this.aniaddr+this.map.slen*(this.aniframe++),this.num*3);
 		}
 	}
