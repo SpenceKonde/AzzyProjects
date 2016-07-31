@@ -143,19 +143,19 @@ var memmap={
 */
  //512kbit
 var memmap={
-	slen:32,
-	rlen:40,
-	statOff:0x2000,
-	statMax:192,
-	sEep:eeprom,
-	oEep:eeprom,
-	oOff:0x8000,
-	oMax:1024,
-	oIEE:eeprom,
+	slen:32, //length of single frame of overlay
+	rlen:40, 
+	statOff:0x2000, //offset of first base pattern
+	statMax:192, //maximum number of base patterns
+	sEep:eeprom, //eeprom with base patterns on it
+	oEep:eeprom, //eeprom with the overlays
+	oOff:0x8000, //offset of start of overlays
+	oMax:1024, //maximum number of overlays
+	oIEE:eeprom, 
 	oIOF:0,
-	scEE:eeprom,
-	scOF:0x1000,
-	scMX:64
+	scEE:eeprom, //scene eeprom
+	scOF:0x1000, //scene offset - scene length = 64 bytes
+	scMX:64      //maximum number of scenes
 };
 scEE=eeprom;
 oEE=eeprom;
