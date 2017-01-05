@@ -354,7 +354,7 @@ leds.export = function (type,index) {
 		var eep=eepromtype[type][0];
 		var off=eepromtype[type][1]+eepromtype[type][2]*index;
 		return btoa(E.toString(eep.read(off),eepromtype[type][2]));
-	} catch {
+	} catch (err) {
 		return 400;
 	}
 	
@@ -366,7 +366,7 @@ leds.import = function (type,index,data) {
 		var off=eepromtype[type][1]+eepromtype[type][2];
 		eep.write(off,atob(data));
 		return 200;
-	} catch {
+	} catch (err) {
 		return 400;
 	}
 	
