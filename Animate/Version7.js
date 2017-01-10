@@ -1,36 +1,21 @@
-
 /*
-
 Scene format:
-
 16-bit fields: 
-
 [Base ID, interval for events, (Random 0) (Random 1) (Random 2) (Random 3) (Random 4) (Random 5) (Random 6) ] //32 bytes
 [Event 0 through 15] // 32 bytes
-
 System supports up to (in theory) 16768 scenes or animation frames.
-
 That corresponds to 512 KB or 256 KB respectively, so more than would realistically be used. 
-
 Scene Event is 16-bit: | S1 |  S0  | A13~A0
-
 S: 
 00: Start animation at this frame
 01: Switch to this other scene
 10: Unused
 11: Special command
-
 11cc ccc ffff fff
 c0~5: Command
 1: Resume last scene. 
-
 f0~7: Flags
 Bit 0: Reset twinkle
-
-
-
-
-
 */
 
 
@@ -116,6 +101,16 @@ function handleCmd(pn,q,r) {
     		return leds.setAll(eval(q.color),eval(q.mode),eval(q.max),eval(q.min))?200:0;
   		}else if (pn=="/setPixel.cmd") {
     		return leds.setPixel2(q.led,0,eval(q.color),eval(q.mode),eval(q.max),eval(q.min))?200:0;
+  		}else if (pn=="/export.cmd") {
+    			var resp=leds.export(eval(q.type),eval(q.index));
+			if (resp==""){
+				return 400;
+			} else {
+				r.write(resp);
+				return 200;
+			}
+  		}else if (pn=="/import.cmd") {
+    		return leds.import(eval(q.type),eval(q.index),q.data)?200:0;
   		} else {
   			return 404;
 		}
@@ -139,7 +134,6 @@ var memmap={
 	oIEE:eeprom,
 	oIOF:0
 };
-
 */
  //512kbit
 var memmap={
@@ -160,6 +154,8 @@ var memmap={
 scEE=eeprom;
 oEE=eeprom;
 sEE=eeprom;
+
+eepromtype={"scene":[scEE,memmap.scOF,64],"overlay":[oEE,memmap.oOff,32],"base":[sEE,memmap.statOff,memmap.slen*4]};
 
 // LEDS
 gtab=new Uint16Array([0,1,2,3,4,5,6,7,8,9,11,13,15,17,19,21,23,25,27,30,33,36,39,42,45,48,51,54,58,62,66,70,74,78,82,86,91,96,101,106,111,116,121,126,132,138,144,150,156,162,168,174,181,188,195,202,209,216,223,230,238,246,254,262,270,278,286,294,303,312,321,330,339,348,357,366,376,386,396,406,416,426,436,446,457,468,479,490,501,512,523,534,546,558,570,582,594,606,618,630,643,656,669,682,695,708,721,734,748,762,776,790,804,818,832,846,861,876,891,906,921,936,951,966,982,998,1014,1030,1046,1062,1078,1094,1111,1128,1145,1162,1179,1196,1213,1230,1248,1266,1284,1302,1320,1338,1356,1374,1393,1412,1431,1450,1469,1488,1507,1526,1546,1566,1586,1606,1626,1646,1666,1686,1707,1728,1749,1770,1791,1812,1833,1854,1876,1898,1920,1942,1964,1986,2008,2030,2053,2076,2099,2122,2145,2168,2191,2214,2238,2262,2286,2310,2334,2358,2382,2406,2431,2456,2481,2506,2531,2556,2581,2606,2631,2657,2683,2709,2735,2761,2787,2813,2839,2866,2893,2920,2947,2974,3001,3028,3055,3083,3111,3139,3167,3195,3223,3251,3279,3308,3337,3366,3395,3424,3453,3482,3511,3541,3571,3601,3631,3661,3691,3721,3751,3782,3813,3844,3875,3906,3937,3968,3999,4031,4063,4095]);
@@ -337,6 +333,32 @@ leds.save = function (index) {
 	return 1;
 };
 
+leds.export = function (type,index) {
+  console.log(type);
+	try {
+		var eep=eepromtype[type][0];
+		var off=eepromtype[type][1]+eepromtype[type][2]*index;
+      console.log(off);
+		return btoa(JSON.stringify(eep.read(off,eepromtype[type][2])));
+	} catch (err) {
+      console.log(err);
+		return "";
+	}
+	
+};
+
+leds.import = function (type,index,data) {
+	try {
+		var eep=eepromtype[type][0];
+		var off=eepromtype[type][1]+eepromtype[type][2]*index;
+		eep.write(off,atob(data));
+		return 200;
+	} catch (err) {
+		return 400;
+	}
+	
+};
+
 leds.setPixel2 = function (x, y, color,mode,maxtwi,mintwi,instant) {
 	x*=3;
 	for (var i=0;i<3;i++){
@@ -422,4 +444,3 @@ leds.scene=new Uint16Array(16);
 
 setBusyIndicator(2);
 leds.setPixel2(0,0,[0,255,255],[0,0,0],[0,0,0],[0,0,0]);
-
