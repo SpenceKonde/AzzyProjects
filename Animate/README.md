@@ -1,14 +1,18 @@
 
-Version 4:
+Version 7:
 
 API:
-/save.cmd?eeprom=...&address=...&len=...
+/save.cmd?index=...
 
-/load.cmd?eeprom=...&address=...&len=...
+/load.cmd?index=...
 
 load and save the base configurations to the EEPROM. 
-len is the length that should be assumed (in terms of number of LEDs) for the purpose of spacing the writes on the EEPROM (eg, to make sure things line up on page boundaries, etc. 
-Address is the address of the start of the data. 
+
+/setScene.cmd?scene=...
+Set current scene to specified value
+
+/sceneVect.cmd?...
+Run specified scene event in current scene. 
 
 /showState.cmd
 output the current state in json format
