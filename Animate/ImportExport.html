@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <style type="text/css">
+    textarea {
+  white-space: pre;
+  word-wrap: normal;
+  overflow-x: scroll;
+}
+    </style>
+    <meta charset="utf-8">
+    <title>title</title>
+    <script type="text/javascript">
+    var PingPongLights=[
+      {"ip":"192.168.2.135","id":"Pong1"},
+      {"ip":"192.168.2.136","id":"Pong2"},
+      {"ip":"192.168.2.137","id":"Pong3"},
+      {"ip":"192.168.2.138","id":"Pong4"}
+    ];
+    function massLoad() {
+      var t=document.getElementById("index").value;
+      var len=PingPongLights.length;
+      for (var i=0;i<len;i++) {
+        if (document.getElementById(PingPongLights[i]["id"]).checked) {
+          var xmlhttp = new XMLHttpRequest();
+          var url = "http://"+PingPongLights[i]["ip"]+"/load.cmd?index="+t;
+          xmlhttp.open("GET", url, true);
+          xmlhttp.send();
+        }
+      }
+    }
+    function importPattern() {
+      var patternData=document.getElementById("exportCode").value;
+      if (patternData=="" || patternData=="ERROR") {
+        console.log("no data to send")
+        return;
+      }
+      var t=document.getElementById("indexImport").value;
+      var len=PingPongLights.length;
+      var patternType=document.getElementById("patternType").value;
+      for (var i=0;i<len;i++) {
+        if (document.getElementById(PingPongLights[i]["id"]).checked) {
+          var xmlhttp = new XMLHttpRequest();
+          var url = "http://"+PingPongLights[i]["ip"]+"/import.cmd?type="+patternType+"index="+t+"data="+patternData;
+          alert(url);
+          //xmlhttp.open("GET", url, true);
+          //xmlhttp.send();
+        }
+      }
+
+    }
+    </script>
+  </head>
+  <body width="100%;">
+  <div>
+  Source:
+  <select id="source">
+    <option value="1">Desk Right</option>
+    <option value="2">Couch</option>
+    <option value="3">Desk Left</option>
+    <option value="4">Corner</option>
+  </select>
+  Type:
+    <select id="patternType">
+    <option value="base">Base</option>
+    <option value="scene">Scene</option>
+    <option value="overlay">Overlay</option>
+  </select>
+  </div>
+  <div>
+    Index:
+    <input type="number" id="indexExport" min="0" max="512">
+    <input type="button" onclick="exportPattern()" value="export">
+  </div>
+  <div> 
+  <textarea id="exportCode"></textarea>
+  </div>
+    <div>
+    <div><input type="checkbox" id="Pong1" >Desk Right</div>
+    <div><input type="checkbox" id="Pong2" >Couch</div>
+    <div><input type="checkbox" id="Pong3" >Desk Left</div>
+    <div><input type="checkbox" id="Pong4" >Corner</div>
+  </div>
+    
+  <div>
+    Index:
+    <input type="number" id="indexImport" min="0" max="512">
+    <input type="button" onclick="importPattern()" value="import">
+  </div>
+
+  </body>
+</html>
+
