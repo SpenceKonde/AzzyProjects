@@ -106,8 +106,9 @@ function handleCmd(pn,q,r) {
 			if (resp==""){
 				return 400;
 			} else {
+              r.writeHead(200,CORS);
 				r.write(resp);
-				return 200;
+				return -1;
 			}
   		}else if (pn=="/import.cmd") {
     		return leds.import(eval(q.type),eval(q.index),q.data)?200:0;
@@ -338,8 +339,11 @@ leds.export = function (type,index) {
 	try {
 		var eep=eepromtype[type][0];
 		var off=eepromtype[type][1]+eepromtype[type][2]*index;
+      var lenh=(eepromtype[type][2]/2);
       console.log(off);
-		return btoa(JSON.stringify(eep.read(off,eepromtype[type][2])));
+		var rv= String.fromCharCode.apply(null,(eep.read(off,lenh)));
+      rv+= String.fromCharCode.apply(null,(eep.read(off+lenh,lenh)));
+      return btoa(rv);
 	} catch (err) {
       console.log(err);
 		return "";
@@ -351,12 +355,11 @@ leds.import = function (type,index,data) {
 	try {
 		var eep=eepromtype[type][0];
 		var off=eepromtype[type][1]+eepromtype[type][2]*index;
-		eep.write(off,atob(data));
+		eep.write(off,E.toUint8Array(atob(data)));
 		return 200;
 	} catch (err) {
 		return 400;
 	}
-	
 };
 
 leds.setPixel2 = function (x, y, color,mode,maxtwi,mintwi,instant) {
