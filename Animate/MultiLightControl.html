@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+
+  <link rel="stylesheet" type="text/css" href="style.css">
     <style type="text/css">
     textarea {
   white-space: pre;
@@ -22,21 +24,57 @@
       var len=PingPongLights.length;
       for (var i=0;i<len;i++) {
         if (document.getElementById(PingPongLights[i]["name"]).checked) {
+          document.getElementById(PingPongLights[i]["name"]+"Div").className="pendPongDiv";
           var xmlhttp = new XMLHttpRequest();
           var url = "http://"+PingPongLights[i]["ip"]+"/load.cmd?index="+t;
+          var pongname=PingPongLights[i]["name"]+"Div";
+          xmlhttp.pongname=pongname;
+          xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4) {
+              if (this.status == 200) {
+                document.getElementById(this.pongname).className="okayPongDiv";
+              } else {
+                document.getElementById(this.pongname).className="badPongDiv";
+              }
+            }
+          }
           xmlhttp.open("GET", url, true);
           xmlhttp.send();
         }
       }
     }
+    function massSetAll() {
+      var len=PingPongLights.length;
+      for (var i=0;i<len;i++) {
+        if (document.getElementById(PingPongLights[i]["name"]).checked) {
+          document.getElementById(PingPongLights[i]["name"]+"Div").className="pendPongDiv";
+          var xmlhttp = new XMLHttpRequest();
+          var url = "http://"+PingPongLights[i]["ip"]+"/setAll.cmd?base="++;
+          var pongname=PingPongLights[i]["name"]+"Div";
+          xmlhttp.pongname=pongname;
+          xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4) {
+              if (this.status == 200) {
+                document.getElementById(this.pongname).className="okayPongDiv";
+              } else {
+                document.getElementById(this.pongname).className="badPongDiv";
+              }
+            }
+          }
+          xmlhttp.open("GET", url, true);
+          xmlhttp.send();
+        }
+      }
+    }
+    function get
     </script>
   </head>
   <body width="100%;">
   <div>
-    <div><input type="checkbox" id="Pong1" checked=true>Desk Right</div>
-    <div><input type="checkbox" id="Pong2" checked=true>Couch</div>
-    <div><input type="checkbox" id="Pong3" checked=true>Desk Left</div>
-    <div><input type="checkbox" id="Pong4" checked=true>Corner</div>
+    <div id="Pong1Div" class="pendPongDiv"><input type="checkbox" id="Pong1">Desk Right</div>
+    <div id="Pong2Div" class="pendPongDiv"><input type="checkbox" id="Pong2">Couch</div>
+    <div id="Pong3Div" class="pendPongDiv"><input type="checkbox" id="Pong3">Desk Left</div>
+    <div id="Pong4Div" class="pendPongDiv"><input type="checkbox" id="Pong4">Corner</div>
   </div>
   <div>
     Index:

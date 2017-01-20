@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+  <head>  
+  <link rel="stylesheet" type="text/css" href="style.css">
     <style type="text/css">
     textarea {
   white-space: pre;
@@ -29,6 +30,7 @@
         }
       }
     }
+
     function importPattern() {
       var patternData=document.getElementById("exportCode").value;
       if (patternData=="" || patternData=="ERROR") {
@@ -40,11 +42,23 @@
       var patternType=document.getElementById("patternType").value;
       for (var i=0;i<len;i++) {
         if (document.getElementById(PingPongLights[i]["id"]).checked) {
+          document.getElementById(PingPongLights[i]["id"]+"Div").className="pendPongDiv";
           var xmlhttp = new XMLHttpRequest();
-          var url = "http://"+PingPongLights[i]["ip"]+"/import.cmd?type="+patternType+"index="+t+"data="+patternData;
-          alert(url);
-          //xmlhttp.open("GET", url, true);
-          //xmlhttp.send();
+          var url = "http://"+PingPongLights[i]["ip"]+"/import.cmd?type="+patternType+"&index="+t+"&data="+patternData;
+          alert(url);          
+          var pongname=PingPongLights[i]["id"]+"Div";
+          xmlhttp.pongname=pongname;
+          xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4) {
+              if (this.status == 200) {
+                document.getElementById(this.pongname).className="okayPongDiv";
+              } else {
+                document.getElementById(this.pongname).className="badPongDiv";
+              }
+            }
+          }
+          xmlhttp.open("GET", url, true);
+          xmlhttp.send();
         }
       }
 
@@ -52,7 +66,7 @@
     </script>
   </head>
   <body width="100%;">
-  <div>
+  <div id="exportSelectDiv" class="pendPongDiv">
   Source:
   <select id="source">
     <option value="1">Desk Right</option>
@@ -62,9 +76,9 @@
   </select>
   Type:
     <select id="patternType">
-    <option value="base">Base</option>
-    <option value="scene">Scene</option>
-    <option value="overlay">Overlay</option>
+    <option value='"base"'>Base</option>
+    <option value='"scene"'>Scene</option>
+    <option value='"overlay"'>Overlay</option>
   </select>
   </div>
   <div>
@@ -76,10 +90,10 @@
   <textarea id="exportCode"></textarea>
   </div>
     <div>
-    <div><input type="checkbox" id="Pong1" >Desk Right</div>
-    <div><input type="checkbox" id="Pong2" >Couch</div>
-    <div><input type="checkbox" id="Pong3" >Desk Left</div>
-    <div><input type="checkbox" id="Pong4" >Corner</div>
+    <div id="Pong1Div" class="pendPongDiv"><input type="checkbox" id="Pong1" >Desk Right</div>
+    <div id="Pong2Div" class="pendPongDiv"><input type="checkbox" id="Pong2" >Couch</div>
+    <div id="Pong3Div" class="pendPongDiv"><input type="checkbox" id="Pong3" >Desk Left</div>
+    <div id="Pong4Div" class="pendPongDiv"><input type="checkbox" id="Pong4" >Corner</div>
   </div>
     
   <div>
