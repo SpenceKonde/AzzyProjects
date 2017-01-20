@@ -30,7 +30,24 @@
         }
       }
     }
-
+    function exportPattern() {
+      var xmlhttp = new XMLHttpRequest();
+      var value=document.getElementById("exportSelectDiv").value;
+      var patternType=document.getElementById("patternType").value;
+      var idx=document.getElementById("indexExport").value;
+      var url = "http://"+PingPongLights[value]["ip"]+"/export.cmd?type="+patternType+"&index="+idx;
+      xmlhttp.onreadystatechange = function() {
+        if (this.readyState == 4) {
+          if (this.status == 200) {
+            document.getElementById("exportSelectDiv").className="okayPongDiv";
+          } else {
+            document.getElementById("exportSelectDiv").className="badPongDiv";
+          }
+        }
+      }
+      xmlhttp.open("GET", url, true);
+      xmlhttp.send();
+    }
     function importPattern() {
       var patternData=document.getElementById("exportCode").value;
       if (patternData=="" || patternData=="ERROR") {
