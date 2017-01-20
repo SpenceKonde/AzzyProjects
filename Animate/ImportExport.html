@@ -39,6 +39,7 @@
       xmlhttp.onreadystatechange = function() {
         if (this.readyState == 4) {
           if (this.status == 200) {
+            document.getElementById("exportCode").value=this.responseText;
             document.getElementById("exportSelectDiv").className="okayPongDiv";
           } else {
             document.getElementById("exportSelectDiv").className="badPongDiv";
