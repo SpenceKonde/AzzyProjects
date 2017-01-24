@@ -39,7 +39,7 @@
       xmlhttp.onreadystatechange = function() {
         if (this.readyState == 4) {
           if (this.status == 200) {
-            document.getElementById("exportCode").value=this.responseText;
+            updateTextArea(this.responseText,false);
             document.getElementById("exportSelectDiv").className="okayPongDiv";
           } else {
             document.getElementById("exportSelectDiv").className="badPongDiv";
@@ -49,20 +49,92 @@
       xmlhttp.open("GET", url, true);
       xmlhttp.send();
     }
+    function updateTextArea(data,multiLine) {
+        var outData={"type":document.getElementById("patternType").value,"index":document.getElementById("indexExport").value,"data":data};
+      if (multiLine && textAreaIsArray()) {
+        var outArray=JSON.parse(document.getElementById("exportCode").value);
+        outArray.append(outData);
+        document.getElementById("exportCode").value=JSON.stringify(outArray);
+      } else {
+        document.getElementById("exportCode").value=JSON.stringify(outData); 
+      }
+      textAreaUpdate();
+    }
+    function textAreaIsArray() {
+      var temp=document.getElementById("exportCode").value;
+      if (temp=="") {
+        return 0;
+      }
+      if (temp.charAt(0)=="[") {
+        try {
+          JSON.parse(temp);
+          return 1;
+        }
+        catch {
+          return 0;
+        }
+      }
+      return 0;
+    }
+    function textAreaIsObj() {
+      var temp=document.getElementById("exportCode").value;
+      if (temp==""){
+        return 0;
+      } else {
+        if (temp.charAt(0)=="{") {
+          try {
+            JSON.parse(temp);
+            return 1;
+          }
+          catch {
+            return 0;
+          }
+        }
+      }
+      return 0;
+    }
+    function textAreaUpdate() {
+      if (textAreaIsArray() || textAreaIsObj()) {
+        document.getElementById("patternTypeImport").disabled=true;
+        document.getElementById("indexImport").disabled=true;
+
+      } else {
+        document.getElementById("patternTypeImport").disabled=false;
+        document.getElementById("indexImport").disabled=false;
+
+      }
+    }
     function importPattern() {
-      var patternData=document.getElementById("exportCode").value;
-      if (patternData=="" || patternData=="ERROR") {
-        console.log("no data to send")
+      if (textAreaIsArray) {
+        alert("multiimport is not yet supported")
         return;
       }
-      var t=document.getElementById("indexImport").value;
+      if (textAreaIsObj()) {
+        tObject=JSON.parse(patternData=document.getElementById("exportCode").value);
+        try {
+          patternData=tObject.data;
+          patternType=tObject.type;
+          patternIndex=tObject.index;
+        } 
+        catch(err) {
+          alert(err);
+          return;
+        }
+      } else {
+        var patternData=document.getElementById("exportCode").value;
+        if (patternData=="" || patternData=="ERROR") {
+          console.log("no data to send")
+          return;
+        }
+        var patternIndex=document.getElementById("indexImport").value;
+        var patternType=document.getElementById("patternTypeImport").value;
+      }
       var len=PingPongLights.length;
-      var patternType=document.getElementById("patternType").value;
       for (var i=0;i<len;i++) {
         if (document.getElementById(PingPongLights[i]["id"]).checked) {
           document.getElementById(PingPongLights[i]["id"]+"Div").className="pendPongDiv";
           var xmlhttp = new XMLHttpRequest();
-          var url = "http://"+PingPongLights[i]["ip"]+"/import.cmd?type="+patternType+"&index="+t+"&data="+patternData;
+          var url = "http://"+PingPongLights[i]["ip"]+"/import.cmd?type="+patternType+"&index="+patternIndex+"&data="+patternData;
           alert(url);          
           var pongname=PingPongLights[i]["id"]+"Div";
           xmlhttp.pongname=pongname;
@@ -84,6 +156,7 @@
     </script>
   </head>
   <body width="100%;">
+
   <div id="exportSelectDiv" class="pendPongDiv">
   Source:
   <select id="source">
@@ -93,7 +166,7 @@
     <option value="4">Corner</option>
   </select>
   Type:
-    <select id="patternType">
+  <select id="patternType">
     <option value='"base"'>Base</option>
     <option value='"scene"'>Scene</option>
     <option value='"overlay"'>Overlay</option>
@@ -105,7 +178,7 @@
     <input type="button" onclick="exportPattern()" value="export">
   </div>
   <div> 
-  <textarea id="exportCode"></textarea>
+  <textarea id="exportCode" onchange="textAreaUpdate()"></textarea>
   </div>
     <div>
     <div id="Pong1Div" class="pendPongDiv"><input type="checkbox" id="Pong1" >Desk Right</div>
@@ -116,6 +189,11 @@
     
   <div>
     Index:
+    <select id="patternTypeImport">
+      <option value='"base"'>Base</option>
+      <option value='"scene"'>Scene</option>
+      <option value='"overlay"'>Overlay</option>
+    </select>
     <input type="number" id="indexImport" min="0" max="512">
     <input type="button" onclick="importPattern()" value="import">
   </div>
