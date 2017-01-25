@@ -26,7 +26,26 @@ That's 5/8ths of a 1mbit eeprom, leaves space for 1536 frames of animation.
 - 17: pink-purple, bright
 - 18: purple-pink, bright
 - 19: cool purple, bright
-- 20: Blue-green everywhere
+- 20: Pure blue, dim
+- 21: sky blue, dim
+- 22: cyan, dim
+- 23: green-blue, dim
+- 24: pure green, dim
+- 25: pure blue, bright
+- 26: sky blue, bright
+- 27: cyan, bright
+- 28: green-blue, dim
+- 29: pure green, bright
+- 30: pale pure green, dim
+- 31: yellow-green, dim
+- 32: yellow, dim
+- 33: yellow-orange, dim
+- 34: orange, dim
+- 35: pale pure green, bright
+- 36: yellow-green, bright
+- 37: yellow, bright
+- 38: yellow-orange, bright
+- 39: orange, bright
 - 90: Cool white
 - 91: Neutral white
 - 92: Warm white
