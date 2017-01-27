@@ -32,14 +32,14 @@
     }
     function exportPattern() {
       var xmlhttp = new XMLHttpRequest();
-      var value=document.getElementById("exportSelectDiv").value;
+      var value=document.getElementById("source").value-1;
       var patternType=document.getElementById("patternType").value;
       var idx=document.getElementById("indexExport").value;
       var url = "http://"+PingPongLights[value]["ip"]+"/export.cmd?type="+patternType+"&index="+idx;
       xmlhttp.onreadystatechange = function() {
         if (this.readyState == 4) {
           if (this.status == 200) {
-            updateTextArea(this.responseText,false);
+            updateTextArea(this.responseText,document.getElementById("multi-export").checked);
             document.getElementById("exportSelectDiv").className="okayPongDiv";
           } else {
             document.getElementById("exportSelectDiv").className="badPongDiv";
@@ -51,14 +51,30 @@
     }
     function updateTextArea(data,multiLine) {
         var outData={"type":document.getElementById("patternType").value,"index":document.getElementById("indexExport").value,"data":data};
-      if (multiLine && textAreaIsArray()) {
-        var outArray=JSON.parse(document.getElementById("exportCode").value);
-        outArray.append(outData);
-        document.getElementById("exportCode").value=JSON.stringify(outArray);
+      if (multiLine) {
+        if (textAreaIsArray()) {
+          var outArray=JSON.parse(document.getElementById("exportCode").value);
+          outArray.push(outData);
+        } else {
+          outArray=[outData];
+        }
+        prettyPrintArray(outArray);
       } else {
         document.getElementById("exportCode").value=JSON.stringify(outData); 
       }
       textAreaUpdate();
+    }
+    function prettyPrintArray(outarr) {
+      var outstr="";
+      outstr+="[";
+      for (var i=0;i<outarr.length;i++) {
+        outstr+=JSON.stringify(outarr[i]);
+        if (i<(outarr.length-1)) {
+          outstr+=",\r\n";
+        }
+      }
+      outstr+="]";
+      document.getElementById("exportCode").value=outstr;
     }
     function textAreaIsArray() {
       var temp=document.getElementById("exportCode").value;
@@ -70,7 +86,7 @@
           JSON.parse(temp);
           return 1;
         }
-        catch {
+        catch (err) {
           return 0;
         }
       }
@@ -86,7 +102,7 @@
             JSON.parse(temp);
             return 1;
           }
-          catch {
+          catch (err) {
             return 0;
           }
         }
@@ -105,36 +121,41 @@
       }
     }
     function importPattern() {
-      if (textAreaIsArray) {
+      if (textAreaIsArray()) {
         alert("multiimport is not yet supported")
+
         return;
-      }
-      if (textAreaIsObj()) {
-        tObject=JSON.parse(patternData=document.getElementById("exportCode").value);
-        try {
-          patternData=tObject.data;
-          patternType=tObject.type;
-          patternIndex=tObject.index;
-        } 
-        catch(err) {
-          alert(err);
-          return;
-        }
       } else {
-        var patternData=document.getElementById("exportCode").value;
-        if (patternData=="" || patternData=="ERROR") {
-          console.log("no data to send")
-          return;
+        if (textAreaIsObj()) {
+          tObject=JSON.parse(patternData=document.getElementById("exportCode").value);
+          try {
+            patternData=tObject.data;
+            patternType=tObject.type;
+            patternIndex=tObject.index;
+          } 
+          catch(err) {
+            alert(err);
+            return;
+          }
+        } else {
+          var patternData=document.getElementById("exportCode").value;
+          if (patternData=="" || patternData=="ERROR") {
+            console.log("no data to send")
+            return;
+          }
+          var patternIndex=document.getElementById("indexImport").value;
+          var patternType=document.getElementById("patternTypeImport").value;
         }
-        var patternIndex=document.getElementById("indexImport").value;
-        var patternType=document.getElementById("patternTypeImport").value;
+        doPatternImport(patternType,patternIndex,patternData)
       }
+    }
+    function doPatternImport(pType,pIndex,pData) {
       var len=PingPongLights.length;
       for (var i=0;i<len;i++) {
         if (document.getElementById(PingPongLights[i]["id"]).checked) {
           document.getElementById(PingPongLights[i]["id"]+"Div").className="pendPongDiv";
           var xmlhttp = new XMLHttpRequest();
-          var url = "http://"+PingPongLights[i]["ip"]+"/import.cmd?type="+patternType+"&index="+patternIndex+"&data="+patternData;
+          var url = "http://"+PingPongLights[i]["ip"]+"/import.cmd?type="+pType+"&index="+pIndex+"&data="+pData;
           alert(url);          
           var pongname=PingPongLights[i]["id"]+"Div";
           xmlhttp.pongname=pongname;
@@ -151,7 +172,6 @@
           xmlhttp.send();
         }
       }
-
     }
     </script>
   </head>
@@ -176,9 +196,10 @@
     Index:
     <input type="number" id="indexExport" min="0" max="512">
     <input type="button" onclick="exportPattern()" value="export">
+    <input type="checkbox" id="multi-export" > Multiline export
   </div>
   <div> 
-  <textarea id="exportCode" onchange="textAreaUpdate()"></textarea>
+  <textarea id="exportCode" rows="4" cols="80" onchange="textAreaUpdate()"></textarea>
   </div>
     <div>
     <div id="Pong1Div" class="pendPongDiv"><input type="checkbox" id="Pong1" >Desk Right</div>

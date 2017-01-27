@@ -24,7 +24,7 @@ SPI1.setup({sck:14,mosi:13,mode:1,order:"msb",baud:4000000});
 I2C1.setup({scl:5,sda:4});
 
 var http = require("http");
-var eeprom=require("AT24").connect(I2C1, 128, 512);
+var eeprom=require("AT24").connect(I2C1, 128, 1024);
 
 setBusyIndicator(2);
 require("ESP8266").logDebug(0);
@@ -136,21 +136,21 @@ var memmap={
 	oIOF:0
 };
 */
- //512kbit
+ //1024 bit
 var memmap={
 	slen:32, //length of single frame of overlay
 	rlen:40, 
-	statOff:0x2000, //offset of first base pattern
-	statMax:192, //maximum number of base patterns
+	statOff:0, //offset of first base pattern
+	statMax:512, //maximum number of base patterns
 	sEep:eeprom, //eeprom with base patterns on it
 	oEep:eeprom, //eeprom with the overlays
-	oOff:0x8000, //offset of start of overlays
-	oMax:1024, //maximum number of overlays
+	oOff:0x14000, //offset of start of overlays
+	oMax:1536, //maximum number of overlays
 	oIEE:eeprom, 
 	oIOF:0,
 	scEE:eeprom, //scene eeprom
-	scOF:0x1000, //scene offset - scene length = 64 bytes
-	scMX:64      //maximum number of scenes
+	scOF:0x10000, //scene offset - scene length = 64 bytes
+	scMX:256      //maximum number of scenes
 };
 scEE=eeprom;
 oEE=eeprom;
