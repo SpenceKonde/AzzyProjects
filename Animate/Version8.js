@@ -340,14 +340,14 @@ leds.export = function (type,index) {
 	try {
 		var eep=eepromtype[type][0];
 		var off=eepromtype[type][1]+eepromtype[type][2]*index;
-      var lenh=(eepromtype[type][2]/2);
-      if (eep.read(off+lenh+lenh-1,1)[0]==255) {
-		return "";
-	}
+      	var len=(eepromtype[type][2]);
+      	if (eep.read(off+len-1,1)[0]==255) {
+			return "";
+		}
 
 		//var rv= String.fromCharCode.apply(null,(eep.read(off,lenh)));
       //rv+= String.fromCharCode.apply(null,(eep.read(off+lenh,lenh)));
-      var rv=E.toString(eep.read(off,(2*lenh)));
+      var rv=E.toString(eep.read(off,(len)));
       return btoa(rv);
 	} catch (err) {
       console.log(err);
