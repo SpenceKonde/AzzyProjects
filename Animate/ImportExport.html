@@ -120,10 +120,24 @@
 
       }
     }
+    function disableButtons() {
+      document.getElementById("importButton").disabled=true;
+      document.getElementById("exportButton").disabled=true;
+    }
+    function enableButtons() {
+      document.getElementById("importButton").disabled=false;
+      document.getElementById("exportButton").disabled=false;
+    }
     function importPattern() {
       if (textAreaIsArray()) {
-        alert("multiimport is not yet supported")
-
+        //alert("multiimport is not yet supported")
+        tArray=JSON.parse(document.getElementById("exportCode").value);
+        var len=tArray.length;
+        disableButtons()
+        for (var i=0;i<len;i++) {
+          setTimeout(doPatternImport,(i+1)*1000,tArray[i].type,tArray[i].index,tArray[i].data)
+        }
+        setTimeout("enableButtons()",(1+len)*1000);
         return;
       } else {
         if (textAreaIsObj()) {
@@ -156,7 +170,7 @@
           document.getElementById(PingPongLights[i]["id"]+"Div").className="pendPongDiv";
           var xmlhttp = new XMLHttpRequest();
           var url = "http://"+PingPongLights[i]["ip"]+"/import.cmd?type="+pType+"&index="+pIndex+"&data="+pData;
-          alert(url);          
+          //alert(url);          
           var pongname=PingPongLights[i]["id"]+"Div";
           xmlhttp.pongname=pongname;
           xmlhttp.onreadystatechange = function() {
@@ -168,6 +182,7 @@
               }
             }
           }
+          //alert(url);
           xmlhttp.open("GET", url, true);
           xmlhttp.send();
         }
@@ -195,11 +210,11 @@
   <div>
     Index:
     <input type="number" id="indexExport" min="0" max="512">
-    <input type="button" onclick="exportPattern()" value="export">
+    <input type="button" onclick="exportPattern()" value="export" id="exportButton">
     <input type="checkbox" id="multi-export" > Multiline export
   </div>
   <div> 
-  <textarea id="exportCode" rows="4" cols="80" onchange="textAreaUpdate()"></textarea>
+  <textarea id="exportCode" rows="10" cols="120" onchange="textAreaUpdate()"></textarea>
   </div>
     <div>
     <div id="Pong1Div" class="pendPongDiv"><input type="checkbox" id="Pong1" >Desk Right</div>
@@ -216,7 +231,7 @@
       <option value='"overlay"'>Overlay</option>
     </select>
     <input type="number" id="indexImport" min="0" max="512">
-    <input type="button" onclick="importPattern()" value="import">
+    <input type="button" onclick="importPattern()" value="import" id="importButton">
   </div>
 
   </body>
