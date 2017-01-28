@@ -335,14 +335,19 @@ leds.save = function (index) {
 };
 
 leds.export = function (type,index) {
-  console.log(type);
+  //console.log(type);
+  	
 	try {
 		var eep=eepromtype[type][0];
 		var off=eepromtype[type][1]+eepromtype[type][2]*index;
       var lenh=(eepromtype[type][2]/2);
-      console.log(off);
-		var rv= String.fromCharCode.apply(null,(eep.read(off,lenh)));
-      rv+= String.fromCharCode.apply(null,(eep.read(off+lenh,lenh)));
+      if (eep.read(off+lenh+lenh-1,1)[0]==255) {
+		return "";
+	}
+
+		//var rv= String.fromCharCode.apply(null,(eep.read(off,lenh)));
+      //rv+= String.fromCharCode.apply(null,(eep.read(off+lenh,lenh)));
+      var rv=E.toString(eep.read(off,(2*lenh)));
       return btoa(rv);
 	} catch (err) {
       console.log(err);
