@@ -79,6 +79,56 @@
     Index:
     <input type="number" id="index" min="0" max="512">
     <input type="button" onclick="massLoad()" value="load">
+    </div>
+    <div>
+      Mass SetAll:
+      <table>
+        <tr><th></th><th>Red</th><th>Green</th><th>Blue</th></tr>
+        <tr>
+          <td>
+            Base:
+          </td>
+          <td>
+            <input type="number" id="baseRed" min="0" max="255">
+          </td>
+          <td>
+            <input type="number" id="baseGreen" min="0" max="255">
+          </td>
+          <td>
+            <input type="number" id="baseBlue" min="0" max="255">
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Min:
+          </td>
+          <td>
+            <input type="number" id="minRed" min="-128" max="127">
+          </td>
+          <td>
+            <input type="number" id="minGreen" min="-128" max="127">
+          </td>
+          <td>
+            <input type="number" id="minBlue" min="-128" max="127">
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Max:
+          </td>
+          <td>
+            <input type="number" id="maxRed" min="-128" max="127">
+          </td>
+          <td>
+            <input type="number" id="maxGreen" min="-128" max="127">
+          </td>
+          <td>
+            <input type="number" id="maxBlue" min="-128" max="127">
+          </td>
+        </tr>
+      </table>
+    </div>
+    
   </body>
 </html>
 
