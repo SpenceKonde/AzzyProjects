@@ -43,6 +43,9 @@
         }
       }
     }
+    function getColorArray(patternComp) {
+      return "["++","++","++"]";
+    }
     function massSetAll() {
       var len=PingPongLights.length;
       for (var i=0;i<len;i++) {
@@ -89,13 +92,13 @@
             Base:
           </td>
           <td>
-            <input type="number" id="baseRed" min="0" max="255">
+            <input type="number" id="baseRed" min="0" max="255" value="0">
           </td>
           <td>
-            <input type="number" id="baseGreen" min="0" max="255">
+            <input type="number" id="baseGreen" min="0" max="255" value="0">
           </td>
           <td>
-            <input type="number" id="baseBlue" min="0" max="255">
+            <input type="number" id="baseBlue" min="0" max="255" value="0">
           </td>
         </tr>
         <tr>
@@ -103,13 +106,13 @@
             Min:
           </td>
           <td>
-            <input type="number" id="minRed" min="-128" max="127">
+            <input type="number" id="minRed" min="-128" max="127" value="0">
           </td>
           <td>
-            <input type="number" id="minGreen" min="-128" max="127">
+            <input type="number" id="minGreen" min="-128" max="127" value="0">
           </td>
           <td>
-            <input type="number" id="minBlue" min="-128" max="127">
+            <input type="number" id="minBlue" min="-128" max="127" value="0">
           </td>
         </tr>
         <tr>
@@ -117,13 +120,13 @@
             Max:
           </td>
           <td>
-            <input type="number" id="maxRed" min="-128" max="127">
+            <input type="number" id="maxRed" min="-128" max="127" value="0">
           </td>
           <td>
-            <input type="number" id="maxGreen" min="-128" max="127">
+            <input type="number" id="maxGreen" min="-128" max="127" value="0">
           </td>
           <td>
-            <input type="number" id="maxBlue" min="-128" max="127">
+            <input type="number" id="maxBlue" min="-128" max="127" value="0">
           </td>
         </tr>
       </table>
