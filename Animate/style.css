@@ -1,0 +1,10 @@
+div.okayPongDiv {
+	background-color: green;
+}
+div.badPongDiv {
+	background-color: red;
+}
+
+div.pendPongDiv {
+	background-color: yellow;
+}

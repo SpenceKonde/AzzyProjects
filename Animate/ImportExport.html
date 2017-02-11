@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>  
+  <link rel="stylesheet" type="text/css" href="style.css">
+    <style type="text/css">
+    textarea {
+  white-space: pre;
+  word-wrap: normal;
+  overflow-x: scroll;
+}
+    </style>
+    <meta charset="utf-8">
+    <title>title</title>
+    <script type="text/javascript">
+    var PingPongLights=[
+      {"ip":"192.168.2.135","id":"Pong1"},
+      {"ip":"192.168.2.136","id":"Pong2"},
+      {"ip":"192.168.2.137","id":"Pong3"},
+      {"ip":"192.168.2.138","id":"Pong4"}
+    ];
+    function massLoad() {
+      var t=document.getElementById("index").value;
+      var len=PingPongLights.length;
+      for (var i=0;i<len;i++) {
+        if (document.getElementById(PingPongLights[i]["id"]).checked) {
+          var xmlhttp = new XMLHttpRequest();
+          var url = "http://"+PingPongLights[i]["ip"]+"/load.cmd?index="+t;
+          xmlhttp.open("GET", url, true);
+          xmlhttp.send();
+        }
+      }
+    }
+    function exportPattern() {
+      var xmlhttp = new XMLHttpRequest();
+      var value=document.getElementById("source").value-1;
+      var patternType=document.getElementById("patternType").value;
+      var idx=document.getElementById("indexExport").value;
+      var url = "http://"+PingPongLights[value]["ip"]+"/export.cmd?type="+patternType+"&index="+idx;
+      xmlhttp.onreadystatechange = function() {
+        if (this.readyState == 4) {
+          if (this.status == 200) {
+            updateTextArea(this.responseText,document.getElementById("multi-export").checked);
+            document.getElementById("exportSelectDiv").className="okayPongDiv";
+          } else {
+            document.getElementById("exportSelectDiv").className="badPongDiv";
+          }
+        }
+      }
+      xmlhttp.open("GET", url, true);
+      xmlhttp.send();
+    }
+    function updateTextArea(data,multiLine) {
+        var outData={"type":document.getElementById("patternType").value,"index":document.getElementById("indexExport").value,"data":data};
+      if (multiLine) {
+        if (textAreaIsArray()) {
+          var outArray=JSON.parse(document.getElementById("exportCode").value);
+          outArray.push(outData);
+        } else {
+          outArray=[outData];
+        }
+        prettyPrintArray(outArray);
+      } else {
+        document.getElementById("exportCode").value=JSON.stringify(outData); 
+      }
+      textAreaUpdate();
+    }
+    function prettyPrintArray(outarr) {
+      var outstr="";
+      outstr+="[";
+      for (var i=0;i<outarr.length;i++) {
+        outstr+=JSON.stringify(outarr[i]);
+        if (i<(outarr.length-1)) {
+          outstr+=",\r\n";
+        }
+      }
+      outstr+="]";
+      document.getElementById("exportCode").value=outstr;
+    }
+    function textAreaIsArray() {
+      var temp=document.getElementById("exportCode").value;
+      if (temp=="") {
+        return 0;
+      }
+      if (temp.charAt(0)=="[") {
+        try {
+          JSON.parse(temp);
+          return 1;
+        }
+        catch (err) {
+          return 0;
+        }
+      }
+      return 0;
+    }
+    function textAreaIsObj() {
+      var temp=document.getElementById("exportCode").value;
+      if (temp==""){
+        return 0;
+      } else {
+        if (temp.charAt(0)=="{") {
+          try {
+            JSON.parse(temp);
+            return 1;
+          }
+          catch (err) {
+            return 0;
+          }
+        }
+      }
+      return 0;
+    }
+    function textAreaUpdate() {
+      if (textAreaIsArray() || textAreaIsObj()) {
+        document.getElementById("patternTypeImport").disabled=true;
+        document.getElementById("indexImport").disabled=true;
+
+      } else {
+        document.getElementById("patternTypeImport").disabled=false;
+        document.getElementById("indexImport").disabled=false;
+
+      }
+    }
+    function disableButtons() {
+      document.getElementById("importButton").disabled=true;
+      document.getElementById("exportButton").disabled=true;
+    }
+    function enableButtons() {
+      document.getElementById("importButton").disabled=false;
+      document.getElementById("exportButton").disabled=false;
+    }
+    function importPattern() {
+      if (textAreaIsArray()) {
+        //alert("multiimport is not yet supported")
+        tArray=JSON.parse(document.getElementById("exportCode").value);
+        var len=tArray.length;
+        disableButtons()
+        for (var i=0;i<len;i++) {
+          setTimeout(doPatternImport,(i+1)*1000,tArray[i].type,tArray[i].index,tArray[i].data)
+        }
+        setTimeout("enableButtons()",(1+len)*1000);
+        return;
+      } else {
+        if (textAreaIsObj()) {
+          tObject=JSON.parse(patternData=document.getElementById("exportCode").value);
+          try {
+            patternData=tObject.data;
+            patternType=tObject.type;
+            patternIndex=tObject.index;
+          } 
+          catch(err) {
+            alert(err);
+            return;
+          }
+        } else {
+          var patternData=document.getElementById("exportCode").value;
+          if (patternData=="" || patternData=="ERROR") {
+            console.log("no data to send")
+            return;
+          }
+          var patternIndex=document.getElementById("indexImport").value;
+          var patternType=document.getElementById("patternTypeImport").value;
+        }
+        doPatternImport(patternType,patternIndex,patternData)
+      }
+    }
+    function doPatternImport(pType,pIndex,pData) {
+      var len=PingPongLights.length;
+      for (var i=0;i<len;i++) {
+        if (document.getElementById(PingPongLights[i]["id"]).checked) {
+          document.getElementById(PingPongLights[i]["id"]+"Div").className="pendPongDiv";
+          var xmlhttp = new XMLHttpRequest();
+          var url = "http://"+PingPongLights[i]["ip"]+"/import.cmd?type="+pType+"&index="+pIndex+"&data="+pData;
+          //alert(url);          
+          var pongname=PingPongLights[i]["id"]+"Div";
+          xmlhttp.pongname=pongname;
+          xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4) {
+              if (this.status == 200) {
+                document.getElementById(this.pongname).className="okayPongDiv";
+              } else {
+                document.getElementById(this.pongname).className="badPongDiv";
+              }
+            }
+          }
+          //alert(url);
+          xmlhttp.open("GET", url, true);
+          xmlhttp.send();
+        }
+      }
+    }
+    </script>
+  </head>
+  <body width="100%;">
+
+  <div id="exportSelectDiv" class="pendPongDiv">
+  Source:
+  <select id="source">
+    <option value="1">Desk Right</option>
+    <option value="2">Couch</option>
+    <option value="3">Desk Left</option>
+    <option value="4">Corner</option>
+  </select>
+  Type:
+  <select id="patternType">
+    <option value='"base"'>Base</option>
+    <option value='"scene"'>Scene</option>
+    <option value='"overlay"'>Overlay</option>
+  </select>
+  </div>
+  <div>
+    Index:
+    <input type="number" id="indexExport" min="0" max="512">
+    <input type="button" onclick="exportPattern()" value="export" id="exportButton">
+    <input type="checkbox" id="multi-export" > Multiline export
+  </div>
+  <div> 
+  <textarea id="exportCode" rows="10" cols="120" onchange="textAreaUpdate()"></textarea>
+  </div>
+    <div>
+    <div id="Pong1Div" class="pendPongDiv"><input type="checkbox" id="Pong1" >Desk Right</div>
+    <div id="Pong2Div" class="pendPongDiv"><input type="checkbox" id="Pong2" >Couch</div>
+    <div id="Pong3Div" class="pendPongDiv"><input type="checkbox" id="Pong3" >Desk Left</div>
+    <div id="Pong4Div" class="pendPongDiv"><input type="checkbox" id="Pong4" >Corner</div>
+  </div>
+    
+  <div>
+    Index:
+    <select id="patternTypeImport">
+      <option value='"base"'>Base</option>
+      <option value='"scene"'>Scene</option>
+      <option value='"overlay"'>Overlay</option>
+    </select>
+    <input type="number" id="indexImport" min="0" max="512">
+    <input type="button" onclick="importPattern()" value="import" id="importButton">
+  </div>
+
+  </body>
+</html>
+
