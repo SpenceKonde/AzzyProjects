@@ -213,7 +213,7 @@ leds.dotwinkle = function () {
 			var s=1+((mode&12)>>2);
 			var pr=mode>>4;
 			if (!(this.animode&2)) {
-				if (mo==1) { //0x01 - high nybble is chance to change, from 0 (1/16) to 15 (16/16 chance to change)
+				if (mo==1) { //0x01 - high nybble is chance to change, from 0 (16/16) to 15 (1/16 chance to change)
 					var n=Math.random(); //3ms
 					var th=(pr+1)/32;
 	      				if (n<0.5+th){ //8ms

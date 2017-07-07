@@ -41,12 +41,11 @@ That's 5/8ths of a 1mbit eeprom, leaves space for 1536 frames of animation.
 - 32: yellow, dim
 - 33: yellow-orange, dim
 - 34: orange, dim
-- 35: pale pure green, bright
-- 36: yellow-green, bright
-- 37: yellow, bright
-- 38: yellow-orange, bright
-- 39: orange, bright
-- 40: orange-red, bright
+- 35: yellow-green, bright
+- 36: yellow, bright
+- 37: yellow-orange, bright
+- 38: orange, bright
+- 39: orange-red, bright
 - 90: Cool white
 - 91: Neutral white
 - 92: Warm white
