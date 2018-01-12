@@ -451,4 +451,4 @@ leds.scene=new Uint16Array(16);
 
 
 setBusyIndicator(2);
-leds.setPixel2(0,0,[0,255,255],[0,0,0],[0,0,0],[0,0,0]);
+leds.setAll([0,128,128],[0,2,2],[0,127,127],[0,-128,-128]);
