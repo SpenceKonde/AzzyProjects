@@ -70,6 +70,29 @@
         }
       }
     }
+          function massPing() {
+      var len=PingPongLights.length;
+      for (var i=0;i<len;i++) {
+        if (document.getElementById(PingPongLights[i]["name"]).checked) {
+          document.getElementById(PingPongLights[i]["name"]+"Div").className="pendPongDiv";
+          var xmlhttp = new XMLHttpRequest();
+          var url = "http://"+PingPongLights[i]["ip"]+"/ping.cmd;
+          var pongname=PingPongLights[i]["name"]+"Div";
+          xmlhttp.pongname=pongname;
+          xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4) {
+              if (this.status == 200) {
+                document.getElementById(this.pongname).className="okayPongDiv";
+              } else {
+                document.getElementById(this.pongname).className="badPongDiv";
+              }
+            }
+          }
+          xmlhttp.open("GET", url, true);
+          xmlhttp.send();
+        }
+      }
+    }
     function getColorArray(patternComp) {
       if (patternComp=="mode") {
         return "["+((parseInt(document.getElementById(patternComp+"Red").value)<<4)+parseInt(document.getElementById("twiRed").value))+","+((parseInt(document.getElementById(patternComp+"Green").value)<<4)+parseInt(document.getElementById("twiGreen").value))+","+((parseInt(document.getElementById(patternComp+"Blue").value)<<4)+parseInt(document.getElementById("twiBlue").value))+"]";
@@ -121,6 +144,7 @@
     <input type="number" id="index" min="0" max="512">
     <input type="button" onclick="massLoad()" value="load">
     <input type="button" onclick="massSave()" value="save">
+    <input type="button" onclick="massPing()" value="ping">
     </div>
     <div>
       Mass SetAll:
