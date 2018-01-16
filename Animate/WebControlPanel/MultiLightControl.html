@@ -76,7 +76,7 @@
         if (document.getElementById(PingPongLights[i]["name"]).checked) {
           document.getElementById(PingPongLights[i]["name"]+"Div").className="pendPongDiv";
           var xmlhttp = new XMLHttpRequest();
-          var url = "http://"+PingPongLights[i]["ip"]+"/ping.cmd;
+          var url = "http://"+PingPongLights[i]["ip"]+"/ping.cmd";
           var pongname=PingPongLights[i]["name"]+"Div";
           xmlhttp.pongname=pongname;
           xmlhttp.onreadystatechange = function() {
