@@ -20,15 +20,22 @@ Bit 0: Reset twinkle
 
 E.setFlags({pretokenise:1});
 
-SPI1.setup({sck:14,mosi:13,mode:1,order:"msb",baud:4000000});
-I2C1.setup({scl:5,sda:4});
+function startup() {
+  SPI1.setup({sck:14,mosi:13,mode:1,order:"msb",baud:4000000});
+  I2C1.setup({scl:5,sda:4});
+  setBusyIndicator(2);
+  require("ESP8266").logDebug(0);
+  require("ESP8266").setLog(0);
+  require("http").createServer(onPageRequest).listen(80);
+  leds.setAll([0,16,24],[0,2,2],[0,15,23],[0,-16,-24]);
+  setTimeout("animate()",2000);
+}
+
+
 
 var http = require("http");
 var eeprom=require("AT24").connect(I2C1, 128, 1024);
 
-setBusyIndicator(2);
-require("ESP8266").logDebug(0);
-require("ESP8266").setLog(0);
 
 
 // Parameters:
@@ -61,7 +68,6 @@ function onPageRequest(req, res) {
   }
   res.end();
 }
-require("http").createServer(onPageRequest).listen(80);
 
 function handleCmd(pn,q,r) {
 	try {
@@ -450,5 +456,3 @@ leds.tclb=new Uint8ClampedArray(numleds*3);
 leds.scene=new Uint16Array(16);
 
 
-setBusyIndicator(2);
-leds.setAll([0,128,128],[0,2,2],[0,127,127],[0,-128,-128]);
