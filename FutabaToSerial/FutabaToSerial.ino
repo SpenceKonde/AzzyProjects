@@ -6,7 +6,8 @@
 //PB0~PB7 go to D0~D7 on the display, PD6 goes to Write Latch, PB2 to Reset (not used). 
 //Connect to serial port at 19200 baud. All characters are passed through to the display, including control characters. 
 //See datasheet for list of control characters and what they do. 
-// By Spence Konde, 2017. 
+// By Spence Konde (Dr. Azzy) 2017 - drazzy.com/e 
+// Tindie.com/stores/drazzy        github.com/SpenceKonde 
 
 void setup() {
   // put your setup code here, to run once:
