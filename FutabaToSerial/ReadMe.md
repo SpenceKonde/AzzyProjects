@@ -8,7 +8,10 @@ Connect to serial port at 19200 baud. All characters are passed through to the d
 See Futaba datasheet for list of control characters and what they do. 
 
 By Spence Konde (Dr. Azzy) 2017
+
 drazzy.com/e 
+
 Tindie.com/stores/drazzy
+
 github.com/SpenceKonde 
 
