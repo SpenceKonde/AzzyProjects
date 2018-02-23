@@ -1,67 +1,3 @@
-/*
-This sketch continually listens to a 433 or 315mhz receiver connected to rxpin.
-It listens for 4, 8, 16, or 32 byte packets, sent 2ms after the training burst with 0.65ms low between bits, 1.1ms high for 1, 0.6ms for 0.
-
-
-
-
-Description of packet format:
-
-The first byte of packets is:
-
-| SZ1 | SZ0 | A5 | A4 | A3 | A2 | A1 | A0 |
-
-A5~0: Address bits - 6 bit address of the device, compared to MyAddress. Only packets matching address are processed.
-
-SZ1~SZ0: Size setting
-
-SZ1=0, SZ0=0: 4 bytes
-SZ1=0, SZ0=1: 8 bytes
-SZ1=1, SZ0=0: 16 bytes
-SZ1=1, SZ0=1: 32 bytes
-
-The next two bytes go into MyCmd and MyParam, respectively, if the transmission is accepted (ie, device address matches and checksum is OK)
-
-In a 4 byte packet, the first 4 bits of the last byte goes into MyExtParam (extended parameter), and the last 4 bits are the checksum.
-
-For all longer packets, the whole fourth byte goes into MyExtParam, and the final byte is the checksum.
-
-For 4 byte packets, checksum is calculated by XORing the first three bytes, then XORing the first 4 bits of the result with the last 4 bits, and the first 4 bits of the fourth byte.
-
-For longer packets, checksum is calculated by XORing all bytes of the packet.
-
-
-How to extend this:
-
-
-Most of the heavy lifting has been done with regards to receiving, transmitting, and ignoring repeated commands. Ideally, you should only have to edit onCommandST() to handle your new commands, and loop() if you want to add new states, poll sensors, etc.
-
-Receiving:
-
-On receiving a valid packet, MyState will be set to CommandST, and MyCmd, MyParam, and MyExtParam will be populated.
-
-Add a test for the new command to onCommandST() that calls code to handle your new command.
-If you're receiving a long packet, you can get bytes beyond the first 4 from txrxbuffer[] (these are not stored as a separate variable in order to save on SRAM)
-
-
-Transmitting:
-
-Populate txrxbuffer with the bytes you want to send (bytes beyond that are ignored), including the size/address byte.
-set TXLength to the length of the packet you are sending. Do not set up the checksum - this is done by doTransmit();
-
-Call doTransmit(rep) to send it, where rep is the number of times you want to repeat the transmission to ensure that it arrives. This blocks until it finishes sending.
-
-
-The example commands are:
-
-0xF2 - Respond with a 4-byte packet containing the values at 2 locations on the EEPROM, at the addresses (MyParam) and (MyParam+MyExtParam). The first byte is the address of this device, and the first half of the fourth byte is the checksum of the received command (likely not useful here).
-
-0xF4 - Respond with a packet (MyParam) bytes long, repeated (MyExtParam) times. For testing reception. This calculates the checksum, but doesn't set the size and address byte to anything meaningful.
-
-*/
-
-#define ListenST 1
-#define CommandST 2
 #include <EEPROM.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -80,16 +16,9 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 //#define LED4 5
 //#define LED5 6
 //#define LED6 8
-#define BTN0 3
-#define BTN4 5
-#define BTN3 6
-#define BTN2 11
-#define BTN1 8
 
 #define LED_RX LED1
-//#define LED_TX LED3
 #define LED_START LED1
-//#define BTN_ACK BTN1
 
 //#define SHUT_PIN 8
 
@@ -98,20 +27,6 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 #define LED_OFF 0
 
 
-#define HEX_OUT
-//#define HEX_IN
-#define USE_ACK
-//#define AUTO_ACK
-
-
-
-#define rxpin 7
-#define rxPIN PINA
-#define rxBV 2
-
-#define txpin 14
-#define txPIN PINB
-#define txBV 8
 
 
 #define CommandForgetTime 10000 //short, for testing
@@ -130,14 +45,19 @@ char * pEnd; //dummy pointer for strtol
 
 
 //Microcontroller-specific
-//328p
+//1634
 
-#define RX_PIN_STATE (PINB&1)
-#define TX_PIN 7
-#define txPIN PIND
-#define txBV 128
+#define RX_PIN_STATE (PINA&4)
+#define TX_PIN 14
+#define txPIN PINB
+#define txBV 8
 #define SERIAL_CMD Serial
-//#define SERIAL_DBG Serial
+
+#define rxpin 6
+#define rxPIN PINA
+#define rxBV 4
+
+#define TX_PIN 14
 
 //Configuration
 
@@ -186,20 +106,18 @@ const char endMarker2 = '\n';
 unsigned long units[] = {1000, 60000, 900000, 14400000, 3600000, 1, 10, 86400000}; //units for the 8/12/16-bit time values.
 
 
-
-
 void showHex (const byte b, const byte c = 0); //declare this function so it will compile correctly with the optional second argument.
+
+unsigned long backlightOnAt=0;
 
 void setup() {
   Wire.begin();
   lcd.begin();
-
+  
   // Turn on the blacklight and print a message.
   lcd.backlight();
   pinMode(txpin, OUTPUT);
   pinMode(rxpin, INPUT);
-  pinMode(12,OUTPUT);
-  pinMode(16,OUTPUT);
 
   pinMode(1,INPUT_PULLUP);
   Serial.begin(9600);
@@ -210,8 +128,19 @@ void setup() {
   ////xSerialDbg.print(decode8(123));
   delay(1000);
   lcd.noBacklight();
+  setupInputCapture();
+}
 
-
+void setupInputCapture() {
+  TCCR1A = 0;
+  TCCR1B = 0;
+  TIFR1 = bit (ICF1) | bit (TOV1);  // clear flags so we don't get a bogus interrupt
+  TCNT1 = 0;          // Counter to zero
+  ACSRA = (1<<ACIC)|(1<<ACBG);
+  TIMSK = 1 << ICIE1; // interrupt on Timer 1 input capture
+  // start Timer 1, prescalar of 8, edge select on falling edge
+  TCCR1B =  ((F_CPU == 1000000L) ? (1 << CS10) : (1 << CS11)) | 1 << ICNC1; //prescalar 8 except at 1mhz, where we use prescalar of 1, noise cancler active
+  //ready to rock and roll
 }
 
 
@@ -221,6 +150,9 @@ void loop() {
   if (rlen) {
     outputPacket(rlen);
   }
+  if (backlightOnAt && (millis()-backlightOnAt > 5000) {
+    lcd.noBacklight();
+    backlightOnAt=0;
 }
 
 
@@ -240,6 +172,59 @@ void outputPacket(byte rlen) { //format of rlen: what is passed back from handle
       showHex(recvMessage[3] >> 4, 1);
   }
   Serial.println();
+  displayPacketLCD(rlen, vers);
+}
+
+void displayPacketLCD(byte rlen, byte vers) {
+  lcd.clear();
+  if (readLDR > 200) {
+    lcd.backlight();
+    backlightOnAt=millis();
+    if (!backlightOnAt) backlightOnAt=1; //handle millis()==0 
+  }
+  if (rlen==4) {
+    lcd.setCursor(0,0);
+    lcd.print("Received:");
+    lcd.setCursor(1,9);
+    lcd.print(vers?'=':'+');
+    showHex(recvMessage[0], 2);
+    showHex(recvMessage[1], 2);
+    showHex(recvMessage[2], 2);
+    showHex(recvMessage[3] >> 4, 2);
+  } else if (rlen==8 || rlen==16) {
+    lcd.setCursor(0,0);
+    lcd.print("Received:");
+    lcd.setCursor(1,2);
+    lcd.print(vers?'=':'+');
+    for (byte i = 0; i < (rlen==8?7:8); i++) {
+      showHex(recvMessage[i], 2);
+    }
+    if (rlen==16) {
+      lcd.setCursor(2,3);
+      for (byte i = 8; i < 15; i++) {
+        showHex(recvMessage[i], 2);
+      }
+    }
+  } else {
+    lcd.setCursor(0,0);
+    lcd.print("RX ");
+    lcd.print(vers?'=':'+');
+    for (byte i = 0; i < (rlen==8?7:8); i++) {
+      showHex(recvMessage[i], 2);
+    }
+    lcd.setCursor(1,3);
+    for (byte i = 8; i < 16; i++) {
+      showHex(recvMessage[i], 2);
+    }
+    lcd.setCursor(2,3);
+    for (byte i = 16; i < 24; i++) {
+      showHex(recvMessage[i], 2);
+    }
+    lcd.setCursor(3,3);
+    for (byte i = 24; i < 31; i++) {
+      showHex(recvMessage[i], 2);
+    }
+  }
 }
 
 
@@ -329,7 +314,11 @@ ISR (TIMER1_CAPT_vect)
   static unsigned long lasttime = 0;
   unsigned int newTime = ICR1; //immediately get the ICR value
   byte state = (RX_PIN_STATE);
+#ifdef USE_ACO
+  TCCR1B = (!state) ? (1 << CS11 | 1 << ICNC1) : (1 << CS11 | 1 << ICNC1 | 1 << ICES1); //and set edge
+#else 
   TCCR1B = state ? (1 << CS11 | 1 << ICNC1) : (1 << CS11 | 1 << ICNC1 | 1 << ICES1); //and set edge
+#endif
   unsigned int duration = newTime - lasttime;
   lasttime = newTime;
   if (state) {
