@@ -47,6 +47,7 @@ char * pEnd; //dummy pointer for strtol
 //Microcontroller-specific
 //1634
 
+#define USE_ACO
 #define RX_PIN_STATE (PINA&4)
 #define TX_PIN 14
 #define txPIN PINB
@@ -136,7 +137,9 @@ void setupInputCapture() {
   TCCR1B = 0;
   TIFR1 = bit (ICF1) | bit (TOV1);  // clear flags so we don't get a bogus interrupt
   TCNT1 = 0;          // Counter to zero
+  #ifdef USE_ACO
   ACSRA = (1<<ACIC)|(1<<ACBG);
+  #endif
   TIMSK = 1 << ICIE1; // interrupt on Timer 1 input capture
   // start Timer 1, prescalar of 8, edge select on falling edge
   TCCR1B =  ((F_CPU == 1000000L) ? (1 << CS10) : (1 << CS11)) | 1 << ICNC1; //prescalar 8 except at 1mhz, where we use prescalar of 1, noise cancler active
