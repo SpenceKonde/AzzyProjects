@@ -4,6 +4,7 @@ volatile byte bitnum = 0; //current bit received
 volatile byte gotMessage = 0;
 volatile byte dataIn = 0;
 volatile byte pktLength = 31;
+volatile unsigned long lastBitAt=0;
 unsigned long lastPacketTime = 0;
 unsigned long lastPacketSig = 0;
 
@@ -227,6 +228,7 @@ ISR (TIMER1_CAPT_vect)
         memset(rxBuffer, 0, 32); //clear buffer
         return;
       }
+      lastBitAt=millis();
       if ((bitnum & 7) == 7) {
         rxBuffer[bitnum >> 3] = dataIn;
         if (bitnum == 7) {
