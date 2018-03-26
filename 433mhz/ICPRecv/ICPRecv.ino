@@ -6,9 +6,6 @@ volatile byte dataIn = 0;
 volatile byte pktLength = 31;
 unsigned long lastPacketTime = 0;
 unsigned long lastPacketSig = 0;
-unsigned long lastSendSig = 0;
-unsigned long lastSer = 0;
-char * pEnd; //dummy pointer for strtol
 
 
 //Microcontroller-specific
@@ -53,32 +50,13 @@ const unsigned int rxZeroMax  = 390 TIME_MULT;
 const unsigned int rxOneMin  = 410 TIME_MULT;
 const unsigned int rxOneMax  = 700 TIME_MULT;
 const unsigned int rxLowMax  = 600 TIME_MULT;
-const unsigned int txOneLength  = 500;
-const unsigned int txZeroLength  = 300;
-const unsigned int txSyncTime  = 2000;
-const unsigned int txTrainLen  = 200;
-const unsigned int txRepCount = 12;
-const unsigned int txRepDelay = 2000;
-const byte txTrainRep  = 30;
 const int commandForgetTime = 5000;
-const char endMarker = '\r';
-const char endMarker2 = '\n';
 
-// Commands:
-
-const char ATSEND[] PROGMEM = {"AT+SEND"};
-const char ATSENDM[] PROGMEM = {"AT+SENDM"};
-const char ATSENDL[] PROGMEM = {"AT+SENDL"};
-const char ATSENDE[] PROGMEM = {"AT+SENDE"};
-const char ATADRQ[] PROGMEM = {"AT+ADR?"};
-const char ATADR[] PROGMEM = {"AT+ADR"};
-const char ATVERS[] PROGMEM = {"AT+VERS"};
 
 
 
 void setup() {
   // put your setup code here, to run once:
-  pinMode(TX_PIN, OUTPUT);
   TCCR1A = 0;
   TCCR1B = 0;
   TIFR1 = bit (ICF1) | bit (TOV1);  // clear flags so we don't get a bogus interrupt
@@ -87,7 +65,7 @@ void setup() {
   // start Timer 1, prescalar of 8, edge select on falling edge
   TCCR1B =  ((F_CPU == 1000000L) ? (1 << CS10) : (1 << CS11)) | 1 << ICNC1; //prescalar 8 except at 1mhz, where we use prescalar of 1, noise cancler active
   //ready to rock and roll
-  SERIAL_CMD.begin(115200);
+  Seria.begin(115200);
 }
 
 void loop() {
@@ -96,129 +74,9 @@ void loop() {
   if (rlen) {
     outputPacket(rlen);
   }
-  processSerial();
+  
 }
 
-void processSerial() {
-  static char minb[3] = {0, 0, 0};
-  static byte ndx = 0;
-  static byte SerRXidx;
-  static byte SerRXmax;
-  while (SERIAL_CMD.available() > 0) {
-    char c=SERIAL_CMD.read();
-    if (SerRXmax) {
-      if (ndx == 1) {
-        minb[1] = c;
-        ndx = 0;
-        byte t = strtol(minb, &pEnd, 16);
-        if (SerRXmax == 1) {
-          if (t<32){
-            MyAddress = t;
-            SERIAL_CMD.println(F("OK"));
-          } else {
-            SERIAL_CMD.println(F("ERROR"));
-          }
-          ndx = 0;
-          SerRXidx = 0;
-          SerRXmax = 0;
-          resetSer();
-        } else {
-          SerRXidx++;
-          txBuffer[SerRXidx] = t;
-        }
-      } else {
-        minb[0] = c;
-        ndx = 1;
-      }
-      if (SerRXidx >= SerRXmax && SerRXmax) {
-        ndx = 0;
-        
-        byte len = preparePayloadFromSerial(SerRXmax);
-        while (!doTransmit(len, 1));
-        SERIAL_CMD.println(F("OK"));
-        SerRXidx=0;
-        SerRXmax=0;
-        resetSer();
-      }
-    } else {
-      
-      if (c != endMarker && c != endMarker2) {
-        serBuffer[SerRXidx] = c;
-        SerRXidx++;
-        if (SerRXidx >= MAX_SER_LEN) {
-          SerRXidx = 0;
-    SerRXmax = 0;
-          SERIAL_CMD.println(F("ERROR"));
-          resetSer();
-        }
-      } else {
-        if (SerRXidx) { //index 0? means it's a \r\n pattern.
-          serBuffer[SerRXidx] = '\0'; // terminate the string
-          SerRXidx = 0;
-          SerRXmax = checkCommand();
-          if (SerRXmax==255 ) {//error condition
-            SerRXmax=0;
-            SerRXidx=0;
-            SERIAL_CMD.println(F("ERROR"));
-            resetSer();
-          }
-        }
-      }
-    }
-    if (c != endMarker && c != endMarker2){
-      lastSer = millis();
-    }
-  }
-  if (millis() - lastSer > 10000 && lastSer) {
-    SERIAL_CMD.println(F("ERROR"));
-    SerRXidx = 0;
-    SerRXmax = 0;
-    resetSer();
-  }
-}
-
-byte preparePayloadFromSerial(byte rcvlen) {
-  txBuffer[0] = (txBuffer[0] & 0x3F);
-  if (rcvlen > 4) {
-    txBuffer[0] = txBuffer[0] | (rcvlen == 7 ? 0x40 : (rcvlen == 15 ? 0x80 : 0xC0));
-    return rcvlen + 1;
-  } else {
-    txBuffer[3] = txBuffer[3] << 4;
-    return 4;
-  }
-}
-
-byte checkCommand() {
-  byte paramlen = 0;
-  if (strcmp_P (serBuffer, ATSEND) == 0) {
-    paramlen = 4;
-  } else if (strcmp_P (serBuffer, ATSENDM) == 0) {
-    paramlen = 7;
-  } else if (strcmp_P (serBuffer, ATSENDL) == 0) {
-    paramlen = 15;
-  } else if (strcmp_P (serBuffer, ATSENDE) == 0) {
-    paramlen = 31;
-  } else if (strcmp_P (serBuffer, ATADRQ) == 0) { //AT+ADR?
-    SERIAL_CMD.println(MyAddress);
-  } else if (strcmp_P (serBuffer, ATADR) == 0) {
-    paramlen = 1;
-  } else if (strcmp_P (serBuffer, ATVERS) == 0) {
-    SERIAL_CMD.println("AzzyRF v2.3");
-  } else {
-    return 255;
-  }
-  if (paramlen) {
-    SERIAL_CMD.print(F(">"));
-  }
-  return paramlen;
-}
-void resetSer() {
-  if (lastSer) { //if we've gotten any characters since last reset, print newline to signify completion.
-    lastSer = 0;
-    SERIAL_CMD.println();
-  }
-  memset(serBuffer, 0, MAX_SER_LEN);
-}
 
 void outputPacket(byte rlen) { //format of rlen: what is passed back from handleReceive(), first 2 bits are version-1, last 6 are length in bytes
   
@@ -387,72 +245,5 @@ ISR (TIMER1_CAPT_vect)
         bitnum++;
       }
     }
-  }
-}
-
-
-
-byte doTransmit(byte len, byte vers) {
-  if (!(receiving || lastPacketTime)) {
-    TIMSK1 = 0;
-#ifdef LED_TX
-    digitalWrite(LED_TX, TX_LED_ON);
-#endif
-    digitalWrite(TX_PIN, 0); // known state
-    byte txchecksum = 0;
-    byte txchecksum2 = 0;
-    byte txc2;
-    for (byte i = 0; i < len - 1; i++) {
-      txchecksum = txchecksum ^ txBuffer[i];
-      txc2 = txchecksum2 & 128 ? 1 : 0;
-      txchecksum2 = (txchecksum2 << 1 + txc2)^txBuffer[i];
-    }
-    if (len == 4) {
-      txchecksum = (txchecksum & 0x0F) ^ (txchecksum >> 4) ^ ((txBuffer[3] & 0xF0) >> 4);
-      txchecksum2 = (txchecksum2 & 0x0F) ^ (txchecksum2 >> 4) ^ ((txBuffer[3] & 0xF0) >> 4);
-      if (txchecksum == txchecksum2)txchecksum2++;
-      txBuffer[3] = (txBuffer[3] & 0xF0) | 0x0F & (vers == 1 ? txchecksum : txchecksum2);
-    } else {
-      if (txchecksum == txchecksum2)txchecksum2++;
-      txBuffer[len - 1] = (vers == 1 ? txchecksum : txchecksum2);
-    }
-
-    for (byte r = 0; r < txRepCount; r++) {
-      for (byte j = 0; j <= 2 * txTrainRep; j++) {
-        delayMicroseconds(txTrainLen);
-        //digitalWrite(txpin, j & 1);
-        txPIN = txBV;
-      }
-      digitalWrite(TX_PIN, 1);
-      delayMicroseconds(txSyncTime);
-      txPIN = txBV;
-      delayMicroseconds(txSyncTime);
-      for (byte k = 0; k < len; k++) {
-        //send a byte
-        for (int m = 7; m >= 0; m--) {
-          txPIN = txBV;
-          if ((txBuffer[k] >> m) & 1) {
-            delayMicroseconds(txOneLength);
-            txPIN = txBV;
-            delayMicroseconds(txOneLength);
-          } else {
-            delayMicroseconds(txZeroLength);
-            txPIN = txBV;
-            delayMicroseconds(txZeroLength);
-          }
-        }
-        //done with that byte
-      }
-      //done with sending this packet;
-      digitalWrite(TX_PIN, 0); //make sure it's off;
-      delayMicroseconds(txRepDelay); //wait before doing the next round.
-    }
-#ifdef LED_TX
-    digitalWrite(LED_TX, TX_LED_OFF);
-#endif
-    TIMSK1 = 1 << ICIE1;
-    return 1;
-  } else {
-    return 0;
   }
 }
