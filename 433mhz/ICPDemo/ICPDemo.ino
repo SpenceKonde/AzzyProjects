@@ -15,7 +15,7 @@ char * pEnd; //dummy pointer for strtol
 //Microcontroller-specific
 //328p
 
-#define RX_PIN_STATE (PINB&1)
+#define RX_PIN_STATE (PINB&1) //RX on pin 8 for input capture. 
 #define TX_PIN 7
 #define txPIN PIND
 #define txBV 128
