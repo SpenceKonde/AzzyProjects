@@ -66,7 +66,7 @@ void setup() {
   // start Timer 1, prescalar of 8, edge select on falling edge
   TCCR1B =  ((F_CPU == 1000000L) ? (1 << CS10) : (1 << CS11)) | 1 << ICNC1; //prescalar 8 except at 1mhz, where we use prescalar of 1, noise cancler active
   //ready to rock and roll
-  Seria.begin(115200);
+  Serial.begin(115200);
 }
 
 void loop() {
