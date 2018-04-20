@@ -1,6 +1,7 @@
 #include <EEPROM.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
+#include <util/crc16.h>
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
@@ -287,8 +288,7 @@ byte checkCSC() {
   byte rxc2;
   for (byte i = 0; i < pktLength >> 3; i++) {
     rxchecksum = rxchecksum ^ rxBuffer[i];
-    rxc2 = rxchecksum2 & 128 ? 1 : 0;
-    rxchecksum2 = (rxchecksum2 << 1 + rxc2)^rxBuffer[i];
+    rxchecksum2 = _crc8_ccitt_update(rxchecksum2,rxBuffer[i]);
   }
   if (pktLength >> 3 == 3) {
     rxchecksum = (rxchecksum & 0x0F) ^ (rxchecksum >> 4) ^ ((rxBuffer[3] & 0xF0) >> 4);

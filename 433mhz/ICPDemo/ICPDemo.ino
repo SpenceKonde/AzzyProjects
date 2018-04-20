@@ -1,4 +1,4 @@
-
+#include <util/crc16.h>
 volatile byte receiving = 0;
 volatile byte bitnum = 0; //current bit received
 
@@ -64,6 +64,7 @@ const byte txTrainRep  = 30;
 const int commandForgetTime = 5000;
 const char endMarker = '\r';
 const char endMarker2 = '\n';
+byte SendVersion=1;
 
 // Commands:
 
@@ -71,6 +72,9 @@ const char ATSEND[] PROGMEM = {"AT+SEND"};
 const char ATSENDM[] PROGMEM = {"AT+SENDM"};
 const char ATSENDL[] PROGMEM = {"AT+SENDL"};
 const char ATSENDE[] PROGMEM = {"AT+SENDE"};
+const char ATSENDV1[] PROGMEM = {"AT+SENDV1"};
+const char ATSENDV2[] PROGMEM = {"AT+SENDV2"};
+const char ATSENDVQ[] PROGMEM = {"AT+SENDV?"};
 const char ATADRQ[] PROGMEM = {"AT+ADR?"};
 const char ATADR[] PROGMEM = {"AT+ADR"};
 const char ATVERS[] PROGMEM = {"AT+VERS"};
@@ -135,7 +139,7 @@ void processSerial() {
         ndx = 0;
         
         byte len = preparePayloadFromSerial(SerRXmax);
-        while (!doTransmit(len, 1));
+        while (!doTransmit(len, SendVersion));
         SERIAL_CMD.println(F("OK"));
         SerRXidx=0;
         SerRXmax=0;
@@ -201,15 +205,21 @@ byte checkCommand() {
     paramlen = 31;
   } else if (strcmp_P (serBuffer, ATADRQ) == 0) { //AT+ADR?
     SERIAL_CMD.println(MyAddress);
+  } else if (strcmp_P (serBuffer, ATSENDVQ) == 0) {
+    SERIAL_CMD.println(SendVersion);
+  } else if (strcmp_P (serBuffer, ATSENDV1) == 0) {
+    SendVersion=1;
+  } else if (strcmp_P (serBuffer, ATSENDV2) == 0) {
+    SendVersion=2;
   } else if (strcmp_P (serBuffer, ATADR) == 0) {
     paramlen = 1;
   } else if (strcmp_P (serBuffer, ATVERS) == 0) {
-    SERIAL_CMD.println("AzzyRF v2.3");
+    SERIAL_CMD.println(F("AzzyRF v2.3"));
   } else {
     return 255;
   }
   if (paramlen) {
-    SERIAL_CMD.print(F(">"));
+    SERIAL_CMD.print('>');
   }
   return paramlen;
 }
@@ -303,11 +313,9 @@ void resetReceive() {
 byte checkCSC() {
   byte rxchecksum = 0;
   byte rxchecksum2 = 0;
-  byte rxc2;
   for (byte i = 0; i < pktLength >> 3; i++) {
     rxchecksum = rxchecksum ^ rxBuffer[i];
-    rxc2 = rxchecksum2 & 128 ? 1 : 0;
-    rxchecksum2 = (rxchecksum2 << 1 + rxc2)^rxBuffer[i];
+    rxchecksum2 = _crc8_ccitt_update(rxchecksum2,rxBuffer[i]);
   }
   if (pktLength >> 3 == 3) {
     rxchecksum = (rxchecksum & 0x0F) ^ (rxchecksum >> 4) ^ ((rxBuffer[3] & 0xF0) >> 4);
@@ -402,11 +410,9 @@ byte doTransmit(byte len, byte vers) {
     digitalWrite(TX_PIN, 0); // known state
     byte txchecksum = 0;
     byte txchecksum2 = 0;
-    byte txc2;
     for (byte i = 0; i < len - 1; i++) {
       txchecksum = txchecksum ^ txBuffer[i];
-      txc2 = txchecksum2 & 128 ? 1 : 0;
-      txchecksum2 = (txchecksum2 << 1 + txc2)^txBuffer[i];
+      txchecksum2 = _crc8_ccitt_update(txchecksum2,txBuffer[i]);
     }
     if (len == 4) {
       txchecksum = (txchecksum & 0x0F) ^ (txchecksum >> 4) ^ ((txBuffer[3] & 0xF0) >> 4);
