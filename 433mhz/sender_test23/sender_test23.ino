@@ -122,7 +122,7 @@ void loop() {
     } else {
       prepareErrorPayload(btnst); //error
     }
-    doTransmit(TXLength,1);
+    doTransmit(TXLength,2);
     TXLength=0;
   }
   delay(50);
