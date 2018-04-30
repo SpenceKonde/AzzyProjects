@@ -18,7 +18,7 @@ f0~7: Flags
 Bit 0: Reset twinkle
 */
 
-E.setFlags({pretokenise:1});
+//E.setFlags({pretokenise:1});
 
 function startup() {
   SPI1.setup({sck:14,mosi:13,mode:1,order:"msb",baud:4000000});
