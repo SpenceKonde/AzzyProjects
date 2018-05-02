@@ -40,6 +40,7 @@ var db={};
 db.humidity=[];
 db.temp=[];
 db.aqi=[];
+db.currentpos=0;
 
 function newRecord(h,t,a) {
 	db.temp.shift();
@@ -48,7 +49,10 @@ function newRecord(h,t,a) {
 	db.temp.push(t);
 	db.humidity.push(h);
 	db.aqi.push(a);
+	db.currentpos++;
 }
+
+
 
 function initDB() {
 	for (i=0;i<49;i++){
