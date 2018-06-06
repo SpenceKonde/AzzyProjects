@@ -27,23 +27,55 @@ var CORS={'Access-Control-Allow-Origin':'*'};
 function onPageRequest(req, res) {
   var a = url.parse(req.url, true);
   var resu = handleCmd(a.pathname,a.query,res);
-  if (resu == -1) {;}
-  	else if (resu) {
-  	res.writeHead(resu,CORS);
-  	if (resu==200) {res.write("OK");}
-  	else if (resu==404) {res.write("Not Found");}
+  if (resu == -1) {
+	  ;
+  }
+  else if (resu) {
+  	  res.writeHead(resu,CORS);
+  	  if (resu==200) {res.write('{"error":false,"code":200,"text":"OK"}');}
+  	  else if (resu==404) {res.write('{"error":true,"code":404,"text":"Not Found"}');}
+  	  else if (resu==403) {res.write('{"error":true,"code":403,"text":"Unauthorized Client"}');}
+  	  else if (resu==400) {res.write('{"error":true,"code":400,"text":"Bad Request"}');}
   } else {
-  	res.writeHead(500,CORS);
-  	res.write("ERROR");
+  	  res.writeHead(500,CORS);
+  	  res.write('{"error":true,"code":500,"text":"Unknown Error"}');
   }
   res.end();
 }
+
+'{"error":true,"code":404,"errorText":"Not Found"}'
+
+function handleCmd(path,query,res) {
+	console.log(path);
+	console.log(query);
+	if (query.un!="testuser" || query.pw!="testpass") { 
+		return 403;
+	}
+	if (path=="/status") {
+		res.writeHead(200,CORS);
+		res.write(JSON.stringify(cs));
+	} else {
+		return 404;
+	}
+}
+
+var cs={ //cs=Current State
+	DoorUp:0,
+	DoorDown:0,
+	Fridge:0,
+	Fargo:new Uint8Array(8);
+	Humidity:null,
+	Temperature:null,
+	Pressure:null,
+	Light:null
+}
+	
 
 var db={};
 db.humidity=[];
 db.temp=[];
 db.aqi=[];
-db.currentpos=0;
+db.light[];
 
 function newRecord(h,t,a) {
 	db.temp.shift();
@@ -52,16 +84,15 @@ function newRecord(h,t,a) {
 	db.temp.push(t);
 	db.humidity.push(h);
 	db.aqi.push(a);
-	db.currentpos++;
 }
 
 
 
 function initDB() {
 	for (i=0;i<49;i++){
-		db.temp.push(NaN);
-		db.humidity.push(NaN);
-		db.aqi.push(NaN);
+		db.temp.push(null);
+		db.humidity.push(null);
+		db.aqi.push(null);
 	}
 	
 }
@@ -113,4 +144,5 @@ function processPacket_V1(r) {
 function processPacket_V2(rcvpkt) {
   
 }
+
 
