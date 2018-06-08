@@ -75,15 +75,21 @@ var db={};
 db.humidity=[];
 db.temp=[];
 db.aqi=[];
-db.light[];
+db.light=[];
+db.pressure=[];
+db.lastUpdate=0;
 
-function newRecord(h,t,a) {
+function newRecord(h,t,a,p,l) {
 	db.temp.shift();
 	db.humidity.shift();
 	db.aqi.shift();
+	db.pressure.shift();
+	db.light.shift();
 	db.temp.push(t);
 	db.humidity.push(h);
 	db.aqi.push(a);
+	db.pressure.push(p);
+	db.light.push(l);
 }
 
 
@@ -93,6 +99,8 @@ function initDB() {
 		db.temp.push(null);
 		db.humidity.push(null);
 		db.aqi.push(null);
+		db.light.push(null);
+		db.pressure.push(null);
 	}
 	
 }
@@ -142,7 +150,15 @@ function processPacket_V1(r) {
 }
 
 function processPacket_V2(rcvpkt) {
-  
+  if (r.destaddress==31) {
+	  if (r.data[1]==226) {
+		  var x=data[3];
+		  for (var i=0;i<8;i++) {
+			  cs.fargo[i]=x&1;
+			  x>>1;
+		  }
 }
 
-
+function cvt(high,low,divisor) {
+	return (low+(high<<8))/divisor;
+}
