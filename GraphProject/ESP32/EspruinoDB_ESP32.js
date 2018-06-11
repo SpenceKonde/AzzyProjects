@@ -54,6 +54,7 @@ function handleCmd(path,query,res) {
 	if (path=="/status") {
 		res.writeHead(200,CORS);
 		res.write(JSON.stringify(cs));
+		return -1;
 	} else {
 		return 404;
 	}
