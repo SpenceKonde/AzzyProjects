@@ -43,7 +43,6 @@ function onPageRequest(req, res) {
   res.end();
 }
 
-'{"error":true,"code":404,"errorText":"Not Found"}'
 
 function handleCmd(path,query,res) {
 	console.log(path);
@@ -64,12 +63,14 @@ var cs={ //cs=Current State
 	DoorUp:0,
 	DoorDown:0,
 	Fridge:0,
-	Fargo:new Uint8Array(8);
 	Humidity:null,
 	Temperature:null,
 	Pressure:null,
+	AQI:null,
 	Light:null
 }
+cs.Fargo=new Uint8Array(8);
+cs.Misc=new Uint8Array(8);
 	
 
 var db={};
@@ -155,9 +156,20 @@ function processPacket_V2(rcvpkt) {
 	  if (r.data[1]==226) {
 		  var x=data[3];
 		  for (var i=0;i<8;i++) {
-			  cs.fargo[i]=x&1;
+			  cs.Fargo[i]=x&1;
 			  x>>1;
 		  }
+		  var x=data[14];
+		  for (var i=0;i<8;i++) {
+			  cs.Misc[i]=x&1;
+			  x>>1;
+		  }
+		  cs.Temperature=(((data[4]<<8)&0x7F)+data[5])/100;
+          if (data[4]>>7) {cs.Temperature=-1*cs.Temperature;}
+		  cs.Humidity=((data[6]<<8)+data[7])/100;
+		  cs.AQI=(data[8]<<8)+data[9];
+		  cs.Pressure=(data[10]<<8)+data[11];
+		  cs.Light=(data[12]<<8)+data[13];
 }
 
 function cvt(high,low,divisor) {
