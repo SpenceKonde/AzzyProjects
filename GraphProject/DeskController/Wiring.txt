@@ -1,7 +1,10 @@
 Desk Controller Wiring:
 
 VFD:
-
+B6 - Serial1 TX
+B7 - MOSFET gate
++5v separate supply
+Gnd. 
 
 
 Nixie Display: 
