@@ -1,40 +1,40 @@
 Desk Controller Wiring:
 
-VFD:
-B6 - Serial1 TX
-B7 - MOSFET gate
-+5v separate supply
-Gnd. 
+### VFD:
+* B6 - Serial1 TX
+* B7 - MOSFET gate
+* +5v separate supply
+* Gnd. 
 
 
-Nixie Display: 
-C12 - Serial5 TX
-Gnd
+### Nixie Display: 
+* C12 - Serial5 TX
+* Gnd
 
-AzzyRF transciever:
-C10 - Serial4 TX 5v pullup
-C11 - Serial4 RX 5v pullup
-Vcc
-Gnd
+### AzzyRF transciever:
+* C10 - Serial4 TX 5v pullup
+* C11 - Serial4 RX 5v pullup
+* Vcc
+* Gnd
 
-Keypad: 
-C0, C1, C2, C3, C4 - Rows
-A0,A1,B0,B1 - Columns
+### Keypad: 
+* C0, C1, C2, C3, C4 - Rows
+* A0,A1,B0,B1 - Columns
 
 
-Ethernet:
+### Ethernet:
 SPI3
-B3 - SPI3 MOSI
-B4 - SPI3 MISO
-B5 - SPI3 SCK
-C5 - CS
- Vcc
- Gnd
+* B3 - SPI3 MOSI
+* B4 - SPI3 MISO
+* B5 - SPI3 SCK
+* C5 - CS
+* Vcc
+* Gnd
 
 
-BME680 and other I2C devices: 
-B8 - I2C1 SCL
-B9 - I2C1 SDA
-Vcc
-Gnd
+### BME680 and other I2C devices: 
+* B8 - I2C1 SCL
+* B9 - I2C1 SDA
+* Vcc
+* Gnd
 
