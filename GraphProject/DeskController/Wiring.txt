@@ -18,8 +18,8 @@ Vcc
 Gnd
 
 Keypad: 
-C0, C1, C2, C3, C4 - Rows
-A0,A1,B0,B1 - Columns
+C0, C1, C2, C3, C4 - columns
+A0,A1,B0,B1 - rows
 
 
 Ethernet:
