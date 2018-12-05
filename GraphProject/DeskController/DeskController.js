@@ -6,7 +6,6 @@ function onInit() {
 	setBusyIndicator(A13);
     // initialize hardware. 
 	LedPins=[A8,C9,C8,C7,C6];
-	LedState=new Float32Array([0.0,0.0,0.0,0.0,0.0]);
 	for (var lp in LedPins) {
 		digitalWrite(lp,0);
 	}
@@ -21,7 +20,7 @@ function onInit() {
 	Serial5.setup(115200,{tx:C12});
 	Nixie=require("SmartNixie").connect(Serial5,6);
 	//Keypad
-	KeyPad=require("KeyPad").connect([A0,A1,B0,B1],[C0, C1, C2, C3, C4], function(e) {onKey("AB#*123U456D789CL0RE"[e]);});
+	KeyPad=require("KeyPad").connect([C0, C1, C2, C3, C4],[A0,A1,B0,B1], function(e) {onKey("A147LB2580#369R*UDCE"[e]);});
 	//WIZnet
     SPI3.setup({sck:B3,mosi:B5,miso:B4});
 	Eth=require("WIZnet").connect(SPI3,B2);
@@ -46,29 +45,37 @@ function onInit() {
 	status={}; 
 	status.Fargo=new Uint8Array(8);
 	status.Nixie={on:0,mode:0};
-    status.LEDs=[0.0,0.0,0.0,0.0,0.0];
+        status.LEDs=[0.0,0.0,0.0,0.0,0.0];
 	status.Temp=0;
 	status.RH=0;
 	status.Pressure=0;
 	status.AirQual=0;
-    
+        
 	/*if (fram.read(320,1)!=255) { //if we have stored history in the fram, read it in
 		rhh=fram.read(320,48);
 		temh=fram.read(368,48);
 		prh=fram.read(416,48);
 	}*/ //unsure if we need this now. 
-
+        Intervals={webserver:-1,sensors:-1,nixie:-1,history:-1,fargo:-1,date:-1,activity:-1}; //webserver, sensors, fargo, date, activity, 
 	menu=[2,4,presets.length-1];
 	//if this pin is grounded, we return before actually kicking everything off for maintenance mode. 
     //if (1) {return;}
-	setTimeout("var s=require('http').createServer(function (req, res) {var par=url.parse(req.url,true);var q=par.query; var nam=par.pathname; nam=nam.split('/');nam=nam[1];var rd=procreq(nam,q);res.writeHead(rd.code,{'Content-Type': 'text/plain'}); res.write(rd.body);res.end();}).listen(80);",15000);
+	Intervals.webserver=setTimeout("var WebServer=require('http').createServer(function (req, res) {var par=url.parse(req.url,true);var q=par.query; var nam=par.pathname; nam=nam.split('/');nam=nam[1];var rd=procreq(nam,q);res.writeHead(rd.code,{'Content-Type': 'text/plain'}); res.write(rd.body);res.end();}).listen(80);",15000);
     setTimeout("loadPresets();",1000);
-	setInterval("readSensors();",15000);
-	//setTimeout('setInterval("upHist()",60000*30);',59000);
+	Intervals.sensors=setInterval(readSensors,15000);
+	//setTimeout("Intervals.history=setInterval(upHist,60000*30);",59000);
 	//setTimeout("setInterval(function(){uplcd();},30000);",15000);
-	setTimeout("setInterval(getFargoStatus,30000);",20000);
-	setTimeout("getDate();setInterval('getDate();',1800000);",2000);
+	setTimeout("Intervals.fargo=setInterval(getFargoStatus,30000);",20000);
+	setTimeout("Intervals.nixie=setInterval(upNixie,30000);",30000);
+	setTimeout("getDate();Intervals.date=setInterval(getDate,1800000);",2000);
 	setTimeout("delete onInit",500); 
+}
+function onHalfHour() {
+	Intervals.history=-1;
+	
+	var mins=clk.getDate().getMinutes();
+	var m=(31-mins%30
+	Intervals.history=setTimeout(
 }
 
 //START OF PRESET AND LED HANDLING CODE
@@ -109,7 +116,7 @@ function saveNewPreset(name) {
 	prenames.push(name);
 	var t=new Float32Array(5);
 	for (var x=0;i<5;i++) {
-		t[x]=ledstate[x];
+		t[x]=status.LEDs[x];
 	}
 	presets.push(t);
 	savePresets();
@@ -130,7 +137,7 @@ function getPresetString(x) {
 
 function upled() {
 	for (var i=0;i<5;i++) {
-		analogWrite(ledpins[i],ledstate[i]);
+		analogWrite(LedPins[i],status.LEDs[i]);
 	}
 }
 
