@@ -5,7 +5,7 @@ function onInit() {
 	pinMode(BTN1,'input_pulldown');
 	setBusyIndicator(A13);
     // initialize hardware. 
-	LedPins=[A8,C9,C8,C7,C6];
+	LedPins=[C6,C7,C8,C9,A8];//Ice Blue, Cool White, Warm White, Yellow, Red
 	for (var lp in LedPins) {
 		digitalWrite(lp,0);
 	}
@@ -20,7 +20,7 @@ function onInit() {
 	Serial5.setup(115200,{tx:C12});
 	Nixie=require("SmartNixie").connect(Serial5,6);
 	//Keypad
-	KeyPad=require("KeyPad").connect([C0, C1, C2, C3, C4],[A0,A1,B0,B1], function(e) {onKey("A147LB2580#369R*UDCE"[e]);});
+	KeyPad=require("KeyPad").connect([C0, C1, C2, C3, C4],[A0,A1,B0,B1], function(e) {onKey("AL741B0852#R963*ECDU"[e]);});
 	//WIZnet
     SPI3.setup({sck:B3,mosi:B5,miso:B4});
 	Eth=require("WIZnet").connect(SPI3,B2);
@@ -74,8 +74,7 @@ function onHalfHour() {
 	Intervals.history=-1;
 	
 	var mins=clk.getDate().getMinutes();
-	var m=(31-mins%30
-	Intervals.history=setTimeout(
+	var m=(31-mins%30);
 }
 
 //START OF PRESET AND LED HANDLING CODE
