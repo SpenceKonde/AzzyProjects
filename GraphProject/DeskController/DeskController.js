@@ -14,7 +14,7 @@ function onInit() {
 	// I2C devices
     I2C1.setup({scl:B8,sda:B9});
     BME680=require("BME680").connectI2C(I2C1); //T/P/RH/AQI sensor. 
-    TCS=require("TCS3472x").connect(I2C1,64,1); //light color sensor.
+    TCS=require("TCS3472x").connect(I2C1,16,1); //light color sensor.
     FRAM=require("AT24").connect(I2C1,0,256,0); //256 kbit FRAM for storing presets and other data that may change frequently
     //Nixie Clock
 	Serial5.setup(115200,{tx:C12});
@@ -252,22 +252,23 @@ function procreq(path,query) {
 	} else if (path=="code.run") {
 		if (query.code) {
 			rd.code=200;
-			rd.body=eval(query.code);
+			rd.body="{status:\"ok\",result=\""+eval(query.code)+\"}";
 		} else {
 			rd.code=400;
-			rd.body="400 Bad Request: No code supplied!";
+			rd.body="{status:\"error\",error:\"No code supplied.\"}";
 		}
 	} else if (path=="usrmsg.cmd") {
 		if (query.msg && query.msg.length > 1) {
 			rd.code=200;
 			usrmsg=query.msg;
-			rd.body="Message set: "+query.msg;
+			rd.body="{status:\"ok\",message:\""+query.msg+"\"}";
 			MnuS=10;
 			setTimeout("uplcd();",100);
-		} else {rd.code=400; rd.body="400 Bad Request: No message supplied";}
-	} else {rd.code=403; rd.body="403 Forbidden";}
+		} else {rd.code=400; rd.body="{status:\"error\",error:\"No message supplied\"}";}
+	} else {rd.code=403; rd.body="";}
 	return rd;
 }
+
 
 //END HTTP INTERFACE CODE
 
