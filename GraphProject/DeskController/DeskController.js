@@ -101,6 +101,14 @@ function updateHistory() {
 
 }
 
+
+/* FRAM Map 
+
+0~1023: Presets (32 at 32 bytes each)
+1024~2047: Reserved for other settings
+2048~3248: history of last 24 hours
+
+
 //START OF PRESET AND LED HANDLING CODE
 
 function loadPresets() {
