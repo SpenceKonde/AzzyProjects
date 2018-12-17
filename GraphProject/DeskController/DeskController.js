@@ -42,39 +42,55 @@ function onInit() {
 	nixr=0;
 	presets=[new Float32Array([0.0,0.0,0.0,0.0,0.0]),new Float32Array([0.9,1,0.6,0,0]),new Float32Array([0,0.6,1,0.8,0.4]),new Float32Array([0.5,0.5,0.5,0.5,0.5])];
 	prenames=["OFF","COLD WHITE","VERY WARM","HALF AND HALF"];
-	status={}; 
-	status.Fargo=new Uint8Array(8);
-	status.Nixie={on:0,mode:0};
-        status.LEDs=[0.0,0.0,0.0,0.0,0.0];
-	status.Temp=0;
-	status.RH=0;
-	status.Pressure=0;
-	status.AirQual=0;
-        
+	STATUS={}; 
+	STATUS.Fargo=new Uint8Array(8);
+	STATUS.Nixie={on:0,mode:0};
+    STATUS.LEDs=[0.0,0.0,0.0,0.0,0.0];
+	STATUS.Temp=0;
+	STATUS.RH=0;
+	STATUS.Pressure=0;
+	STATUS.AirQual=0;
+	HISTORY={};
+	HISTORY.Temp=new Float32Array[48];
+	HISTORY.RH=new Float32Array[48];
+	HISTORY.Pressure=new Float32Array[48];
+	HISTORY.AirQual=new Float32Array[48];
+	HISTORY.Clear=new Uint16Array[48];
+	HISTORY.Red=new Uint16Array[48];
+	HISTORY.Green=new Uint16Array[48];
+	HISTORY.Blue=new Uint16Array[48];
 	/*if (fram.read(320,1)!=255) { //if we have stored history in the fram, read it in
 		rhh=fram.read(320,48);
 		temh=fram.read(368,48);
 		prh=fram.read(416,48);
 	}*/ //unsure if we need this now. 
-        Intervals={webserver:-1,sensors:-1,nixie:-1,history:-1,fargo:-1,date:-1,activity:-1}; //webserver, sensors, fargo, date, activity, 
+        INTERVALS={webserver:-1,sensors:-1,nixie:-1,history:-1,fargo:-1,date:-1,activity:-1}; //webserver, sensors, fargo, date, activity, 
 	menu=[2,4,presets.length-1];
 	//if this pin is grounded, we return before actually kicking everything off for maintenance mode. 
     //if (1) {return;}
-	Intervals.webserver=setTimeout("var WebServer=require('http').createServer(function (req, res) {var par=url.parse(req.url,true);var q=par.query; var nam=par.pathname; nam=nam.split('/');nam=nam[1];var rd=procreq(nam,q);res.writeHead(rd.code,{'Content-Type': 'text/plain'}); res.write(rd.body);res.end();}).listen(80);",15000);
+	INTERVALS.webserver=setTimeout("var WebServer=require('http').createServer(function (req, res) {var par=url.parse(req.url,true);var q=par.query; var nam=par.pathname; nam=nam.split('/');nam=nam[1];var rd=procreq(nam,q);res.writeHead(rd.code,{'Content-Type': 'text/plain'}); res.write(rd.body);res.end();}).listen(80);",15000);
     setTimeout("loadPresets();",1000);
-	Intervals.sensors=setInterval(readSensors,15000);
-	//setTimeout("Intervals.history=setInterval(upHist,60000*30);",59000);
+	INTERVALS.sensors=setInterval(readSensors,15000);
+	setTimeout(onHalfHour,5000);
 	//setTimeout("setInterval(function(){uplcd();},30000);",15000);
-	setTimeout("Intervals.fargo=setInterval(getFargoStatus,30000);",20000);
-	setTimeout("Intervals.nixie=setInterval(upNixie,30000);",30000);
-	setTimeout("getDate();Intervals.date=setInterval(getDate,1800000);",2000);
+	setTimeout("INTERVALS.fargo=setInterval(getFargoStatus,30000);",20000);
+	setTimeout("INTERVALS.nixie=setInterval(upNixie,30000);",30000);
+	setTimeout("getDate();INTERVALS.date=setInterval(getDate,1800000);",2000);
 	setTimeout("delete onInit",500); 
 }
 function onHalfHour() {
-	Intervals.history=-1;
-	
+	if INTERVALS.history != -1 {
+		INTERVALS.history=-1;
+		//update history here. 
+		updateHistory();
+	}
 	var mins=clk.getDate().getMinutes();
 	var m=(31-mins%30);
+	INTERVALS.history=setTimeout(onHalfHour,m*60000); //now we set t
+}
+
+function updateHistory() {
+
 }
 
 //START OF PRESET AND LED HANDLING CODE
@@ -111,11 +127,20 @@ function savePresets() {
 	}
 }
 
+function loadPreset(number) {
+	if (number>=presets.length) {return 0;}
+	for (var i=0;i<5;i++) {
+		STATUS.LEDs[i]=presets[number][i];
+	}
+	upled();
+	return 1;
+}
+
 function saveNewPreset(name) {
 	prenames.push(name);
 	var t=new Float32Array(5);
 	for (var x=0;i<5;i++) {
-		t[x]=status.LEDs[x];
+		t[x]=STATUS.LEDs[x];
 	}
 	presets.push(t);
 	savePresets();
@@ -136,7 +161,7 @@ function getPresetString(x) {
 
 function upled() {
 	for (var i=0;i<5;i++) {
-		analogWrite(LedPins[i],status.LEDs[i]);
+		analogWrite(LedPins[i],STATUS.LEDs[i]);
 	}
 }
 
@@ -150,7 +175,7 @@ function getFargoStatus() {
 	var fargost="";
 	require("http").get(fargosturl, function(res) {
 		res.on('data',function (data) {fargost+=data;});
-		res.on('close',function() {var tfs=JSON.parse(fargost); for (var i=0;i<8;i++) { status.Fargo[i]=tfs.relaystate[i].state;} /*if(MnuS==3){uplcd(1);}*/});
+		res.on('close',function() {var tfs=JSON.parse(fargost); for (var i=0;i<8;i++) { STATUS.Fargo[i]=tfs.relaystate[i].state;} /*if(MnuS==3){uplcd(1);}*/});
 	});
 }
 
@@ -159,7 +184,7 @@ function setFargo(relay,state) {
 	require("http").get(fargourl+(relay+1).toString()+postfix, function(res) {
 		res.on('close',function () {
 			if(this.code==200) {
-				status.Fargo[relay]=state;
+				STATUS.Fargo[relay]=state;
 			} else {
               console.log(this.code);
             }
@@ -170,21 +195,21 @@ function setFargo(relay,state) {
 
 
 function upNixie() {
-	if (status.Nixie.on){
-		if (status.Nixie.mode==0) { // Time
+	if (STATUS.Nixie.on){
+		if (STATUS.Nixie.mode==0) { // Time
 			Nixie.setAllLED(0,0,0);
 			Nixie.setString(getTStr(" ")+" ");
-		} else if (status.Nixie.mode==1) { // Temp
-			Nixie.setString("  "+status.Temp.toFixed(1)+"5");
+		} else if (STATUS.Nixie.mode==1) { // Temp
+			Nixie.setString("  "+STATUS.Temp.toFixed(1)+"5");
 			Nixie.setAllLED(96,0,0);Nixie.setLED(1,0,0,0);Nixie.setLED(0,0,0,0);
-		} else if (status.Nixie.mode==2) { // RH 
-			Nixie.setString("  "+status.RH.toFixed(1)+"6");
+		} else if (STATUS.Nixie.mode==2) { // RH 
+			Nixie.setString("  "+STATUS.RH.toFixed(1)+"6");
 			Nixie.setAllLED(16,24,64); Nixie.setLED(1,0,0,0); nixie.setLED(0,0,0,0);
-		} else if (status.Nixie.mode==3) { // pressure
-			Nixie.setString((status.Pressure+"8"));
+		} else if (STATUS.Nixie.mode==3) { // pressure
+			Nixie.setString((STATUS.Pressure+"8"));
 			Nixie.setAllLED(16,48,16);
-		} else if (status.Nixie.mode==4) { // Air Quality
-			Nixie.setString("  "+status.AirQual.toFixed(1)+" ");
+		} else if (STATUS.Nixie.mode==4) { // Air Quality
+			Nixie.setString("  "+STATUS.AirQual.toFixed(1)+" ");
 			Nixie.setAllLED(16,24,64); Nixie.setLED(1,0,0,0); nixie.setLED(7,0,0,0);
 		}
 	} else {
@@ -201,11 +226,11 @@ function upNixie() {
 function readSensors() {
 	BME680.perform_measurement();
     var t=BME680.get_sensor_data();
-    status.RH=t.humidity;
-    status.Temp=t.temperature;
-    status.Pressure=t.pressure;
-  status.AirQual=t.gas_resistance;
-  status.Light=TCS.getValue();
+    STATUS.RH=t.humidity;
+    STATUS.Temp=t.temperature;
+    STATUS.Pressure=t.pressure;
+  STATUS.AirQual=t.gas_resistance;
+  STATUS.Light=TCS.getValue();
 }
 
 
@@ -235,19 +260,19 @@ function procreq(path,query) {
 		rd.code=200;
 		var r='{"lamp":{';
 		for (var i=0;i<5;i++) {
-			r+='"'+colors.substr(i*4,4)+'":'+status.LEDs[i].toFixed(2);
+			r+='"'+colors.substr(i*4,4)+'":'+STATUS.LEDs[i].toFixed(2);
 			if (i<4) {r+=",";}
 		}
-		r+='},\n"sensors":{"RH":'+status.RH.toFixed(1)+',"Temp":'+status.Temp.toFixed(1)+',"Pressure":'+status.Pressure.toFixed(2)+',"Air Quality":'+status.AirQual.toFixed(2)+'},\nLight:'+JSON.stringify(status.Light)+'}';
+		r+='},\n"sensors":{"RH":'+STATUS.RH.toFixed(1)+',"Temp":'+STATUS.Temp.toFixed(1)+',"Pressure":'+STATUS.Pressure.toFixed(2)+',"Air Quality":'+STATUS.AirQual.toFixed(2)+'},\nLight:'+JSON.stringify(STATUS.Light)+'}';
 		rd.body=r;
 	} else if (path=="lamp.cmd") {
 		rd.code=200;
 		rd.body="Command applied";
-		status.LEDs[0]=query.BLUE===undefined ? 0:E.clip(query.BLUE,0,1);
-		status.LEDs[1]=query.COOL===undefined ? 0:E.clip(query.COOL,0,1);
-		status.LEDs[2]=query.WARM===undefined ? 0:E.clip(query.WARM,0,1);
-		status.LEDs[3]=query.YELL===undefined ? 0:E.clip(query.YELL,0,1);
-		status.LEDs[4]=query.RED===undefined ? 0:E.clip(query.RED,0,1);
+		STATUS.LEDs[0]=query.BLUE===undefined ? 0:E.clip(query.BLUE,0,1);
+		STATUS.LEDs[1]=query.COOL===undefined ? 0:E.clip(query.COOL,0,1);
+		STATUS.LEDs[2]=query.WARM===undefined ? 0:E.clip(query.WARM,0,1);
+		STATUS.LEDs[3]=query.YELL===undefined ? 0:E.clip(query.YELL,0,1);
+		STATUS.LEDs[4]=query.RED===undefined ? 0:E.clip(query.RED,0,1);
 		setTimeout("uplcd(); upled();",100);
 	} else if (path=="code.run") {
 		if (query.code) {
