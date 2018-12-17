@@ -2,6 +2,7 @@
 
 
 function onInit() {
+	USB.setConsole(); 
 	pinMode(BTN1,'input_pulldown');
 	setBusyIndicator(A13);
     // initialize hardware. 
@@ -32,7 +33,7 @@ function onInit() {
     Serial3.setup(115200,{tx:C10,rx:C11});
     //
     //initialize variables
-	fargosturl="http://raspi/fargostatus.php";
+	fargosturl="http://192.168.2.21/fargostatus.php";
 	dateurl="http://drazzy.com/time.shtml";
 	fargourl="http://192.168.2.14/api/relay/";
 	blankpreset="\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF";
@@ -51,20 +52,15 @@ function onInit() {
 	STATUS.Pressure=0;
 	STATUS.AirQual=0;
 	HISTORY={};
-	HISTORY.Temp=new Float32Array[48];
-	HISTORY.RH=new Float32Array[48];
-	HISTORY.Pressure=new Float32Array[48];
-	HISTORY.AirQual=new Float32Array[48];
-	HISTORY.Clear=new Uint16Array[48];
-	HISTORY.Red=new Uint16Array[48];
-	HISTORY.Green=new Uint16Array[48];
-	HISTORY.Blue=new Uint16Array[48];
-	/*if (fram.read(320,1)!=255) { //if we have stored history in the fram, read it in
-		rhh=fram.read(320,48);
-		temh=fram.read(368,48);
-		prh=fram.read(416,48);
-	}*/ //unsure if we need this now. 
-        INTERVALS={webserver:-1,sensors:-1,nixie:-1,history:-1,fargo:-1,date:-1,activity:-1}; //webserver, sensors, fargo, date, activity, 
+	HISTORY.Temp=new Float32Array(48);
+	HISTORY.RH=new Float32Array(48);
+	HISTORY.Pressure=new Float32Array(48);
+	HISTORY.AirQual=new Float32Array(48);
+	HISTORY.Clear=new Uint16Array(48);
+	HISTORY.Red=new Uint16Array(48);
+	HISTORY.Green=new Uint16Array(48);
+	HISTORY.Blue=new Uint16Array(48);
+    INTERVALS={webserver:-1,sensors:-1,nixie:-1,history:-1,fargo:-1,date:-1,activity:-1}; //webserver, sensors, fargo, date, activity, 
 	menu=[2,4,presets.length-1];
 	//if this pin is grounded, we return before actually kicking everything off for maintenance mode. 
     //if (1) {return;}
@@ -78,15 +74,27 @@ function onInit() {
 	setTimeout("getDate();INTERVALS.date=setInterval(getDate,1800000);",2000);
 	setTimeout("delete onInit",500); 
 }
+
+
+
+//START OF HISTORY HANDLING
+
+
 function onHalfHour() {
-	if INTERVALS.history != -1 {
+	if (INTERVALS.history != -1) { //otherwise, interval hasn't been set yet. 
 		INTERVALS.history=-1;
-		//update history here. 
 		updateHistory();
-	}
+	} 
 	var mins=clk.getDate().getMinutes();
 	var m=(31-mins%30);
 	INTERVALS.history=setTimeout(onHalfHour,m*60000); //now we set t
+}
+
+function loadHistory() {
+
+}
+function saveHistory() {
+
 }
 
 function updateHistory() {
@@ -277,7 +285,7 @@ function procreq(path,query) {
 	} else if (path=="code.run") {
 		if (query.code) {
 			rd.code=200;
-			rd.body="{status:\"ok\",result=\""+eval(query.code)+\"}";
+			rd.body="{status:\"ok\",result=\""+eval(query.code)+"\"}";
 		} else {
 			rd.code=400;
 			rd.body="{status:\"error\",error:\"No code supplied.\"}";
