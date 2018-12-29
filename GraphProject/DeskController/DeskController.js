@@ -64,7 +64,7 @@ function onInit() {
 	menu=[2,4,presets.length-1];
 	//if this pin is grounded, we return before actually kicking everything off for maintenance mode. 
     //if (1) {return;}
-	INTERVALS.webserver=setTimeout("var WebServer=require('http').createServer(function (req, res) {var par=url.parse(req.url,true);var q=par.query; var nam=par.pathname; nam=nam.split('/');nam=nam[1];var rd=procreq(nam,q);res.writeHead(rd.code,{'Content-Type': 'text/plain'}); res.write(rd.body);res.end();}).listen(80);",15000);
+	INTERVALS.webserver=setTimeout("var WebServer=require('http').createServer(function (req, res) {var par=url.parse(req.url,true);var q=par.query; var nam=par.pathname; nam=nam.split('/');nam=nam[1];var rd=procreq(nam,q);res.writeHead(rd.code,{'Content-Type': 'text/plain', 'Access-Control-Allow-Origin':'*'}); res.write(rd.body);res.end();}).listen(80);",15000);
     setTimeout("loadPresets();",1000);
 	INTERVALS.sensors=setInterval(readSensors,15000);
 	setTimeout(loadHistory,3000);
