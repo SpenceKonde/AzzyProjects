@@ -2,7 +2,7 @@
 
 
 function onInit() {
-	USB.setConsole(); 
+	USB.setConsole(true); 
 	pinMode(BTN1,'input_pulldown');
 	setBusyIndicator(A13);
     // initialize hardware. 
@@ -67,7 +67,8 @@ function onInit() {
 	INTERVALS.webserver=setTimeout("var WebServer=require('http').createServer(function (req, res) {var par=url.parse(req.url,true);var q=par.query; var nam=par.pathname; nam=nam.split('/');nam=nam[1];var rd=procreq(nam,q);res.writeHead(rd.code,{'Content-Type': 'text/plain'}); res.write(rd.body);res.end();}).listen(80);",15000);
     setTimeout("loadPresets();",1000);
 	INTERVALS.sensors=setInterval(readSensors,15000);
-	setTimeout(onHalfHour,5000);
+	setTimeout(loadHistory,3000);
+	setTimeout(onHalfHour,15000);
 	//setTimeout("setInterval(function(){uplcd();},30000);",15000);
 	setTimeout("INTERVALS.fargo=setInterval(getFargoStatus,30000);",20000);
 	setTimeout("INTERVALS.nixie=setInterval(upNixie,30000);",30000);
@@ -84,20 +85,87 @@ function onHalfHour() {
 	if (INTERVALS.history != -1) { //otherwise, interval hasn't been set yet. 
 		INTERVALS.history=-1;
 		updateHistory();
+        saveHistory();
 	} 
 	var mins=clk.getDate().getMinutes();
-	var m=(31-mins%30);
-	INTERVALS.history=setTimeout(onHalfHour,m*60000); //now we set t
+	var m=(5-mins%5); //TEST MODE
+    m=m*60;
+    m=m-clk.getDate().getSeconds(); 
+	INTERVALS.history=setTimeout(onHalfHour,m*1000); //now we set t
 }
 
 function loadHistory() {
-
+	var a=2048;
+	var t=new Uint8Array(FRAM.read(a,48*4));
+	HISTORY.Temp=new Float32Array(t.buffer);
+	a+=48*4;
+	t=new Uint8Array(FRAM.read(a,48*4));
+	HISTORY.RH=new Float32Array(t.buffer);
+	a+=48*4;
+	t=new Uint8Array(FRAM.read(a,48*4));
+	HISTORY.Pressure=new Float32Array(t.buffer);
+	a+=48*4;
+	t=new Uint8Array(FRAM.read(a,48*4));
+	HISTORY.AirQual=new Float32Array(t.buffer);
+	a+=48*2;
+	t=new Uint8Array(FRAM.read(a,48*2));
+	HISTORY.Clear=new Uint16Array(t.buffer);
+	a+=48*2;
+	t=new Uint8Array(FRAM.read(a,48*2));
+	HISTORY.Red=new Uint16Array(t.buffer);
+	a+=48*2;
+	t=new Uint8Array(FRAM.read(a,48*2));
+	HISTORY.Green=new Uint16Array(t.buffer);
+	a+=48*2;
+	t=new Uint8Array(FRAM.read(a,48*2));
+	HISTORY.Blue=new Uint16Array(t.buffer);
 }
 function saveHistory() {
-
+	var a=2048;
+   var t=new Uint8Array(HISTORY.Temp.buffer);
+   FRAM.write(a,t);
+   a+=48*4;
+   t=new Uint8Array(HISTORY.RH.buffer);
+   FRAM.write(a,t);
+   a+=48*4;
+   t=new Uint8Array(HISTORY.Pressure.buffer);
+   FRAM.write(a,t);
+   a+=48*4;
+   t=new Uint8Array(HISTORY.AirQual.buffer);
+   FRAM.write(a,t);
+   a+=48*2;
+   t=new Uint8Array(HISTORY.Clear.buffer);
+   FRAM.write(a,t);
+   a+=48*2;
+   t=new Uint8Array(HISTORY.Red.buffer);
+   FRAM.write(a,t);
+   a+=48*2;
+   t=new Uint8Array(HISTORY.Green.buffer);
+   FRAM.write(a,t);
+   a+=48*2;
+   t=new Uint8Array(HISTORY.Blue.buffer);
+   FRAM.write(a,t);
 }
 
 function updateHistory() {
+   for (var i=0;i<47;i++) {
+   	HISTORY.Temp[i]=HISTORY.Temp[i+1];
+   	HISTORY.RH[i]=HISTORY.RH[i+1];
+   	HISTORY.Pressure[i]=HISTORY.Pressure[i+1];
+   	HISTORY.AirQual[i]=HISTORY.AirQual[i+1];
+   	HISTORY.Clear[i]=HISTORY.Clear[i+1];
+   	HISTORY.Red[i]=HISTORY.Red[i+1];
+   	HISTORY.Green[i]=HISTORY.Green[i+1];
+   	HISTORY.Blue[i]=HISTORY.Blue[i+1];
+   }
+   HISTORY.Temp[47]=STATUS.Temp;
+   HISTORY.RH[47]=STATUS.RH;
+   HISTORY.Pressure[47]=STATUS.Pressure;
+   HISTORY.AirQual[47]=STATUS.AirQual;
+   HISTORY.Clear[47]=STATUS.Light.clear;
+   HISTORY.Red[47]=STATUS.Light.red;
+   HISTORY.Green[47]=STATUS.Light.green;
+   HISTORY.Blue[47]=STATUS.Light.blue;
 
 }
 
@@ -108,6 +176,7 @@ function updateHistory() {
 1024~2047: Reserved for other settings
 2048~3248: history of last 24 hours
 
+*/
 
 //START OF PRESET AND LED HANDLING CODE
 
@@ -281,6 +350,9 @@ function procreq(path,query) {
 		}
 		r+='},\n"sensors":{"RH":'+STATUS.RH.toFixed(1)+',"Temp":'+STATUS.Temp.toFixed(1)+',"Pressure":'+STATUS.Pressure.toFixed(2)+',"Air Quality":'+STATUS.AirQual.toFixed(2)+'},\nLight:'+JSON.stringify(STATUS.Light)+'}';
 		rd.body=r;
+	} else if (path=="history.json") {
+		rd.code=200;
+		rd.body=JSON.stringify(HISTORY);
 	} else if (path=="lamp.cmd") {
 		rd.code=200;
 		rd.body="Command applied";
