@@ -64,7 +64,7 @@ function onInit() {
 	menu=[2,4,presets.length-1];
 	//if this pin is grounded, we return before actually kicking everything off for maintenance mode. 
     //if (1) {return;}
-	INTERVALS.webserver=setTimeout("var WebServer=require('http').createServer(function (req, res) {var par=url.parse(req.url,true);var q=par.query; var nam=par.pathname; nam=nam.split('/');nam=nam[1];var rd=procreq(nam,q);res.writeHead(rd.code,{'Content-Type': 'text/plain', 'Access-Control-Allow-Origin':'*'}); res.write(rd.body);res.end();}).listen(80);",15000);
+	INTERVALS.webserver=setTimeout("var WebServer=require('http').createServer(processrequest).listen(80);",15000);
     setTimeout("loadPresets();",1000);
 	INTERVALS.sensors=setInterval(readSensors,15000);
 	setTimeout(loadHistory,3000);
@@ -73,7 +73,7 @@ function onInit() {
 	setTimeout("INTERVALS.fargo=setInterval(getFargoStatus,30000);",20000);
 	setTimeout("INTERVALS.nixie=setInterval(upNixie,30000);",30000);
 	setTimeout("getDate();INTERVALS.date=setInterval(getDate,1800000);",2000);
-	setTimeout("delete onInit",500); 
+	setTimeout("delete Init",500); 
 }
 
 
@@ -337,50 +337,98 @@ function onRFMessage(msg) {
 
 //START HTTP INTERFACE CODE
 
-function procreq(path,query) {
-	var rd={};
-	rd.code=404;
-	rd.body="";
-	if (path=="status.json") {
-		rd.code=200;
-		var r='{"lamp":{';
-		for (var i=0;i<5;i++) {
-			r+='"'+colors.substr(i*4,4)+'":'+STATUS.LEDs[i].toFixed(2);
-			if (i<4) {r+=",";}
-		}
-		r+='},\n"sensors":{"RH":'+STATUS.RH.toFixed(1)+',"Temp":'+STATUS.Temp.toFixed(1)+',"Pressure":'+STATUS.Pressure.toFixed(2)+',"Air Quality":'+STATUS.AirQual.toFixed(2)+'},\nLight:'+JSON.stringify(STATUS.Light)+'}';
-		rd.body=r;
-	} else if (path=="history.json") {
-		rd.code=200;
-		rd.body=JSON.stringify(HISTORY);
-	} else if (path=="lamp.cmd") {
-		rd.code=200;
-		rd.body="Command applied";
-		STATUS.LEDs[0]=query.BLUE===undefined ? 0:E.clip(query.BLUE,0,1);
-		STATUS.LEDs[1]=query.COOL===undefined ? 0:E.clip(query.COOL,0,1);
-		STATUS.LEDs[2]=query.WARM===undefined ? 0:E.clip(query.WARM,0,1);
-		STATUS.LEDs[3]=query.YELL===undefined ? 0:E.clip(query.YELL,0,1);
-		STATUS.LEDs[4]=query.RED===undefined ? 0:E.clip(query.RED,0,1);
-		setTimeout("uplcd(); upled();",100);
-	} else if (path=="code.run") {
-		if (query.code) {
-			rd.code=200;
-			rd.body="{status:\"ok\",result=\""+eval(query.code)+"\"}";
-		} else {
-			rd.code=400;
-			rd.body="{status:\"error\",error:\"No code supplied.\"}";
-		}
-	} else if (path=="usrmsg.cmd") {
-		if (query.msg && query.msg.length > 1) {
-			rd.code=200;
-			usrmsg=query.msg;
-			rd.body="{status:\"ok\",message:\""+query.msg+"\"}";
-			MnuS=10;
-			setTimeout("uplcd();",100);
-		} else {rd.code=400; rd.body="{status:\"error\",error:\"No message supplied\"}";}
-	} else {rd.code=403; rd.body="";}
-	return rd;
+head={'Content-Type': 'application/json', 'Access-Control-Allow-Origin':'*'};
+
+function processrequest(req, res) {
+	try {
+		var par=url.parse(req.url,true);
+		var q=par.query; 
+		var path=par.pathname; 
+		path=path.split('/');
+		path=path[1];
+	    switch(path) {
+	    	case "status.json":
+	    		var r='{"lamp":{';
+				for (var i=0;i<5;i++) {
+					r+='"'+colors.substr(i*4,4)+'":'+STATUS.LEDs[i].toFixed(2);
+					if (i<4) {r+=",";}
+				}
+				r+='},\n"sensors":{"RH":'+STATUS.RH.toFixed(1)+',"Temp":'+STATUS.Temp.toFixed(1)+',"Pressure":'+STATUS.Pressure.toFixed(2)+',"Air Quality":'+STATUS.AirQual.toFixed(2)+'},\nLight:'+JSON.stringify(STATUS.Light)+'}';
+				res.writeHead(200,head);
+				res.write(r);
+	    		break;
+	    	
+	    	case "history.json":
+				res.writeHead(200,head);
+				res.write("{\"Temp\":");
+				res.write(JSON.stringify(HISTORY.Temp));
+				res.write(",\r\"RH\":");
+				res.write(JSON.stringify(HISTORY.RH));
+				//res.write(",\"Pressure\":");
+				//res.write(JSON.stringify(HISTORY.Pressure));
+				//res.write(",\"AirQual\":");
+				//res.write(JSON.stringify(HISTORY.AirQual));
+				res.write(",\"Clear\":");
+				res.write(JSON.stringify(HISTORY.Clear));
+				//res.write(",\"Red\":");
+				//res.write(JSON.stringify(HISTORY.Red));
+				//res.write(",\"Green\":");
+				//res.write(JSON.stringify(HISTORY.Green));
+				//res.write(",\"Blue\":");
+				//res.write(JSON.stringify(HISTORY.Blue));
+				res.write("}");
+	    		break;
+	    	case "usermsg.cmd":
+	    		if (query.msg && query.msg.length > 1) {
+					usrmsg=query.msg;
+					MnuS=10;
+					setTimeout("uplcd();",100);
+	    			res.writeHead(200,head);
+	    			res.write("{status:\"ok\",message:\""+query.msg+"\"}");
+	    		} else {
+					res.writeHead(400,head);
+					res.write("{status:\"error\",error:\"No message supplied\"}");
+				}
+	    		break;
+	    	case "lamp.cmd":
+	    		STATUS.LEDs[0]=query.BLUE===undefined ? 0:E.clip(query.BLUE,0,1);
+				STATUS.LEDs[1]=query.COOL===undefined ? 0:E.clip(query.COOL,0,1);
+				STATUS.LEDs[2]=query.WARM===undefined ? 0:E.clip(query.WARM,0,1);
+				STATUS.LEDs[3]=query.YELL===undefined ? 0:E.clip(query.YELL,0,1);
+				STATUS.LEDs[4]=query.RED===undefined ? 0:E.clip(query.RED,0,1);
+				setTimeout("uplcd(); upled();",100);
+	    		res.writeHead(200,head);
+	    		res.write("{status:\"ok\",message:\"lamp state set\"}");
+	    		break;
+	    	case "code.run":
+	    		if (query.code) {
+	    			var x="";
+	    			try {
+	    				x=eval(query.code);
+	    				res.writeHead(200,head);
+	    				res.write("{status:\"ok\",result:\""+x+"\"}");
+	    			}
+	    			catch (err) {
+	    				res.writeHead(500,head);
+	    				res.write("{status:\"error\",error:\""+err.message+"\"}");
+	    			}
+				} else {
+					res.writeHead(400,head);
+					res.write("{status:\"error\",error:\"No code supplied.\"}");
+				}
+	    		break;
+	    	default:
+	    		res.writeHead(404,head);
+				res.write("{status:\"error\",error:\"unknown command\"}");
+	    }
+	}
+	catch (err){
+		res.writeHead(500,head);
+	    res.write("{status:\"error\",error:\""+err.message+"\"}");
+	}
+	res.end();
 }
+
 
 
 //END HTTP INTERFACE CODE
