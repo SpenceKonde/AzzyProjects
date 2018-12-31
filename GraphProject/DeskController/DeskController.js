@@ -1,5 +1,6 @@
 
 
+E.setFlags({pretokenize:1});
 
 function onInit() {
 	USB.setConsole(true); 
@@ -60,7 +61,7 @@ function onInit() {
 	HISTORY.Red=new Uint16Array(48);
 	HISTORY.Green=new Uint16Array(48);
 	HISTORY.Blue=new Uint16Array(48);
-    INTERVALS={webserver:-1,sensors:-1,nixie:-1,history:-1,fargo:-1,date:-1,activity:-1}; //webserver, sensors, fargo, date, activity, 
+    INTERVALS={webserver:-1,sensors:-1,nixie:-1,history:-1,fargo:-1,date:-1,activity:-1,fivemin:-1}; //webserver, sensors, fargo, date, activity, 
 	menu=[2,4,presets.length-1];
 	//if this pin is grounded, we return before actually kicking everything off for maintenance mode. 
     //if (1) {return;}
@@ -73,7 +74,7 @@ function onInit() {
 	setTimeout("INTERVALS.fargo=setInterval(getFargoStatus,30000);",20000);
 	setTimeout("INTERVALS.nixie=setInterval(upNixie,30000);",30000);
 	setTimeout("getDate();INTERVALS.date=setInterval(getDate,1800000);",2000);
-	setTimeout("delete Init",500); 
+	setTimeout("delete onInit",500); 
 }
 
 
@@ -92,6 +93,28 @@ function onHalfHour() {
     m=m*60;
     m=m-clk.getDate().getSeconds(); 
 	INTERVALS.history=setTimeout(onHalfHour,m*1000); //now we set t
+}
+
+function setActivityTime(t) {
+	if (INTERVALS.Activity != -1) {
+		clearInterval(INTERVALS.Activity);
+		onActivityOn();
+	}
+	INTERVALS.Activity = setInterval(onActivityOff,t*1000);
+	onActivityOn();
+}
+
+function onActivityOn() {
+	
+}
+
+function onActivityOff() {
+    digitalWrite(B7,0);
+    if (STATUS.clear < 2000) {
+	STATUS.Nixie.on=0;
+	upNixie(); 
+    }
+    INTERVALS.Activity=-1;
 }
 
 function loadHistory() {
@@ -175,6 +198,7 @@ function updateHistory() {
 0~1023: Presets (32 at 32 bytes each)
 1024~2047: Reserved for other settings
 2048~3248: history of last 24 hours
+4096~4608: (512 bytes) - message on VFD
 
 */
 
@@ -456,8 +480,6 @@ function getDate() {
 	});
 }
 
-function initTimers() {
-//	intervals["rfup"]=
 	
 }
 
