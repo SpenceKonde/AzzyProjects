@@ -11,7 +11,7 @@ function onInit() {
 	for (var lp in LedPins) {
 		digitalWrite(lp,0);
 	}
-	
+	UPMOD={Clock:0,Sensors:0,Webserver:0,History:0};
 	Clock = require("clock").Clock;
 	// I2C devices
     I2C1.setup({scl:B8,sda:B9});
@@ -362,6 +362,23 @@ function onRFMessage(msg) {
 //START HTTP INTERFACE CODE
 
 head={'Content-Type': 'application/json', 'Access-Control-Allow-Origin':'*'};
+htypes=["Temp","RH","Pressure","AirQual","Clear","Red","Green","Blue"];
+
+function writeTypedHistory(res,tdx) {
+  var typen = htypes[tdx];
+  res.write((tdx === 0) ? '{"' : ',"');
+  res.write(typen);
+  res.write('":');
+  res.write(JSON.stringify(HISTORY[typen]));
+  if (++tdx < htypes.length) {
+    setTimeout(writeTypedHistory,200,res,tdx);
+  } else {
+    res.write('}');
+    res.end();
+  }
+}
+
+
 
 function processrequest(req, res) {
 	try {
@@ -380,27 +397,11 @@ function processrequest(req, res) {
 				r+='},\n"sensors":{"RH":'+STATUS.RH.toFixed(1)+',"Temp":'+STATUS.Temp.toFixed(1)+',"Pressure":'+STATUS.Pressure.toFixed(2)+',"Air Quality":'+STATUS.AirQual.toFixed(2)+'},\nLight:'+JSON.stringify(STATUS.Light)+'}';
 				res.writeHead(200,head);
 				res.write(r);
+                res.end();
 	    		break;
-	    	
 	    	case "history.json":
 				res.writeHead(200,head);
-				res.write("{\"Temp\":");
-				res.write(JSON.stringify(HISTORY.Temp));
-				res.write(",\r\"RH\":");
-				res.write(JSON.stringify(HISTORY.RH));
-				//res.write(",\"Pressure\":");
-				//res.write(JSON.stringify(HISTORY.Pressure));
-				//res.write(",\"AirQual\":");
-				//res.write(JSON.stringify(HISTORY.AirQual));
-				res.write(",\"Clear\":");
-				res.write(JSON.stringify(HISTORY.Clear));
-				//res.write(",\"Red\":");
-				//res.write(JSON.stringify(HISTORY.Red));
-				//res.write(",\"Green\":");
-				//res.write(JSON.stringify(HISTORY.Green));
-				//res.write(",\"Blue\":");
-				//res.write(JSON.stringify(HISTORY.Blue));
-				res.write("}");
+				setTimeout(writeTypedHistory,10,res,0);
 	    		break;
 	    	case "usermsg.cmd":
 	    		if (query.msg && query.msg.length > 1) {
@@ -413,6 +414,7 @@ function processrequest(req, res) {
 					res.writeHead(400,head);
 					res.write("{status:\"error\",error:\"No message supplied\"}");
 				}
+				res.end();
 	    		break;
 	    	case "lamp.cmd":
 	    		STATUS.LEDs[0]=query.BLUE===undefined ? 0:E.clip(query.BLUE,0,1);
@@ -423,6 +425,7 @@ function processrequest(req, res) {
 				setTimeout("uplcd(); upled();",100);
 	    		res.writeHead(200,head);
 	    		res.write("{status:\"ok\",message:\"lamp state set\"}");
+	    		res.end();
 	    		break;
 	    	case "code.run":
 	    		if (query.code) {
@@ -440,17 +443,19 @@ function processrequest(req, res) {
 					res.writeHead(400,head);
 					res.write("{status:\"error\",error:\"No code supplied.\"}");
 				}
+				res.end();
 	    		break;
 	    	default:
 	    		res.writeHead(404,head);
 				res.write("{status:\"error\",error:\"unknown command\"}");
+				res.end();
 	    }
 	}
 	catch (err){
 		res.writeHead(500,head);
 	    res.write("{status:\"error\",error:\""+err.message+"\"}");
+		res.end();
 	}
-	res.end();
 }
 
 
