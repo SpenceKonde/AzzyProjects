@@ -1,10 +1,10 @@
 <?php 
 if ($_GET['index'] > -1 && $_GET['index']<101) {
-http_get("http://pong1/load.cmd?" . $_GET['index']);
-http_get("http://pong2/load.cmd?" . $_GET['index']);
-http_get("http://pong3/load.cmd?" . $_GET['index']);
-http_get("http://pong4/load.cmd?" . $_GET['index']);
-http_get("http://pong5/load.cmd?" . $_GET['index']);
-http_get("http://pong6/load.cmd?" . $_GET['index']);
-http_get("http://pong7/load.cmd?" . $_GET['index']);
+file_get_contents("http://pong1/load.cmd?" . "index=".$_GET['index']);
+file_get_contents("http://pong2/load.cmd?" . "index=".$_GET['index']);
+file_get_contents("http://pong3/load.cmd?" . "index=".$_GET['index']);
+file_get_contents("http://pong4/load.cmd?" . "index=".$_GET['index']);
+file_get_contents("http://pong5/load.cmd?" . "index=".$_GET['index']);
+file_get_contents("http://pong6/load.cmd?" . "index=".$_GET['index']);
+file_get_contents("http://pong7/load.cmd?" . "index=".$_GET['index']);
 }
