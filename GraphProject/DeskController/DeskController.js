@@ -1,8 +1,7 @@
 
+//For use with Save on Send and Modules as Functions, otherwise not enough memory. 
 
-E.setFlags({pretokenize:1});
-
-function onInit() {
+//function onInit() {
 	USB.setConsole(true); 
 	pinMode(BTN1,'input_pulldown');
 	setBusyIndicator(A13);
@@ -42,6 +41,9 @@ function onInit() {
 	fargostrs="Colored,White,Wizard,Tentacle,Desk,Micro,Fan,Under";
 	nixs=0;
 	nixr=0;
+
+	head={'Content-Type': 'application/json', 'Access-Control-Allow-Origin':'*', 'Connection':'close'};
+	htypes=["Temp","RH","Pressure","AirQual","Clear","Red","Green","Blue"];
 	presets=[new Float32Array([0.0,0.0,0.0,0.0,0.0]),new Float32Array([0.9,1,0.6,0,0]),new Float32Array([0,0.6,1,0.8,0.4]),new Float32Array([0.5,0.5,0.5,0.5,0.5])];
 	prenames=["OFF","COLD WHITE","VERY WARM","HALF AND HALF"];
 	STATUS={}; 
@@ -67,15 +69,15 @@ function onInit() {
     //if (1) {return;}
 	INTERVALS.webserver=setTimeout("var WebServer=require('http').createServer(processrequest).listen(80);",15000);
     setTimeout("loadPresets();",1000);
-	INTERVALS.sensors=setInterval(readSensors,15000);
-	setTimeout(loadHistory,3000);
-	setTimeout(onHalfHour,15000);
+	INTERVALS.sensors=setInterval("readSensors()",15000);
+	setTimeout("loadHistory()",3000);
+	setTimeout("onHalfHour()",15000);
 	//setTimeout("setInterval(function(){uplcd();},30000);",15000);
 	setTimeout("INTERVALS.fargo=setInterval(getFargoStatus,30000);",20000);
 	setTimeout("INTERVALS.nixie=setInterval(upNixie,30000);",30000);
 	setTimeout("getDate();INTERVALS.date=setInterval(getDate,1800000);",2000);
-	setTimeout("delete onInit",500); 
-}
+	//setTimeout("delete onInit",500); 
+//}
 
 
 
@@ -89,7 +91,7 @@ function onHalfHour() {
         saveHistory();
 	} 
 	var mins=clk.getDate().getMinutes();
-	var m=(5-mins%5); //TEST MODE
+	var m=(30-mins%5); //TEST MODE
     m=m*60;
     m=m-clk.getDate().getSeconds(); 
 	INTERVALS.history=setTimeout(onHalfHour,m*1000); //now we set t
@@ -318,8 +320,8 @@ function upNixie() {
 			Nixie.setString((STATUS.Pressure+"8"));
 			Nixie.setAllLED(16,48,16);
 		} else if (STATUS.Nixie.mode==4) { // Air Quality
-			Nixie.setString("  "+STATUS.AirQual.toFixed(1)+" ");
-			Nixie.setAllLED(16,24,64); Nixie.setLED(1,0,0,0); nixie.setLED(7,0,0,0);
+			Nixie.setString(STATUS.AirQual.toFixed(0)+" ");
+			Nixie.setAllLED(16,24,64); nixie.setLED(5,0,0,0);
 		}
 	} else {
 		Nixie.setAllLED(0,0,0);
@@ -361,23 +363,37 @@ function onRFMessage(msg) {
 
 //START HTTP INTERFACE CODE
 
-head={'Content-Type': 'application/json', 'Access-Control-Allow-Origin':'*'};
-htypes=["Temp","RH","Pressure","AirQual","Clear","Red","Green","Blue"];
-
 function writeTypedHistory(res,tdx) {
-  var typen = htypes[tdx];
-  res.write((tdx === 0) ? '{"' : ',"');
-  res.write(typen);
-  res.write('":');
-  res.write(JSON.stringify(HISTORY[typen]));
-  if (++tdx < htypes.length) {
-    setTimeout(writeTypedHistory,200,res,tdx);
-  } else {
-    res.write('}');
-    res.end();
-  }
+	var typen = htypes[tdx];
+	res.write((tdx === 0) ? '{"' : ',"');
+	res.write(typen);
+	res.write('":');
+	res.write(getTypesHistString(tdx));
+  	if (++tdx < htypes.length) {
+    	setTimeout(writeTypedHistory,100,res,tdx);
+  	} else {
+    	res.write('}');
+    	res.end();
+    }
 }
 
+function getTypesHistString(tdx) {
+	var ret="";
+	var typen = htypes[tdx];
+	if (tdx<4){
+  		var tstr="[";
+  		for (var i=0;i<48;i++) {
+			tstr=tstr+HISTORY[typen][i].toFixed(1);
+  			if (i !=47) {
+  				tstr+=",";
+  			} 
+  		}
+  		tstr+="]";
+  		return tstr;
+	} else {
+  		return JSON.stringify(HISTORY[typen]);
+	}
+}
 
 
 function processrequest(req, res) {
@@ -394,7 +410,7 @@ function processrequest(req, res) {
 					r+='"'+colors.substr(i*4,4)+'":'+STATUS.LEDs[i].toFixed(2);
 					if (i<4) {r+=",";}
 				}
-				r+='},\n"sensors":{"RH":'+STATUS.RH.toFixed(1)+',"Temp":'+STATUS.Temp.toFixed(1)+',"Pressure":'+STATUS.Pressure.toFixed(2)+',"Air Quality":'+STATUS.AirQual.toFixed(2)+'},\nLight:'+JSON.stringify(STATUS.Light)+'}';
+				r+='},\n"sensors":{"RH":'+STATUS.RH.toFixed(1)+',"Temp":'+STATUS.Temp.toFixed(1)+',"Pressure":'+STATUS.Pressure.toFixed(2)+',"Air Quality":'+STATUS.AirQual.toFixed(2)+'},\n"Light":'+JSON.stringify(STATUS.Light)+'}';
 				res.writeHead(200,head);
 				res.write(r);
                 res.end();
@@ -417,12 +433,12 @@ function processrequest(req, res) {
 				res.end();
 	    		break;
 	    	case "lamp.cmd":
-	    		STATUS.LEDs[0]=query.BLUE===undefined ? 0:E.clip(query.BLUE,0,1);
-				STATUS.LEDs[1]=query.COOL===undefined ? 0:E.clip(query.COOL,0,1);
-				STATUS.LEDs[2]=query.WARM===undefined ? 0:E.clip(query.WARM,0,1);
-				STATUS.LEDs[3]=query.YELL===undefined ? 0:E.clip(query.YELL,0,1);
-				STATUS.LEDs[4]=query.RED===undefined ? 0:E.clip(query.RED,0,1);
-				setTimeout("uplcd(); upled();",100);
+	    		STATUS.LEDs[0]=q.BLUE===undefined ? 0:E.clip(q.BLUE,0,1);
+				STATUS.LEDs[1]=q.COOL===undefined ? 0:E.clip(q.COOL,0,1);
+				STATUS.LEDs[2]=q.WARM===undefined ? 0:E.clip(q.WARM,0,1);
+				STATUS.LEDs[3]=q.YELL===undefined ? 0:E.clip(q.YELL,0,1);
+				STATUS.LEDs[4]=q.RED===undefined ? 0:E.clip(q.RED,0,1);
+				setTimeout("upled();",100);
 	    		res.writeHead(200,head);
 	    		res.write("{status:\"ok\",message:\"lamp state set\"}");
 	    		res.end();
@@ -485,7 +501,5 @@ function getDate() {
 	});
 }
 
-	
-}
 
 //END OF TIMING RELATED CODE
