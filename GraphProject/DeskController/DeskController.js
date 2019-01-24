@@ -54,6 +54,10 @@
     STATUS.RH=0;
     STATUS.Pressure=0;
     STATUS.AirQual=0;
+    MENU={};
+    MENU.page=0;
+    MENU.option=0;
+    MENU.usermsg="";
     HISTORY={};
     HISTORY.Temp=new Float32Array(48);
     HISTORY.RH=new Float32Array(48);
@@ -63,7 +67,7 @@
     HISTORY.Red=new Uint16Array(48);
     HISTORY.Green=new Uint16Array(48);
     HISTORY.Blue=new Uint16Array(48);
-    INTERVALS={webserver:-1,sensors:-1,nixie:-1,history:-1,fargo:-1,date:-1,activity:-1,fivemin:-1}; //webserver, sensors, fargo, date, activity, 
+    INTERVALS={webserver:-1,sensors:-1,nixie:-1,history:-1,fargo:-1,date:-1,activity:-1,vfd:-1}; //webserver, sensors, fargo, date, activity, 
     menu=[2,4,presets.length-1];
 	//if this pin is grounded, we return before actually kicking everything off for maintenance mode. 
     //if (1) {return;}
@@ -72,10 +76,10 @@
     INTERVALS.sensors=setInterval("readSensors()",15000);
     setTimeout("loadHistory()",3000);
     setTimeout("onHalfHour()",15000);
-	//setTimeout("setInterval(function(){uplcd();},30000);",15000);
 	setTimeout("INTERVALS.fargo=setInterval(getFargoStatus,30000);",20000);
 	setTimeout("INTERVALS.nixie=setInterval(upNixie,30000);",30000);
 	setTimeout("getDate();INTERVALS.date=setInterval(getDate,1800000);",2000);
+	setTimeout("INTERVALS.vfd=setInterval(upvfd,60000)",60000);
 	//setTimeout("delete onInit",500); 
 //}
 
@@ -97,27 +101,7 @@ var mins=clk.getDate().getMinutes();
 	INTERVALS.history=setTimeout(onHalfHour,m*1000); //now we set t
 }
 
-function setActivityTime(t) {
-	if (INTERVALS.Activity != -1) {
-		clearInterval(INTERVALS.Activity);
-		onActivityOn();
-	}
-	INTERVALS.Activity = setInterval(onActivityOff,t*1000);
-	onActivityOn();
-}
 
-function onActivityOn() {
-	
-}
-
-function onActivityOff() {
-	digitalWrite(B7,0);
-	if (STATUS.clear < 2000) {
-		STATUS.Nixie.on=0;
-		upNixie(); 
-	}
-	INTERVALS.Activity=-1;
-}
 
 function loadHistory() {
 	var a=2048;
@@ -333,12 +317,62 @@ function upNixie() {
 //END OF FARGO CODE
 
 //START VFD CODE 
-function uplcd() {
+function upvfd() {
 	if (INTERVALS.activity==-1) {
 		return;
+	} else {
+
+
 	}
+}
+
+function setActivityTime(t) {
+	if (INTERVALS.Activity != -1) {
+		clearInterval(INTERVALS.Activity);
+		onActivityOn();
+	}
+	INTERVALS.Activity = setInterval(onActivityOff,t*1000);
+	onActivityOn();
+}
+
+function onActivityOn() {
+	digitalWrite(B7,1);
 
 }
+
+function onActivityOff() {
+	digitalWrite(B7,0);
+	if (STATUS.clear < 2000) {
+		STATUS.Nixie.on=0;
+		upNixie(); 
+    }
+
+	NTERVALS.Activity=-1;
+}
+
+function setActivityTime(t) {
+	if (INTERVALS.Activity != -1) {
+		clearInterval(INTERVALS.Activity);
+		onActivityOn();
+	}
+	INTERVALS.Activity = setInterval(onActivityOff,t*1000);
+	onActivityOn();
+}
+
+function onActivityOn() {
+	
+}
+
+function onActivityOff() {
+	digitalWrite(B7,0);
+	if (STATUS.clear < 2000) {
+		STATUS.Nixie.on=0;
+		upNixie(); 
+	}
+	INTERVALS.Activity=-1;
+}
+
+
 function drawFargo(pg) {
 
 }
@@ -427,17 +461,17 @@ function processrequest(req, res) {
 			var n=0;
 			res.on('drain',function(){
 				res.write('"'+htypes[n]+'"');
-				res.write(":")
+				res.write(":");
 				res.write(getTypedHistString(n++));
-				if (n==8) {res.end("}")} else {res.write(',\r\n');}
-			}
+				if (n==8) {res.end("}");} else {res.write(',\r\n');}
+			});
 			res.write("{");
 			break;
 			case "usermsg.cmd":
 			if (query.msg && query.msg.length > 1) {
-				usrmsg=query.msg;
-				MnuS=10;
-				setTimeout("uplcd();",100);
+				MENU.usrmsg=query.msg;
+				MENU.page=10;
+				setTimeout("upvfd();",100);
 				res.writeHead(200,head);
 				res.write("{status:\"ok\",message:\""+query.msg+"\"}");
 			} else {
