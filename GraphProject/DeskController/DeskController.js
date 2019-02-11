@@ -38,7 +38,8 @@
     fargourl="http://192.168.2.14/api/relay/";
     blankpreset="\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF";
     colors="BLUECOOLWARMYELLRED ";
-    fargostrs="Colored,White,Wizard,Tentacle,Desk,Micro,Fan,Under";
+    fargonames=["Colored","White","Wizard","Tentacl","Desk","Micro","Fan","Under"];
+    colornames=["BLUE","COOL","WARM","YELL","RED"];
     nixs=0;
     nixr=0;
 
@@ -46,6 +47,7 @@
     htypes=["Temp","RH","Pressure","AirQual","Clear","Red","Green","Blue"];
     presets=[new Float32Array([0.0,0.0,0.0,0.0,0.0]),new Float32Array([0.9,1,0.6,0,0]),new Float32Array([0,0.6,1,0.8,0.4]),new Float32Array([0.5,0.5,0.5,0.5,0.5])];
     prenames=["OFF","COLD WHITE","VERY WARM","HALF AND HALF"];
+
     STATUS={}; 
     STATUS.Fargo=new Uint8Array(8);
     STATUS.Nixie={on:0,mode:0};
@@ -58,6 +60,7 @@
     MENU.page=0;
     MENU.option=0;
     MENU.usermsg="";
+    MENU.vfd=0;
     HISTORY={};
     HISTORY.Temp=new Float32Array(48);
     HISTORY.RH=new Float32Array(48);
@@ -317,51 +320,80 @@ function upNixie() {
 //END OF FARGO CODE
 
 //START VFD CODE 
+//MENU.page:
+//0: usermessage
+//1: Fargo1 
+//2: Fargo2
+//3: desklamp
+//4: 
+//5: 
+//
+
 function upvfd() {
-	if (INTERVALS.activity==-1) {
-		return;
+	if (INTERVALS.activity==-1 || !MENU.vfd) {
+		return 0;
 	} else {
-
-
+		switch (MENU.page) {
+			case 0: 
+				drawUserMessage();
+				break;
+			case 1:
+			case 2:
+				drawFargo();
+				break;
+			case 3: 
+				drawLights();
+				break;
+			default: 
+				console.log("Error: Invalid menu page "+MENU.page);
+				MENU.page=0;
+		}
+		return 1;
 	}
 }
 
 function setActivityTime(t) {
 	if (INTERVALS.Activity != -1) {
 		clearInterval(INTERVALS.Activity);
+		INTERVALS.Activity = setInterval(onActivityOff,t*1000);
+	} else {
+		INTERVALS.Activity = setInterval(onActivityOff,t*1000);
 		onActivityOn();
 	}
-	INTERVALS.Activity = setInterval(onActivityOff,t*1000);
-	onActivityOn();
 }
 
 function onActivityOn() {
 	digitalWrite(B7,1);
-
+	setTimeout(initvfd,500);
 }
 
-function onActivityOff() {
-	digitalWrite(B7,0);
-	if (STATUS.clear < 2000) {
-		STATUS.Nixie.on=0;
-		upNixie(); 
-    }
+function vfdsetcursor(line,pos) {
+	var position;
+	if (INTERVALS.Activity==-1 || !MENU.vfd) {return 0;}
+	if (pos===undefined) { 
+		position=line;
+	} else 	{
+		position=line*20+pos;
+	}
+	Serial1.print(String.fromCharCode(0x1B,position));
+	return 1;
+}
 
-	NTERVALS.Activity=-1;
+function initvfd() {
+	Serial1.print('\x15'); //clear screen, home curseor. 
+	MENU.vfd=1;
 }
 
 function setActivityTime(t) {
 	if (INTERVALS.Activity != -1) {
 		clearInterval(INTERVALS.Activity);
+		INTERVALS.Activity=-1;
 		onActivityOn();
 	}
 	INTERVALS.Activity = setInterval(onActivityOff,t*1000);
 	onActivityOn();
 }
 
-function onActivityOn() {
-	
-}
 
 function onActivityOff() {
 	digitalWrite(B7,0);
@@ -369,18 +401,71 @@ function onActivityOff() {
 		STATUS.Nixie.on=0;
 		upNixie(); 
 	}
+
 	INTERVALS.Activity=-1;
 }
 
 
-function drawFargo(pg) {
+function drawFargo() {
+	Serial1.print('\x15'); //clear screen and home; 
+	var m=(MENU.page-1)*4
+	for (var i=0;i<4;i++) {
+		vfdsetcursor(i*10);
+		Serial1.print(STATUS.fargo[m+i]?" \xDB ":" \xD9 "); 
+		Serial1.print(fargonames[m+i]); 
+	}
+	vfdsetcursor(MENU.option*10);
+	Serial1.print("\x0B\xBC\x0C"); 
+}
 
+
+function drawStatus() {
+	Serial1.print('\x15');
+	Serial1.print(STATUS.Temp.toFixed(1)+"\xB9C "+STATUS.RH.toFixed(1)+"%\r\n"+STATUS.Pressure.toFixed(0)+"mBar AQ "+Pressure.AirQual.toFixed(0));
 }
 function drawLights() {
-
+	Serial1.print('\x15');
+    for(var i=0;i<5;i++) {
+    	if (MENU.option==i){
+    		Serial1.print('\x0B');
+    	}
+    	Serial1.print(colornames[i]);
+    	if (MENU.option==i){
+    		Serial1.print('\x0C');
+    	}
+    	Serial.print(" ");
+    }
+    vfdsetcursor(1,0);
+	for(var i=0;i<5;i++) {
+		var f=STATUS.fargo[i];
+		for (var j=0,j<4;j++) {
+			if (f>0.24) {
+				Serial1.print("\x7F")
+			} else {
+				if (f<0.05) {
+					Serial1.print(" ");
+				} else if (f<0.09) {
+					Serial1.print("\xF0");
+				} else if (f<0.09) {
+					Serial1.print("\xF1");
+				} else if (f<0.09) {
+					Serial1.print("\xF2");
+				}else {
+					Serial1.print("\xF3");
+				}
+			}
+			f-=0.25;
+		} 
+		Serial.print(" ")
+	}
 }
-function drawStatus() {
-	
+
+function drawUserMessage() {
+	if (MENU.usermsg=="") {
+		drawStatus();
+	} else {
+		Serial1.print(MENU.usermsg); 
+	}
 }
 
 //END OF VFD CODE
@@ -391,7 +476,7 @@ function readSensors() {
 	BME680.perform_measurement();
 	var t=BME680.get_sensor_data();
 	STATUS.RH=t.humidity;
-	STATUS.Temp=t.temperature;
+	STATUS.Temp=t.temperature -3.5; // correct for difference in temperature between sensor and bulk temperature of room
 	STATUS.Pressure=t.pressure;
 	STATUS.AirQual=t.gas_resistance;
 	STATUS.Light=TCS.getValue();
@@ -448,7 +533,7 @@ function processrequest(req, res) {
 			case "status.json":
 			var r='{"lamp":{';
 			for (var i=0;i<5;i++) {
-				r+='"'+colors.substr(i*4,4)+'":'+STATUS.LEDs[i].toFixed(2);
+				r+='"'+colornames[i]+'":'+STATUS.LEDs[i].toFixed(2);
 				if (i<4) {r+=",";}
 			}
 			r+='},\n"sensors":{"RH":'+STATUS.RH.toFixed(1)+',"Temp":'+STATUS.Temp.toFixed(1)+',"Pressure":'+STATUS.Pressure.toFixed(2)+',"Air Quality":'+STATUS.AirQual.toFixed(2)+'},\n"Light":'+JSON.stringify(STATUS.Light)+'}';
