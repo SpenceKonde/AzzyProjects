@@ -554,8 +554,13 @@ function processrequest(req, res) {
 			break;
 			case "usermsg.cmd":
 			if (query.msg && query.msg.length > 1) {
-				MENU.usrmsg=query.msg;
-				MENU.page=10;
+				MENU.usrmsg=btoa(query.msg)
+				MENU.page=0;
+				if (query.time) {
+					setActivityTime(query.time*60);
+				} else {
+					setActivityTime(30*60);
+				}
 				setTimeout("upvfd();",100);
 				res.writeHead(200,head);
 				res.write("{status:\"ok\",message:\""+query.msg+"\"}");
