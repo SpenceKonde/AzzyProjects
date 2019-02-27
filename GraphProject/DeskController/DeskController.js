@@ -21,7 +21,7 @@
     Serial5.setup(115200,{tx:C12});
     Nixie=require("SmartNixie").connect(Serial5,6);
 	//Keypad
-	KeyPad=require("KeyPad").connect([C0, C1, C2, C3, C4],[A0,A1,B0,B1], function(e) {onKey("AL741B0852#R963*ECDU"[e]);});
+	KeyPad=require("KeyPad").connect([C0, C1, C2, C3, C4],[A0,A1,B0,B1], function(e) {onKey(menuopts[e]);});
 	//WIZnet
 	SPI3.setup({sck:B3,mosi:B5,miso:B4});
 	Eth=require("WIZnet").connect(SPI3,B2);
@@ -47,7 +47,30 @@
     htypes=["Temp","RH","Pressure","AirQual","Clear","Red","Green","Blue"];
     presets=[new Float32Array([0.0,0.0,0.0,0.0,0.0]),new Float32Array([0.9,1,0.6,0,0]),new Float32Array([0,0.6,1,0.8,0.4]),new Float32Array([0.5,0.5,0.5,0.5,0.5])];
     prenames=["OFF","COLD WHITE","VERY WARM","HALF AND HALF"];
-
+    //AL741B0852#R963*ECDU
+    //[symbol,type: 0=function, 1=number, 2=cursor L/R, 3=cursor U/D, number: value, function: ?, cursor: ?]
+    MenuOpts=[
+	    ["A",0], //F1
+	    ["L",2,-1], //Left
+	    ["7",1,7],
+	    ["4",1,4],
+	    ["1",1,1],
+	    ["B",0], //F2
+	    ["0",1,0],
+	    ["8",1,8],
+	    ["5",1,5],
+	    ["2",1,2],
+	    ["#",0],  //Number sign
+	    ["R",2,1],  //right
+	    ["9",1,9],
+	    ["6",1,6],
+	    ["3",1,3],
+	    ["*",0],  //Asterisk
+	    ["E",0],  //enter
+	    ["C",0],  //esc
+	    ["D",3,1],  //down
+	    ["U",2,-1]   //up
+	    ];
     STATUS={}; 
     STATUS.Fargo=new Uint8Array(8);
     STATUS.Nixie={on:0,mode:0};
@@ -491,6 +514,11 @@ function readSensors() {
 function sendRFMessage(msg) {
     //TODO
 }
+cmd = ""
+Serial4.on('data', function (data) { 
+	
+	cmd+=data;
+});
 
 function onRFMessage(msg) {
 	//TODO
