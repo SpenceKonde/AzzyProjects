@@ -21,7 +21,7 @@
     Serial5.setup(115200,{tx:C12});
     Nixie=require("SmartNixie").connect(Serial5,6);
 	//Keypad
-	KeyPad=require("KeyPad").connect([C0, C1, C2, C3, C4],[A0,A1,B0,B1], function(e) {onKey(menuopts[e]);});
+	KeyPad=require("KeyPad").connect([C0, C1, C2, C3, C4],[A0,A1,B0,B1], function(e) {onKey(MenuOpts[e]);});
 	//WIZnet
 	SPI3.setup({sck:B3,mosi:B5,miso:B4});
 	Eth=require("WIZnet").connect(SPI3,B2);
@@ -48,28 +48,28 @@
     presets=[new Float32Array([0.0,0.0,0.0,0.0,0.0]),new Float32Array([0.9,1,0.6,0,0]),new Float32Array([0,0.6,1,0.8,0.4]),new Float32Array([0.5,0.5,0.5,0.5,0.5])];
     prenames=["OFF","COLD WHITE","VERY WARM","HALF AND HALF"];
     //AL741B0852#R963*ECDU
-    //[symbol,type: 0=function, 1=number, 2=cursor L/R, 3=cursor U/D, number: value, function: ?, cursor: ?]
+    //[symbol,type: 0=function, 1=number, 2=cursor L/R, 3=cursor U/D, number: value, function: function to call when pressed, cursor: -1 or 1, menumask - if (1<<MENU.page) & this is true, has an effect for this menu page]
     MenuOpts=[
-	    ["A",0], //F1
-	    ["L",2,-1], //Left
-	    ["7",1,7],
-	    ["4",1,4],
-	    ["1",1,1],
-	    ["B",0], //F2
-	    ["0",1,0],
-	    ["8",1,8],
-	    ["5",1,5],
-	    ["2",1,2],
-	    ["#",0],  //Number sign
-	    ["R",2,1],  //right
-	    ["9",1,9],
-	    ["6",1,6],
-	    ["3",1,3],
-	    ["*",0],  //Asterisk
-	    ["E",0],  //enter
-	    ["C",0],  //esc
-	    ["D",3,1],  //down
-	    ["U",2,-1]   //up
+	    ["A",0,menuF1,255], //F1
+	    ["L",2,-1,30], //Left
+	    ["7",1,7,24],
+	    ["4",1,4,24],
+	    ["1",1,1,24],
+	    ["B",0,menuF2], //F2
+	    ["0",1,0,24],
+	    ["8",1,8,24],
+	    ["5",1,5,24],
+	    ["2",1,2,24],
+	    ["#",0,menuSave,24],  //Number sign
+	    ["R",2,1,30],  //right
+	    ["9",1,9,24],
+	    ["6",1,6,24],
+	    ["3",1,3,24],
+	    ["*",0,menuNext,255],  //Asterisk
+	    ["E",0,menuEnter,254],  //enter
+	    ["C",0,menuCancel,255],  //esc
+	    ["D",3,1,30],  //down
+	    ["U",2,-1,30]   //up
 	    ];
     STATUS={}; 
     STATUS.Fargo=new Uint8Array(8);
@@ -348,7 +348,7 @@ function upNixie() {
 //1: Fargo1 
 //2: Fargo2
 //3: desklamp
-//4: 
+//4: desklamp preset
 //5: 
 //
 
@@ -366,6 +366,9 @@ function upvfd() {
 				break;
 			case 3: 
 				drawLights();
+				break;
+			case 4:
+				drawLightsPreset();
 				break;
 			default: 
 				console.log("Error: Invalid menu page "+MENU.page);
@@ -480,6 +483,46 @@ function drawLights() {
 			f-=0.25;
 		} 
 		Serial.print(" ")
+	}
+}
+
+function onKey(menuoption) {
+	console.log(menuoption[0]);
+	if ((1<<MENU.option)&menuoption[3]) {
+		switch (menuoption[1]) {
+			case 0: //function
+			    menuoption[2]();
+				break;
+			case 1: //number
+			    if (MENU.page==3) {
+					if (MENU.number < 11) {
+						MENU.number=menuoption[2]+(MENU.number*10);
+					} else if(MENU.number <100) {
+						MENU.number=100;
+					} else {
+						MENU.number=menuoption[2];
+					}
+				} else {
+					if (MENU.lastnum==menuoption[0]){
+						MENU.curletter++; 
+						if (MENU.curletter>=((MENU.lastnum=="7" || MENU.lastnum=="9")?4:3))
+							MENU.
+					} else {
+						MENU.lastnum=
+					}
+					MENU.lastnum
+				}
+				break;
+			case 2: //left/right
+				break;
+			case 3: //up/down
+				break;
+			default:
+				console.log("invalid key type "+menuoption[1]);
+		}
+	}
+	} else {
+		console.log("not valid here");//menu option not valid. 
 	}
 }
 
